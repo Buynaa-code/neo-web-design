@@ -1,0 +1,2478 @@
+<!DOCTYPE html>
+<html lang="mn">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Зууч — Үл хөдлөхийн агентын CRM</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<style>
+  :root {
+    --bg: #FAFAF7;
+    --surface: #FFFFFF;
+    --surface-2: #F5F4EF;
+    --border: #E8E6DF;
+    --text: #1A1A1A;
+    --text-2: #5C5C5C;
+    --text-3: #8E8E8E;
+    --primary: #1B4332;
+    --primary-soft: #D8E5DF;
+    --primary-dark: #15362A;
+    --accent: #C4661F;
+    --accent-soft: #F5E4D7;
+    --success: #2D6A4F;
+    --warning: #B8860B;
+    --danger: #9B2C2C;
+    --info: #2B6CB0;
+  }
+  html, body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', 'Helvetica Neue', -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    font-feature-settings: "tnum" 0;
+  }
+  .num { font-variant-numeric: tabular-nums; font-weight: 600; }
+  .eyebrow { font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-3); }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; transition: box-shadow .15s ease, border-color .15s ease, transform .15s ease; }
+  .card:hover { border-color: #d4d1c5; box-shadow: 0 1px 3px rgba(0,0,0,.04), 0 4px 12px rgba(0,0,0,.03); }
+  .btn-primary { background: var(--primary); color: #fff; border-radius: 8px; padding: 10px 16px; font-weight: 500; font-size: 14px; transition: background .15s; display: inline-flex; align-items: center; gap: 8px; }
+  .btn-primary:hover { background: var(--primary-dark); }
+  .btn-secondary { background: #fff; border: 1px solid var(--border); color: var(--text); border-radius: 8px; padding: 10px 16px; font-weight: 500; font-size: 14px; transition: background .15s; display: inline-flex; align-items: center; gap: 8px; }
+  .btn-secondary:hover { background: var(--surface-2); }
+  .input { background: #fff; border: 1px solid var(--border); border-radius: 6px; padding: 9px 12px; font-size: 14px; width: 100%; transition: border-color .15s, box-shadow .15s; }
+  .input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(27,67,50,.08); }
+  .pill { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 500; }
+  .pill-active { background: var(--primary-soft); color: var(--primary); }
+  .pill-reserved { background: #FBF3E2; color: #8a6608; }
+  .pill-sold { background: #EFEDE5; color: #5C5C5C; }
+  .pill-new { background: #DBE8F4; color: var(--info); }
+  .pill-hot { background: var(--accent-soft); color: var(--accent); }
+  .nav-item { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-radius: 8px; font-size: 14px; color: var(--text-2); position: relative; cursor: pointer; transition: background .12s, color .12s; }
+  .nav-item:hover { background: var(--surface-2); color: var(--text); }
+  .nav-item.active { background: var(--primary-soft); color: var(--primary); font-weight: 600; }
+  .nav-item.active::before { content: ""; position: absolute; left: -8px; top: 6px; bottom: 6px; width: 4px; background: var(--primary); border-radius: 2px; }
+  .screen { display: none; }
+  .screen.active { display: block; }
+  /* Override Tailwind display utilities on inactive screens (CDN loads after inline <style>) */
+  .screen:not(.active) { display: none !important; }
+  .kanban-card { transition: transform .15s ease, box-shadow .15s ease; cursor: grab; }
+  .kanban-card:hover { transform: rotate(1deg); box-shadow: 0 4px 12px rgba(0,0,0,.06); }
+  .demo-pill { position: fixed; bottom: 16px; right: 16px; z-index: 50; background: #fff; border: 1px solid var(--border); border-radius: 999px; box-shadow: 0 4px 16px rgba(0,0,0,.08); display: flex; gap: 2px; padding: 6px; max-width: calc(100vw - 32px); overflow-x: auto; }
+  .demo-pill button { width: 36px; height: 36px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; color: var(--text-2); transition: background .12s, color .12s; flex-shrink: 0; position: relative; }
+  .demo-pill button:hover { background: var(--surface-2); color: var(--text); }
+  .demo-pill button.active { background: var(--primary); color: #fff; }
+  .demo-pill button:hover .tip { opacity: 1; transform: translateY(-44px); }
+  .tip { position: absolute; bottom: 100%; left: 50%; transform: translate(-50%, -36px); background: #1A1A1A; color: #fff; font-size: 11px; padding: 4px 8px; border-radius: 4px; opacity: 0; pointer-events: none; transition: all .15s; white-space: nowrap; }
+  .otp-box { width: 44px; height: 52px; text-align: center; font-size: 22px; font-weight: 600; border: 1px solid var(--border); border-radius: 8px; background: #fff; }
+  .otp-box:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(27,67,50,.08); }
+  .stage-node { width: 28px; height: 28px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; }
+  .stage-line { flex: 1; height: 2px; background: var(--border); }
+  .stage-line.done { background: var(--primary); }
+  .stage-node.done { background: var(--primary); color: #fff; }
+  .stage-node.current { background: var(--primary); color: #fff; box-shadow: 0 0 0 4px var(--primary-soft); }
+  .stage-node.todo { background: var(--surface-2); color: var(--text-3); border: 1px solid var(--border); }
+  /* hide scrollbars on demo pill */
+  .demo-pill::-webkit-scrollbar { display: none; }
+  /* funnel bars */
+  .funnel-row { display: flex; align-items: center; gap: 16px; }
+  .funnel-bar { height: 36px; border-radius: 6px; background: linear-gradient(90deg, var(--primary) 0%, #2d6a4f 100%); display: flex; align-items: center; padding: 0 14px; color: #fff; font-weight: 600; font-size: 14px; }
+  /* mobile sidebar */
+  @media (max-width: 1024px) {
+    .sidebar { transform: translateX(-100%); transition: transform .2s ease; position: fixed; top: 0; bottom: 0; left: 0; z-index: 40; background: #fff; width: 240px; box-shadow: 4px 0 16px rgba(0,0,0,.06); }
+    .sidebar.open { transform: translateX(0); }
+    .sidebar-backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.3); z-index: 39; }
+    .sidebar-backdrop.open { display: block; }
+  }
+  /* simple count-up suppression for inputs */
+  input[type=number]::-webkit-outer-spin-button, input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
+  /* ========== Modal ========== */
+  .modal-backdrop { position: fixed; inset: 0; background: rgba(26,26,26,.4); backdrop-filter: blur(2px); z-index: 80; display: none; align-items: flex-start; justify-content: center; padding: 48px 16px; overflow-y: auto; }
+  .modal-backdrop.open { display: flex; }
+  .modal { background: #fff; border-radius: 14px; box-shadow: 0 24px 64px rgba(0,0,0,.2); width: 100%; max-width: 560px; animation: modalIn .18s ease; }
+  .modal.lg { max-width: 720px; }
+  .modal.sm { max-width: 400px; }
+  @keyframes modalIn { from { transform: translateY(8px) scale(.98); opacity: 0; } to { transform: translateY(0) scale(1); opacity: 1; } }
+  .modal-head { padding: 20px 24px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+  .modal-body { padding: 24px; }
+  .modal-foot { padding: 16px 24px; border-top: 1px solid var(--border); background: #FAFAF7; border-radius: 0 0 14px 14px; display: flex; gap: 10px; justify-content: flex-end; }
+
+  /* ========== Toast ========== */
+  .toast-wrap { position: fixed; bottom: 80px; right: 16px; z-index: 90; display: flex; flex-direction: column; gap: 10px; max-width: calc(100vw - 32px); width: 360px; pointer-events: none; }
+  .toast { background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; box-shadow: 0 8px 24px rgba(0,0,0,.08); display: flex; align-items: flex-start; gap: 12px; pointer-events: auto; animation: toastIn .22s ease; }
+  .toast.success { border-left: 4px solid var(--success); }
+  .toast.info { border-left: 4px solid var(--info); }
+  .toast.warning { border-left: 4px solid var(--warning); }
+  .toast.danger { border-left: 4px solid var(--danger); }
+  .toast.leaving { animation: toastOut .2s ease forwards; }
+  @keyframes toastIn { from { transform: translateX(20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+  @keyframes toastOut { from { transform: translateX(0); opacity: 1; } to { transform: translateX(20px); opacity: 0; } }
+
+  /* ========== Command Palette ========== */
+  .cmd-backdrop { position: fixed; inset: 0; background: rgba(26,26,26,.45); backdrop-filter: blur(3px); z-index: 100; display: none; align-items: flex-start; justify-content: center; padding-top: 12vh; }
+  .cmd-backdrop.open { display: flex; }
+  .cmd { background: #fff; border-radius: 14px; box-shadow: 0 28px 72px rgba(0,0,0,.25); width: 100%; max-width: 580px; overflow: hidden; animation: modalIn .15s ease; }
+  .cmd-input-wrap { display: flex; align-items: center; gap: 10px; padding: 16px 18px; border-bottom: 1px solid var(--border); }
+  .cmd-input { flex: 1; border: 0; outline: none; font-size: 15px; background: transparent; }
+  .cmd-kbd { font-size: 11px; padding: 2px 6px; border: 1px solid var(--border); border-radius: 4px; color: var(--text-3); font-family: ui-monospace, monospace; }
+  .cmd-list { max-height: 360px; overflow-y: auto; padding: 8px; }
+  .cmd-group-title { padding: 8px 12px 4px; font-size: 11px; font-weight: 600; letter-spacing: .06em; color: var(--text-3); text-transform: uppercase; }
+  .cmd-item { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 8px; cursor: pointer; font-size: 14px; }
+  .cmd-item.selected { background: var(--primary-soft); color: var(--primary); }
+  .cmd-item.selected .cmd-arrow { opacity: 1; }
+  .cmd-arrow { margin-left: auto; opacity: 0; transition: opacity .12s; }
+  .cmd-empty { text-align: center; padding: 36px 16px; color: var(--text-3); font-size: 13px; }
+
+  /* ========== Notifications Panel ========== */
+  .notif-panel { position: absolute; top: calc(100% + 6px); right: 0; width: 360px; max-width: calc(100vw - 24px); background: #fff; border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 16px 40px rgba(0,0,0,.12); z-index: 35; display: none; overflow: hidden; }
+  .notif-panel.open { display: block; animation: modalIn .15s ease; }
+  .notif-item { padding: 12px 16px; display: flex; gap: 12px; cursor: pointer; transition: background .12s; border-bottom: 1px solid var(--border); }
+  .notif-item:last-child { border-bottom: 0; }
+  .notif-item:hover { background: var(--surface-2); }
+  .notif-item .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); margin-top: 6px; flex-shrink: 0; }
+  .notif-item.read .dot { background: transparent; }
+
+  /* ========== Filter Chip ========== */
+  .chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 4px 4px 10px; border-radius: 999px; background: var(--primary-soft); color: var(--primary); font-size: 12px; font-weight: 500; }
+  .chip-x { width: 18px; height: 18px; border-radius: 50%; background: rgba(27,67,50,.15); display: inline-flex; align-items: center; justify-content: center; cursor: pointer; }
+  .chip-x:hover { background: rgba(27,67,50,.25); }
+
+  /* ========== Mobile Bottom Nav ========== */
+  .mobile-bnav { position: fixed; bottom: 0; left: 0; right: 0; background: #fff; border-top: 1px solid var(--border); display: none; z-index: 40; padding: 6px 0 calc(env(safe-area-inset-bottom, 0px) + 6px); }
+  .mobile-bnav .bnav-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 0; color: var(--text-3); font-size: 10px; font-weight: 500; }
+  .mobile-bnav .bnav-item.active { color: var(--primary); }
+  @media (max-width: 768px) {
+    body.in-app .mobile-bnav { display: flex; }
+    body.in-app #demo-pill { bottom: 76px; }
+    body.in-app #app-main { padding-bottom: 90px; }
+  }
+
+  /* ========== Sparkline ========== */
+  .spark { height: 28px; width: 80px; }
+
+  /* ========== Onboarding Banner ========== */
+  .onboarding-card { background: linear-gradient(135deg, #fff 0%, #FBFAF5 100%); border: 1px solid #E8E6DF; border-radius: 14px; }
+  .check-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 8px; transition: background .12s; cursor: pointer; }
+  .check-item:hover { background: var(--surface-2); }
+  .check-circle { width: 18px; height: 18px; border-radius: 50%; border: 1.5px solid var(--border); display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .check-item.done .check-circle { background: var(--primary); border-color: var(--primary); color: #fff; }
+  .check-item.done .check-label { text-decoration: line-through; color: var(--text-3); }
+
+  /* ========== Stage clickable hint ========== */
+  .stage-node.todo:hover { background: var(--primary-soft); color: var(--primary); cursor: pointer; transition: all .15s; }
+  .stage-node.done:hover, .stage-node.current:hover { cursor: pointer; }
+
+  /* ========== Help Widget ========== */
+  .help-fab { position: fixed; bottom: 16px; left: 16px; width: 44px; height: 44px; border-radius: 50%; background: #fff; border: 1px solid var(--border); box-shadow: 0 4px 16px rgba(0,0,0,.08); display: flex; align-items: center; justify-content: center; color: var(--text-2); z-index: 45; transition: all .15s; }
+  .help-fab:hover { color: var(--primary); border-color: var(--primary); }
+  @media (max-width: 768px) {
+    body.in-app .help-fab { display: none; }
+  }
+
+  /* ========== Multi-step Lead Flow ========== */
+  .src-chip { padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border); font-size: 13px; text-align: center; cursor: pointer; transition: all .12s; background: #fff; user-select: none; }
+  .src-chip:hover { background: var(--surface-2); }
+  .src-chip.selected { border-color: var(--primary); background: var(--primary-soft); color: var(--primary); font-weight: 500; }
+  .opt-card { display: flex; align-items: flex-start; gap: 12px; padding: 14px 16px; border: 1px solid var(--border); border-radius: 10px; cursor: pointer; transition: all .12s; }
+  .opt-card:hover { border-color: #d4d1c5; }
+  .opt-card.checked { border-color: var(--primary); background: #F0F4F1; }
+  .opt-card input[type=checkbox] { accent-color: var(--primary); margin-top: 3px; }
+</style>
+</head>
+<body class="min-h-screen">
+
+<!-- ========== SCREEN: LANDING ========== -->
+<section data-screen="landing" data-screen-label="01 Landing" class="screen">
+  <!-- Top nav -->
+  <header class="border-b border-[#E8E6DF] bg-white">
+    <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <div class="w-9 h-9 rounded-lg bg-[#1B4332] flex items-center justify-center text-white font-semibold">З</div>
+        <span class="text-lg font-semibold tracking-tight">Зууч</span>
+      </div>
+      <nav class="hidden md:flex items-center gap-8 text-sm text-[#5C5C5C]">
+        <a href="#" class="hover:text-[#1A1A1A]">Боломжууд</a>
+        <a href="#" class="hover:text-[#1A1A1A]">Үнэ</a>
+        <a href="#" class="hover:text-[#1A1A1A]">Хэрэглэгчид</a>
+        <a href="#" class="hover:text-[#1A1A1A]">Тусламж</a>
+      </nav>
+      <div class="flex items-center gap-3">
+        <button onclick="goTo('signup')" class="text-sm text-[#5C5C5C] hover:text-[#1A1A1A] hidden sm:inline">Нэвтрэх</button>
+        <button onclick="goTo('signup')" class="btn-primary">Үнэгүй эхлэх</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero -->
+  <section class="max-w-7xl mx-auto px-6 pt-20 pb-16">
+    <div class="grid lg:grid-cols-12 gap-12 items-center">
+      <div class="lg:col-span-7">
+        <div class="inline-flex items-center gap-2 bg-[#F5E4D7] text-[#C4661F] px-3 py-1.5 rounded-full text-xs font-medium mb-6">
+          <span class="w-1.5 h-1.5 rounded-full bg-[#C4661F]"></span>
+          2026 оны 5-р сараас эхлэн нээлттэй
+        </div>
+        <h1 class="text-4xl md:text-5xl lg:text-6xl font-semibold tracking-tight leading-[1.1] text-[#1A1A1A]" style="text-wrap: balance;">
+          Үл хөдлөхийн агентын ажлыг бүхэлд нь нэг газарт
+        </h1>
+        <p class="text-lg text-[#5C5C5C] mt-6 leading-relaxed max-w-2xl">
+          Excel хүснэгт, Facebook chat, утасны notebook-оо орхиод болоо. Зар, lead, viewing, хэлэлцээрээ нэг дороос удирдаарай — монгол агентуудад зориулсан CRM.
+        </p>
+        <div class="flex flex-wrap items-center gap-4 mt-8">
+          <button onclick="goTo('signup')" class="btn-primary !px-5 !py-3 !text-[15px]">14 хоног үнэгүй туршаад үзэх</button>
+          <button onclick="goTo('dashboard')" class="btn-secondary !px-5 !py-3 !text-[15px]">Demo харах</button>
+        </div>
+        <p class="text-xs text-[#8E8E8E] mt-4">Картын мэдээлэл шаардлагагүй · 2 минутад тохируулна</p>
+      </div>
+      <div class="lg:col-span-5">
+        <!-- Decorative mock dashboard preview -->
+        <div class="card p-5 shadow-sm">
+          <div class="flex items-center gap-2 mb-4">
+            <div class="w-2.5 h-2.5 rounded-full bg-[#E8E6DF]"></div>
+            <div class="w-2.5 h-2.5 rounded-full bg-[#E8E6DF]"></div>
+            <div class="w-2.5 h-2.5 rounded-full bg-[#E8E6DF]"></div>
+            <div class="ml-auto eyebrow">Зууч · Хяналтын самбар</div>
+          </div>
+          <div class="grid grid-cols-2 gap-3 mb-4">
+            <div class="bg-[#F5F4EF] rounded-lg p-3">
+              <div class="text-xs text-[#5C5C5C]">Идэвхтэй зар</div>
+              <div class="num text-2xl mt-1">14</div>
+            </div>
+            <div class="bg-[#F5F4EF] rounded-lg p-3">
+              <div class="text-xs text-[#5C5C5C]">Шинэ lead</div>
+              <div class="num text-2xl mt-1">27</div>
+            </div>
+          </div>
+          <div class="space-y-2">
+            <div class="flex items-center gap-3 p-2 rounded-lg hover:bg-[#F5F4EF]">
+              <div class="w-9 h-9 rounded-md bg-cover bg-center" style="background-image:url('https://picsum.photos/seed/zh1/80/80')"></div>
+              <div class="flex-1 min-w-0">
+                <div class="text-sm font-medium truncate">Хан-Уул, Time Tower 92м²</div>
+                <div class="text-xs text-[#8E8E8E]">Б. Эрдэнэбаатар · 14:30</div>
+              </div>
+              <span class="pill pill-active">Идэвхтэй</span>
+            </div>
+            <div class="flex items-center gap-3 p-2 rounded-lg hover:bg-[#F5F4EF]">
+              <div class="w-9 h-9 rounded-md bg-cover bg-center" style="background-image:url('https://picsum.photos/seed/zh2/80/80')"></div>
+              <div class="flex-1 min-w-0">
+                <div class="text-sm font-medium truncate">Сүхбаатар, Encanto 65м²</div>
+                <div class="text-xs text-[#8E8E8E]">Д. Болормаа · 11:00</div>
+              </div>
+              <span class="pill pill-reserved">Захиалагдсан</span>
+            </div>
+            <div class="flex items-center gap-3 p-2 rounded-lg hover:bg-[#F5F4EF]">
+              <div class="w-9 h-9 rounded-md bg-cover bg-center" style="background-image:url('https://picsum.photos/seed/zh3/80/80')"></div>
+              <div class="flex-1 min-w-0">
+                <div class="text-sm font-medium truncate">Баянзүрх, Energy Residence 145м²</div>
+                <div class="text-xs text-[#8E8E8E]">Г. Энхтайван · Өчигдөр</div>
+              </div>
+              <span class="pill pill-hot">Халуун</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Social proof -->
+  <section class="border-y border-[#E8E6DF] bg-white">
+    <div class="max-w-7xl mx-auto px-6 py-10">
+      <p class="text-center eyebrow mb-6">10+ агентлаг бидэнтэй хамтран ажиллаж байна</p>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-6 items-center justify-items-center text-[#8E8E8E]">
+        <div class="text-lg font-bold tracking-tight">RE/MAX Mongolia</div>
+        <div class="text-lg font-semibold italic">Marco Realty</div>
+        <div class="text-lg font-bold tracking-widest">MGG</div>
+        <div class="text-lg font-serif">Chestertons</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Pain points / Problem-Solution -->
+  <section class="max-w-7xl mx-auto px-6 py-20">
+    <div class="max-w-3xl mb-12">
+      <p class="eyebrow mb-3" style="color:#9B2C2C">Танил санагдаж байна уу?</p>
+      <h2 class="text-3xl md:text-4xl font-semibold tracking-tight leading-[1.15]" style="text-wrap: balance;">
+        Үл хөдлөхийн агент өдөр бүр алддаг — <span class="text-[#9B2C2C]">30 минут, 3 lead, нэг хэлцэл</span>
+      </h2>
+      <p class="text-base md:text-lg text-[#5C5C5C] mt-5 leading-relaxed">
+        Бид Улаанбаатарын 30+ агентлагтай ярилцсаны үндсэн дээр өдөр тутмын бодит хүндрэлүүдийг сонссон. Зууч эдгээрийг тэрхүү агентуудын үгээр шийдэхээр бүтсэн.
+      </p>
+    </div>
+
+    <div class="grid md:grid-cols-2 gap-5">
+      <!-- Pain 01 -->
+      <div class="card overflow-hidden flex flex-col">
+        <div class="p-6 flex-1">
+          <div class="flex items-start gap-3 mb-4">
+            <div class="w-10 h-10 rounded-lg flex items-center justify-center shrink-0" style="background:#FBE9E9">
+              <i data-lucide="message-square-off" class="w-5 h-5" style="color:#9B2C2C"></i>
+            </div>
+            <div>
+              <div class="eyebrow" style="color:#9B2C2C">Асуудал 01</div>
+              <h3 class="font-semibold mt-0.5 text-lg">Lead-үүд таван өөр сувгаар алдагддаг</h3>
+            </div>
+          </div>
+          <p class="text-[15px] text-[#5C5C5C] italic leading-relaxed border-l-2 border-[#E8E6DF] pl-4 mb-4">
+            "Facebook Messenger, Viber, утасны notebook, цаасан дэвтэр, орлогын баримтын ар тал... 3 хоногийн өмнө залгасан үйлчлүүлэгчийн нэрийг олох гэж 20 минут болдог. Хэдэн lead алдсаныг бүү асуу."
+          </p>
+          <div class="flex items-center gap-2 text-xs text-[#8E8E8E]">
+            <div class="w-6 h-6 rounded-full bg-[#1B4332] text-white text-[10px] font-semibold flex items-center justify-center">ДБ</div>
+            <span>Д. Болормаа · Marco Realty · 8 жилийн туршлагатай</span>
+          </div>
+        </div>
+        <div class="bg-[#F0F4F1] border-t border-[#D8E5DF] px-6 py-5">
+          <div class="flex items-start gap-3">
+            <i data-lucide="check-circle-2" class="w-5 h-5 shrink-0 mt-0.5" style="color:#1B4332"></i>
+            <div>
+              <div class="text-[11px] font-semibold tracking-wider uppercase mb-1" style="color:#1B4332">Зууч-н шийдэл</div>
+              <p class="text-sm text-[#1A1A1A] leading-relaxed">Бүх сувгаас орж ирсэн lead нэг pipeline-д цуглана. 3+ хоног холбогдоогүй бүх lead-ыг улаан цэгээр автомат сануулна.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pain 02 -->
+      <div class="card overflow-hidden flex flex-col">
+        <div class="p-6 flex-1">
+          <div class="flex items-start gap-3 mb-4">
+            <div class="w-10 h-10 rounded-lg flex items-center justify-center shrink-0" style="background:#FBE9E9">
+              <i data-lucide="file-x-2" class="w-5 h-5" style="color:#9B2C2C"></i>
+            </div>
+            <div>
+              <div class="eyebrow" style="color:#9B2C2C">Асуудал 02</div>
+              <h3 class="font-semibold mt-0.5 text-lg">Excel-ийн файл алдагдвал бүх ажил алга</h3>
+            </div>
+          </div>
+          <p class="text-[15px] text-[#5C5C5C] italic leading-relaxed border-l-2 border-[#E8E6DF] pl-4 mb-4">
+            "3 жилийн зар, lead-ийн мэдээллээ нэг Excel файлд хадгалж байсан. USB шилжүүлэхдээ устгасан. Backup байхгүй. Энэ нэг өдөр л миний хагас жилийн орлогыг арилгасан."
+          </p>
+          <div class="flex items-center gap-2 text-xs text-[#8E8E8E]">
+            <div class="w-6 h-6 rounded-full bg-[#C4661F] text-white text-[10px] font-semibold flex items-center justify-center">БЭ</div>
+            <span>Б. Энхбаатар · бие даасан агент · 5 жил</span>
+          </div>
+        </div>
+        <div class="bg-[#F0F4F1] border-t border-[#D8E5DF] px-6 py-5">
+          <div class="flex items-start gap-3">
+            <i data-lucide="check-circle-2" class="w-5 h-5 shrink-0 mt-0.5" style="color:#1B4332"></i>
+            <div>
+              <div class="text-[11px] font-semibold tracking-wider uppercase mb-1" style="color:#1B4332">Зууч-н шийдэл</div>
+              <p class="text-sm text-[#1A1A1A] leading-relaxed">Үүлэн дээр шифрлэгдсэн автомат хадгалалт. Excel хэлбэрээр хэдийд ч татна. Файл алдагдах эрсдэлгүй.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pain 03 -->
+      <div class="card overflow-hidden flex flex-col">
+        <div class="p-6 flex-1">
+          <div class="flex items-start gap-3 mb-4">
+            <div class="w-10 h-10 rounded-lg flex items-center justify-center shrink-0" style="background:#FBE9E9">
+              <i data-lucide="calendar-x-2" class="w-5 h-5" style="color:#9B2C2C"></i>
+            </div>
+            <div>
+              <div class="eyebrow" style="color:#9B2C2C">Асуудал 03</div>
+              <h3 class="font-semibold mt-0.5 text-lg">Үзүүлэлтийн хуваарь давхардаж ичгэвтэр</h3>
+            </div>
+          </div>
+          <p class="text-[15px] text-[#5C5C5C] italic leading-relaxed border-l-2 border-[#E8E6DF] pl-4 mb-4">
+            "Time Tower-т нэгэн өдөр 16:00 цагт нэг үйлчлүүлэгч ирлээ. Зэрэгцээд миний хамтрагч өөр гэр бүлийг авч ирчихсэн. Хоёр гэр бүлийн дунд гарт орох орон зайгүй. Зээл дээрх нэр хүндээ алдсан."
+          </p>
+          <div class="flex items-center gap-2 text-xs text-[#8E8E8E]">
+            <div class="w-6 h-6 rounded-full bg-[#2B6CB0] text-white text-[10px] font-semibold flex items-center justify-center">ГЭ</div>
+            <span>Г. Энхтайван · RE/MAX Mongolia · ахлах агент</span>
+          </div>
+        </div>
+        <div class="bg-[#F0F4F1] border-t border-[#D8E5DF] px-6 py-5">
+          <div class="flex items-start gap-3">
+            <i data-lucide="check-circle-2" class="w-5 h-5 shrink-0 mt-0.5" style="color:#1B4332"></i>
+            <div>
+              <div class="text-[11px] font-semibold tracking-wider uppercase mb-1" style="color:#1B4332">Зууч-н шийдэл</div>
+              <p class="text-sm text-[#1A1A1A] leading-relaxed">Бүх агентын хуанли нэгдсэн. Давхардсан цагийг автомат илрүүлж сэрэмжлүүлнэ. SMS-ээр үйлчлүүлэгчид 24 цагийн өмнө сануулга.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pain 04 -->
+      <div class="card overflow-hidden flex flex-col">
+        <div class="p-6 flex-1">
+          <div class="flex items-start gap-3 mb-4">
+            <div class="w-10 h-10 rounded-lg flex items-center justify-center shrink-0" style="background:#FBE9E9">
+              <i data-lucide="eye-off" class="w-5 h-5" style="color:#9B2C2C"></i>
+            </div>
+            <div>
+              <div class="eyebrow" style="color:#9B2C2C">Асуудал 04</div>
+              <h3 class="font-semibold mt-0.5 text-lg">Агент бүр юу хийж буй нь эзэнд харагдахгүй</h3>
+            </div>
+          </div>
+          <p class="text-[15px] text-[#5C5C5C] italic leading-relaxed border-l-2 border-[#E8E6DF] pl-4 mb-4">
+            "5 агенттай. Сар бүр цалин өгнө. Гэхдээ хэн нь хэдэн lead-тэй ярьж, аль зар чадварлаг байгааг хагас сар хүлээж байж мэддэг. Үр дүнгүй цалин олон удаа өгсөн."
+          </p>
+          <div class="flex items-center gap-2 text-xs text-[#8E8E8E]">
+            <div class="w-6 h-6 rounded-full bg-[#1B4332] text-white text-[10px] font-semibold flex items-center justify-center">ТТ</div>
+            <span>Т. Түмэнжаргал · MGG Real Estate · эзэн</span>
+          </div>
+        </div>
+        <div class="bg-[#F0F4F1] border-t border-[#D8E5DF] px-6 py-5">
+          <div class="flex items-start gap-3">
+            <i data-lucide="check-circle-2" class="w-5 h-5 shrink-0 mt-0.5" style="color:#1B4332"></i>
+            <div>
+              <div class="text-[11px] font-semibold tracking-wider uppercase mb-1" style="color:#1B4332">Зууч-н шийдэл</div>
+              <p class="text-sm text-[#1A1A1A] leading-relaxed">Real-time leaderboard: lead, viewing, хэлцэл, орлого — агент бүрээр. Эх үүсвэр (Facebook/Unegui) хаанаас илүү lead ирэхийг харна.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Closing stat strip -->
+    <div class="card mt-10 p-6 md:p-8 bg-[#1B4332] border-[#1B4332] text-white">
+      <div class="grid sm:grid-cols-3 gap-6 items-center">
+        <div class="sm:col-span-1">
+          <div class="eyebrow text-white/60 mb-2">Зууч хэрэглэгчдийн тоо</div>
+          <p class="text-lg font-medium leading-snug">Эхний 3 сард л агентууд дунджаар:</p>
+        </div>
+        <div class="sm:col-span-2 grid grid-cols-3 gap-4">
+          <div><div class="num text-3xl md:text-4xl">+34%</div><div class="text-xs text-white/70 mt-1">илүү lead хариулсан</div></div>
+          <div><div class="num text-3xl md:text-4xl">−4цаг</div><div class="text-xs text-white/70 mt-1">долоо хоног тутамд хэмнэсэн</div></div>
+          <div><div class="num text-3xl md:text-4xl">0</div><div class="text-xs text-white/70 mt-1">алдагдсан хуанлийн давхардал</div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features -->
+  <section class="max-w-7xl mx-auto px-6 py-20">
+    <div class="max-w-2xl mb-12">
+      <p class="eyebrow mb-3">Шийдэл</p>
+      <h2 class="text-3xl md:text-4xl font-semibold tracking-tight leading-tight">
+        Гурван үндсэн модулиар таны бизнес нэг газар
+      </h2>
+    </div>
+    <div class="grid md:grid-cols-3 gap-6">
+      <div class="card p-7">
+        <div class="w-11 h-11 rounded-lg bg-[#D8E5DF] flex items-center justify-center mb-5">
+          <i data-lucide="building-2" class="w-5 h-5 text-[#1B4332]"></i>
+        </div>
+        <h3 class="text-lg font-semibold mb-2">Listing удирдлага</h3>
+        <p class="text-sm text-[#5C5C5C] leading-relaxed">Зарын зураг, дэлгэрэнгүй мэдээлэл, төлөв байдлыг нэг газраас. Unegui болон Facebook-руу автомат нийтэлнэ.</p>
+      </div>
+      <div class="card p-7">
+        <div class="w-11 h-11 rounded-lg bg-[#D8E5DF] flex items-center justify-center mb-5">
+          <i data-lucide="users" class="w-5 h-5 text-[#1B4332]"></i>
+        </div>
+        <h3 class="text-lg font-semibold mb-2">Lead pipeline</h3>
+        <p class="text-sm text-[#5C5C5C] leading-relaxed">Шинэ хүсэлтээс эхлээд хэлцэл хаах хүртэлх замналыг kanban-аар хянана. Нэг ч lead алдагдахгүй.</p>
+      </div>
+      <div class="card p-7">
+        <div class="w-11 h-11 rounded-lg bg-[#D8E5DF] flex items-center justify-center mb-5">
+          <i data-lucide="bar-chart-3" class="w-5 h-5 text-[#1B4332]"></i>
+        </div>
+        <h3 class="text-lg font-semibold mb-2">Тайлан гаргалт</h3>
+        <p class="text-sm text-[#5C5C5C] leading-relaxed">Агент бүрийн гүйцэтгэл, орлогын эх үүсвэр, conversion %-ийг бодит цаг хугацаанд хараарай.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Pricing -->
+  <section class="bg-[#F5F4EF] border-y border-[#E8E6DF]">
+    <div class="max-w-7xl mx-auto px-6 py-20">
+      <div class="max-w-2xl mb-12">
+        <p class="eyebrow mb-3">Үнэ</p>
+        <h2 class="text-3xl md:text-4xl font-semibold tracking-tight leading-tight">Танай агентлагт тохирох багц</h2>
+      </div>
+      <div class="grid md:grid-cols-3 gap-6">
+        <div class="card p-7 bg-white">
+          <div class="flex items-baseline justify-between mb-4">
+            <h3 class="font-semibold">Free</h3>
+            <span class="text-xs text-[#8E8E8E]">14 хоног</span>
+          </div>
+          <div class="mb-4"><span class="text-3xl font-semibold num">0₮</span><span class="text-sm text-[#8E8E8E]">/сар</span></div>
+          <p class="text-sm text-[#5C5C5C] mb-5">Туршилтын хувилбар — нэг агент, 10 зар хүртэл.</p>
+          <button onclick="goTo('signup')" class="btn-secondary w-full justify-center">Туршаад үзэх</button>
+        </div>
+        <div class="card p-7 bg-white">
+          <div class="flex items-baseline justify-between mb-4">
+            <h3 class="font-semibold">Starter</h3>
+            <span class="pill pill-active">Түгээмэл</span>
+          </div>
+          <div class="mb-4"><span class="text-3xl font-semibold num">99,000₮</span><span class="text-sm text-[#8E8E8E]">/сар</span></div>
+          <p class="text-sm text-[#5C5C5C] mb-5">1-3 агент, хязгааргүй зар, lead удирдлага.</p>
+          <button onclick="goTo('signup')" class="btn-secondary w-full justify-center">Сонгох</button>
+        </div>
+        <div class="card p-7 bg-[#1B4332] text-white border-[#1B4332]">
+          <div class="flex items-baseline justify-between mb-4">
+            <h3 class="font-semibold">Pro</h3>
+            <span class="pill bg-white/15 text-white">Бүх боломж</span>
+          </div>
+          <div class="mb-4"><span class="text-3xl font-semibold num">199,000₮</span><span class="text-white/60 text-sm">/сар</span></div>
+          <p class="text-sm text-white/80 mb-5">10 хүртэлх агент, тайлан, QPay интеграц, API.</p>
+          <button onclick="goTo('billing')" class="bg-white text-[#1B4332] rounded-lg px-4 py-2.5 w-full font-medium hover:bg-white/90 text-sm">Сонгох</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section class="max-w-3xl mx-auto px-6 py-20">
+    <h2 class="text-3xl font-semibold mb-8 tracking-tight">Түгээмэл асуултууд</h2>
+    <div class="divide-y divide-[#E8E6DF] border-t border-b border-[#E8E6DF]">
+      <details class="group py-5">
+        <summary class="flex items-center justify-between cursor-pointer list-none">
+          <span class="font-medium">Excel-ээс мэдээлэлээ хэрхэн оруулах вэ?</span>
+          <i data-lucide="plus" class="w-5 h-5 text-[#8E8E8E] group-open:rotate-45 transition"></i>
+        </summary>
+        <p class="text-sm text-[#5C5C5C] mt-3 leading-relaxed">.xlsx файлаа оруулахад автомат таних систем 2 минутын дотор бүх зар, lead-ийг таны эрхэнд оруулна. Шаардлагатай тохиолдолд бид тусална.</p>
+      </details>
+      <details class="group py-5">
+        <summary class="flex items-center justify-between cursor-pointer list-none">
+          <span class="font-medium">Тооцоог хэрхэн хийх вэ?</span>
+          <i data-lucide="plus" class="w-5 h-5 text-[#8E8E8E] group-open:rotate-45 transition"></i>
+        </summary>
+        <p class="text-sm text-[#5C5C5C] mt-3 leading-relaxed">QPay, банкны шилжүүлэг, эсвэл картаар сар бүр автомат тооцоо хийгдэнэ. Захиалгаа хүссэн үедээ цуцалж болно.</p>
+      </details>
+      <details class="group py-5">
+        <summary class="flex items-center justify-between cursor-pointer list-none">
+          <span class="font-medium">Миний өгөгдөл аюулгүй юу?</span>
+          <i data-lucide="plus" class="w-5 h-5 text-[#8E8E8E] group-open:rotate-45 transition"></i>
+        </summary>
+        <p class="text-sm text-[#5C5C5C] mt-3 leading-relaxed">Бүх өгөгдлийг 256-bit AES шифрлэлтээр хадгална. Та хэдийд ч мэдээллээ татаж авах эрхтэй.</p>
+      </details>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="border-t border-[#E8E6DF] bg-white">
+    <div class="max-w-7xl mx-auto px-6 py-12 grid md:grid-cols-4 gap-8 text-sm">
+      <div>
+        <div class="flex items-center gap-2 mb-4">
+          <div class="w-8 h-8 rounded-lg bg-[#1B4332] flex items-center justify-center text-white font-semibold text-sm">З</div>
+          <span class="font-semibold">Зууч</span>
+        </div>
+        <p class="text-[#8E8E8E] text-xs leading-relaxed">Үл хөдлөхийн агентуудад зориулсан CRM. Улаанбаатар, Монгол Улс.</p>
+      </div>
+      <div>
+        <div class="eyebrow mb-3">Бүтээгдэхүүн</div>
+        <ul class="space-y-2 text-[#5C5C5C]"><li><a href="#" class="hover:text-[#1A1A1A]">Боломжууд</a></li><li><a href="#" class="hover:text-[#1A1A1A]">Үнэ</a></li><li><a href="#" class="hover:text-[#1A1A1A]">Шинэчлэлт</a></li></ul>
+      </div>
+      <div>
+        <div class="eyebrow mb-3">Компани</div>
+        <ul class="space-y-2 text-[#5C5C5C]"><li><a href="#" class="hover:text-[#1A1A1A]">Бидний тухай</a></li><li><a href="#" class="hover:text-[#1A1A1A]">Холбоо барих</a></li><li><a href="#" class="hover:text-[#1A1A1A]">Карьер</a></li></ul>
+      </div>
+      <div>
+        <div class="eyebrow mb-3">Холбоо барих</div>
+        <ul class="space-y-2 text-[#5C5C5C]"><li>+976 7711 8800</li><li>hello@zooch.mn</li><li>СБД, 1-р хороо</li></ul>
+      </div>
+    </div>
+    <div class="border-t border-[#E8E6DF] py-5 text-center text-xs text-[#8E8E8E]">© 2026 Зууч ХХК. Бүх эрх хуулиар хамгаалагдсан.</div>
+  </footer>
+</section>
+
+<!-- ========== SCREEN: SIGNUP ========== -->
+<section data-screen="signup" data-screen-label="02 Signup" class="screen min-h-screen flex items-center justify-center px-4 py-12">
+  <div class="w-full max-w-[420px]">
+    <div class="text-center mb-8">
+      <div class="inline-flex items-center gap-2 mb-2">
+        <div class="w-10 h-10 rounded-lg bg-[#1B4332] flex items-center justify-center text-white font-semibold">З</div>
+        <span class="text-xl font-semibold">Зууч</span>
+      </div>
+      <p class="text-sm text-[#8E8E8E]">Бүртгэлээ үүсгээд 14 хоног үнэгүй ашиглаарай</p>
+    </div>
+
+    <div class="card p-7">
+      <!-- Stepper -->
+      <div class="flex items-center gap-2 mb-7">
+        <div class="flex items-center gap-2">
+          <div id="step-dot-1" class="stage-node current">1</div>
+          <span class="text-sm font-medium">Утас</span>
+        </div>
+        <div id="step-line-1" class="stage-line"></div>
+        <div class="flex items-center gap-2">
+          <div id="step-dot-2" class="stage-node todo">2</div>
+          <span class="text-sm text-[#8E8E8E]">Код</span>
+        </div>
+        <div id="step-line-2" class="stage-line"></div>
+        <div class="flex items-center gap-2">
+          <div id="step-dot-3" class="stage-node todo">3</div>
+          <span class="text-sm text-[#8E8E8E]">Мэдээлэл</span>
+        </div>
+      </div>
+
+      <!-- Step 1 -->
+      <div id="signup-step-1">
+        <label class="block text-sm font-medium mb-2">Утасны дугаар</label>
+        <div class="flex gap-2">
+          <div class="input !w-auto !py-2.5 flex items-center gap-2 text-sm text-[#5C5C5C]"><span>🇲🇳</span><span>+976</span></div>
+          <input id="phone-input" maxlength="8" placeholder="9911 5544" class="input" />
+        </div>
+        <p class="text-xs text-[#8E8E8E] mt-2">SMS-ээр 6 оронтой код илгээнэ.</p>
+        <button onclick="signupStep(2)" class="btn-primary w-full justify-center mt-5">Үргэлжлүүлэх</button>
+        <p class="text-xs text-[#8E8E8E] mt-4 text-center">Алдагдсан холбоо тантай хамаагүй. Хэдийд ч цуцалж болно.</p>
+      </div>
+
+      <!-- Step 2 -->
+      <div id="signup-step-2" class="hidden">
+        <label class="block text-sm font-medium mb-2">Илгээсэн код</label>
+        <div class="flex gap-2 justify-between mb-2">
+          <input class="otp-box" maxlength="1" value="4" />
+          <input class="otp-box" maxlength="1" value="7" />
+          <input class="otp-box" maxlength="1" value="2" />
+          <input class="otp-box" maxlength="1" value="9" />
+          <input class="otp-box" maxlength="1" />
+          <input class="otp-box" maxlength="1" />
+        </div>
+        <p class="text-xs text-[#8E8E8E]">+976 9911 5544 дугаарт код илгээгдсэн. <button class="text-[#1B4332] font-medium underline ml-1">Дахин илгээх</button></p>
+        <button onclick="signupStep(3)" class="btn-primary w-full justify-center mt-5">Баталгаажуулах</button>
+      </div>
+
+      <!-- Step 3 -->
+      <div id="signup-step-3" class="hidden">
+        <label class="block text-sm font-medium mb-2">Агентлагийн нэр</label>
+        <input class="input mb-4" placeholder="Жишээ: Marco Realty" value="Marco Realty" />
+        <label class="block text-sm font-medium mb-2">Таны нэр</label>
+        <input class="input mb-4" placeholder="Овог, нэр" value="Б. Эрдэнэбаатар" />
+        <label class="block text-sm font-medium mb-2">Үүрэг</label>
+        <select class="input">
+          <option>Эзэн / Захирал</option><option>Ахлах агент</option><option>Агент</option>
+        </select>
+        <button onclick="goTo('dashboard')" class="btn-primary w-full justify-center mt-5">Бүртгэл дуусгах</button>
+      </div>
+    </div>
+
+    <p class="text-center text-xs text-[#8E8E8E] mt-6">Бүртгүүлснээр та <a href="#" class="underline">үйлчилгээний нөхцөл</a>-ийг хүлээн зөвшөөрнө.</p>
+  </div>
+</section>
+
+<!-- ========== APP SHELL (Dashboard, Listings, Listing Detail, Leads, Lead Detail, Calendar, Reports, Billing) ========== -->
+<section data-screen="app" id="app-shell" class="screen">
+  <!-- mobile sidebar backdrop -->
+  <div id="sb-backdrop" class="sidebar-backdrop" onclick="toggleSidebar(false)"></div>
+
+  <!-- Top bar -->
+  <header class="bg-white border-b border-[#E8E6DF] sticky top-0 z-30">
+    <div class="px-4 md:px-6 h-16 flex items-center gap-4">
+      <button onclick="toggleSidebar(true)" class="lg:hidden text-[#5C5C5C]"><i data-lucide="menu" class="w-5 h-5"></i></button>
+      <div class="flex items-center gap-2">
+        <div class="w-8 h-8 rounded-lg bg-[#1B4332] flex items-center justify-center text-white font-semibold text-sm">З</div>
+        <span class="font-semibold hidden md:block">Зууч</span>
+      </div>
+      <div class="flex-1 max-w-xl mx-auto relative hidden sm:block">
+        <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#8E8E8E]"></i>
+        <input class="input !pl-9 !bg-[#F5F4EF] !border-transparent" placeholder="Listing эсвэл lead хайх..." />
+      </div>
+      <div class="flex items-center gap-2 ml-auto">
+        <button onclick="openCmd()" class="hidden lg:inline-flex items-center gap-2 text-xs text-[#5C5C5C] hover:text-[#1A1A1A] bg-[#F5F4EF] hover:bg-[#EFEDE5] transition rounded-md px-2.5 py-1.5">
+          <i data-lucide="search" class="w-3.5 h-3.5"></i> Хайх <span class="cmd-kbd">⌘K</span>
+        </button>
+        <div class="relative">
+          <button onclick="toggleNotif(event)" class="relative w-9 h-9 rounded-lg hover:bg-[#F5F4EF] flex items-center justify-center text-[#5C5C5C]">
+            <i data-lucide="bell" class="w-4 h-4"></i>
+            <span id="notif-dot" class="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#C4661F]"></span>
+          </button>
+          <div class="notif-panel" id="notif-panel"></div>
+        </div>
+        <div class="flex items-center gap-2 pl-2 cursor-pointer hover:bg-[#F5F4EF] rounded-lg pr-2 py-1">
+          <div class="w-8 h-8 rounded-full bg-[#1B4332] text-white flex items-center justify-center text-xs font-semibold">БЭ</div>
+          <div class="hidden md:block leading-tight">
+            <div class="text-sm font-medium">Б. Эрдэнэбаатар</div>
+            <div class="text-xs text-[#8E8E8E]">Marco Realty</div>
+          </div>
+          <i data-lucide="chevron-down" class="w-4 h-4 text-[#8E8E8E]"></i>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="flex">
+    <!-- Sidebar -->
+    <aside id="sidebar" class="sidebar w-60 border-r border-[#E8E6DF] bg-white p-4 shrink-0 min-h-[calc(100vh-64px)] lg:sticky lg:top-16 lg:self-start">
+      <nav id="nav-list" class="space-y-1">
+        <div class="nav-item" data-nav="dashboard" onclick="goTo('dashboard')"><i data-lucide="layout-dashboard" class="w-4 h-4"></i> Хяналтын самбар</div>
+        <div class="nav-item" data-nav="listings" onclick="goTo('listings')"><i data-lucide="building-2" class="w-4 h-4"></i> Listing-үүд</div>
+        <div class="nav-item" data-nav="leads" onclick="goTo('leads')"><i data-lucide="users" class="w-4 h-4"></i> Lead-үүд</div>
+        <div class="nav-item" data-nav="calendar" onclick="goTo('calendar')"><i data-lucide="calendar" class="w-4 h-4"></i> Хуанли</div>
+        <div class="nav-item" data-nav="reports" onclick="goTo('reports')"><i data-lucide="bar-chart-3" class="w-4 h-4"></i> Тайлан</div>
+        <div class="pt-3 mt-3 border-t border-[#E8E6DF]">
+          <div class="eyebrow px-3 mb-2">Бусад</div>
+          <div class="nav-item"><i data-lucide="settings" class="w-4 h-4"></i> Тохиргоо</div>
+          <div class="nav-item" data-nav="billing" onclick="goTo('billing')"><i data-lucide="credit-card" class="w-4 h-4"></i> Төлбөр</div>
+        </div>
+      </nav>
+      <div class="card p-4 mt-6 bg-[#F5F4EF] border-[#E8E6DF]">
+        <div class="text-xs text-[#5C5C5C] mb-1">Pro багц</div>
+        <div class="num text-sm mb-2">12 хоног үлдсэн</div>
+        <button onclick="goTo('billing')" class="text-xs text-[#1B4332] font-semibold hover:underline">Сунгах →</button>
+      </div>
+    </aside>
+
+    <!-- Main content slot -->
+    <main id="app-main" class="flex-1 min-w-0 px-4 md:px-8 py-6 md:py-8"></main>
+  </div>
+</section>
+
+<!-- =================== DEMO NAV PILL =================== -->
+<div class="demo-pill" id="demo-pill"></div>
+
+<!-- =================== TOAST CONTAINER =================== -->
+<div class="toast-wrap" id="toast-wrap"></div>
+
+<!-- =================== MODAL CONTAINER =================== -->
+<div class="modal-backdrop" id="modal-backdrop" onclick="if(event.target===this) closeModal()">
+  <div class="modal" id="modal-shell"></div>
+</div>
+
+<!-- =================== COMMAND PALETTE =================== -->
+<div class="cmd-backdrop" id="cmd-backdrop" onclick="if(event.target===this) closeCmd()">
+  <div class="cmd">
+    <div class="cmd-input-wrap">
+      <i data-lucide="search" class="w-4 h-4 text-[#8E8E8E]"></i>
+      <input id="cmd-input" class="cmd-input" placeholder="Хайх эсвэл скрин руу үсрэх..." />
+      <span class="cmd-kbd">esc</span>
+    </div>
+    <div class="cmd-list" id="cmd-list"></div>
+  </div>
+</div>
+
+<!-- =================== MOBILE BOTTOM NAV =================== -->
+<nav class="mobile-bnav" id="mobile-bnav">
+  <button class="bnav-item" data-bnav="dashboard" onclick="goTo('dashboard')"><i data-lucide="layout-dashboard" class="w-5 h-5"></i><span>Самбар</span></button>
+  <button class="bnav-item" data-bnav="listings" onclick="goTo('listings')"><i data-lucide="building-2" class="w-5 h-5"></i><span>Зар</span></button>
+  <button class="bnav-item" data-bnav="leads" onclick="goTo('leads')"><i data-lucide="users" class="w-5 h-5"></i><span>Lead</span></button>
+  <button class="bnav-item" data-bnav="calendar" onclick="goTo('calendar')"><i data-lucide="calendar" class="w-5 h-5"></i><span>Хуанли</span></button>
+  <button class="bnav-item" data-bnav="reports" onclick="goTo('reports')"><i data-lucide="bar-chart-3" class="w-5 h-5"></i><span>Тайлан</span></button>
+</nav>
+
+<!-- =================== HELP FAB =================== -->
+<button class="help-fab" onclick="openHelp()" title="Тусламж (⌘K — хайх)"><i data-lucide="life-buoy" class="w-5 h-5"></i></button>
+
+<script>
+/* ============== DATA ============== */
+const DISTRICTS = ['Хан-Уул', 'Баянзүрх', 'Сүхбаатар', 'Чингэлтэй', 'Сонгинохайрхан'];
+const KHOTKHON = ['Time Tower','Energy Residence','Twin Tower','Olympic Residence','Global Garden','Encanto','Sky Tower','Buyant-Ukhaa-2','Tokyo Residence'];
+
+const LISTINGS = [
+  { id: 1, district: 'Хан-Уул', khoroo: '15', khotkhon: 'Time Tower', rooms: 3, area: 92, floor: '8/22', price: 420000000, status: 'active', img: 1, leads: 5, views: 3 },
+  { id: 2, district: 'Сүхбаатар', khoroo: '1', khotkhon: 'Encanto', rooms: 2, area: 65, floor: '12/16', price: 400000000, status: 'reserved', img: 2, leads: 4, views: 2 },
+  { id: 3, district: 'Баянзүрх', khoroo: '5', khotkhon: 'Energy Residence', rooms: 4, area: 145, floor: '14/18', price: 640000000, status: 'active', img: 3, leads: 7, views: 5 },
+  { id: 4, district: 'Хан-Уул', khoroo: '11', khotkhon: 'Olympic Residence', rooms: 3, area: 110, floor: '6/14', price: 510000000, status: 'active', img: 4, leads: 2, views: 1 },
+  { id: 5, district: 'Сүхбаатар', khoroo: '8', khotkhon: 'Sky Tower', rooms: 1, area: 45, floor: '18/24', price: 280000000, status: 'active', img: 5, leads: 6, views: 4 },
+  { id: 6, district: 'Чингэлтэй', khoroo: '4', khotkhon: 'Tokyo Residence', rooms: 2, area: 70, floor: '4/12', price: 350000000, status: 'sold', img: 6, leads: 8, views: 6 },
+  { id: 7, district: 'Хан-Уул', khoroo: '15', khotkhon: 'Twin Tower', rooms: 3, area: 105, floor: '10/20', price: 500000000, status: 'active', img: 7, leads: 3, views: 2 },
+  { id: 8, district: 'Баянзүрх', khoroo: '14', khotkhon: 'Global Garden', rooms: 2, area: 58, floor: '7/9', price: 260000000, status: 'active', img: 8, leads: 5, views: 3 },
+  { id: 9, district: 'Сүхбаатар', khoroo: '1', khotkhon: 'Time Tower', rooms: 4, area: 165, floor: '20/22', price: 1030000000, status: 'reserved', img: 9, leads: 9, views: 7 },
+  { id:10, district: 'Сонгинохайрхан', khoroo: '20', khotkhon: 'Buyant-Ukhaa-2', rooms: 2, area: 62, floor: '5/12', price: 220000000, status: 'active', img: 10, leads: 4, views: 2 },
+  { id:11, district: 'Хан-Уул', khoroo: '3', khotkhon: 'Encanto', rooms: 1, area: 38, floor: '15/16', price: 195000000, status: 'active', img: 11, leads: 6, views: 4 },
+  { id:12, district: 'Баянзүрх', khoroo: '2', khotkhon: 'Energy Residence', rooms: 3, area: 98, floor: '9/18', price: 435000000, status: 'sold', img: 12, leads: 5, views: 3 }
+];
+
+const LEADS = [
+  { id: 1, name: 'Б. Эрдэнэбаатар', phone: '+976 9911 5544', source: 'Facebook', stage: 'new', budget: [300, 450], rooms: 3, district: 'Хан-Уул', listingId: 1, agent: 'БЭ', activity: '15 минутын өмнө', initials: 'БЭ' },
+  { id: 2, name: 'Д. Болормаа', phone: '+976 8855 7722', source: 'Unegui', stage: 'new', budget: [250, 350], rooms: 2, district: 'Сүхбаатар', listingId: 5, agent: 'ДБ', activity: '1 цагийн өмнө', initials: 'ДБ' },
+  { id: 3, name: 'Г. Энхтайван', phone: '+976 9988 3311', source: 'Referral', stage: 'new', budget: [500, 700], rooms: 4, district: 'Баянзүрх', listingId: 3, agent: 'ГЭ', activity: '3 цагийн өмнө', initials: 'ГЭ' },
+  { id: 4, name: 'Ц. Сарангэрэл', phone: '+976 9900 2244', source: 'Facebook', stage: 'contacted', budget: [200, 280], rooms: 1, district: 'Хан-Уул', listingId: 11, agent: 'БЭ', activity: 'Өчигдөр', initials: 'ЦС' },
+  { id: 5, name: 'Н. Мөнхбат', phone: '+976 8811 9933', source: 'Walk-in', stage: 'contacted', budget: [400, 550], rooms: 3, district: 'Хан-Уул', listingId: 4, agent: 'ДБ', activity: 'Өчигдөр', initials: 'НМ' },
+  { id: 6, name: 'О. Оюунчимэг', phone: '+976 9966 1188', source: 'Facebook', stage: 'contacted', budget: [350, 450], rooms: 2, district: 'Сүхбаатар', listingId: 2, agent: 'ГЭ', activity: '2 хоногийн өмнө', initials: 'ОО' },
+  { id: 7, name: 'Х. Хүрэлбаатар', phone: '+976 9944 8866', source: 'Unegui', stage: 'viewed', budget: [550, 700], rooms: 4, district: 'Баянзүрх', listingId: 3, agent: 'БЭ', activity: 'Өнөөдөр 14:30', initials: 'ХХ' },
+  { id: 8, name: 'Я. Янжмаа', phone: '+976 9933 7755', source: 'Facebook', stage: 'viewed', budget: [400, 520], rooms: 3, district: 'Хан-Уул', listingId: 7, agent: 'ДБ', activity: 'Өнөөдөр 11:00', initials: 'ЯЯ' },
+  { id: 9, name: 'Т. Түмэнжаргал', phone: '+976 9922 6644', source: 'Referral', stage: 'viewed', budget: [180, 240], rooms: 2, district: 'Сонгинохайрхан', listingId: 10, agent: 'ГЭ', activity: 'Өчигдөр', initials: 'ТТ' },
+  { id:10, name: 'Ж. Жавхлан', phone: '+976 9977 4422', source: 'Facebook', stage: 'negotiating', budget: [380, 420], rooms: 3, district: 'Хан-Уул', listingId: 1, agent: 'БЭ', activity: '4 цагийн өмнө', initials: 'ЖЖ' },
+  { id:11, name: 'С. Сувд', phone: '+976 8800 5511', source: 'Unegui', stage: 'negotiating', budget: [250, 300], rooms: 2, district: 'Баянзүрх', listingId: 8, agent: 'ДБ', activity: 'Өнөөдөр 09:15', initials: 'СС' },
+  { id:12, name: 'А. Алтанбагана', phone: '+976 9933 2200', source: 'Walk-in', stage: 'won', budget: [490, 510], rooms: 3, district: 'Хан-Уул', listingId: 7, agent: 'БЭ', activity: '3 хоногийн өмнө', initials: 'АА', dealValue: 500000000 },
+  { id:13, name: 'Б. Баасан', phone: '+976 9955 8833', source: 'Referral', stage: 'won', budget: [340, 360], rooms: 2, district: 'Чингэлтэй', listingId: 6, agent: 'ГЭ', activity: '1 долоо хоног', initials: 'ББ', dealValue: 340000000 }
+];
+
+const VIEWINGS = [
+  { day: 0, start: 10, dur: 1, listingId: 1, leadId: 1, status: 'confirmed' },
+  { day: 0, start: 14, dur: 1.5, listingId: 3, leadId: 7, status: 'confirmed' },
+  { day: 1, start: 11, dur: 1, listingId: 5, leadId: 2, status: 'tentative' },
+  { day: 1, start: 16, dur: 1, listingId: 1, leadId: 8, status: 'confirmed' },
+  { day: 2, start: 13, dur: 1, listingId: 4, leadId: 5, status: 'confirmed' },
+  { day: 3, start: 10, dur: 1, listingId: 7, leadId: 10, status: 'tentative' },
+  { day: 4, start: 15, dur: 1.5, listingId: 8, leadId: 11, status: 'confirmed' },
+  { day: 4, start: 17, dur: 1, listingId: 2, leadId: 6, status: 'completed' }
+];
+
+const STAGE_LABELS = { new: 'Шинэ', contacted: 'Холбогдсон', viewed: 'Үзсэн', negotiating: 'Хэлэлцэж буй', won: 'Дуусгасан' };
+const SOURCE_PILL = { 'Facebook': 'bg-[#DBE8F4] text-[#2B6CB0]', 'Unegui': 'bg-[#F5E4D7] text-[#C4661F]', 'Walk-in': 'bg-[#D8E5DF] text-[#1B4332]', 'Referral': 'bg-[#FBF3E2] text-[#8a6608]' };
+const STATUS_PILL = { active: ['pill-active','Идэвхтэй'], reserved: ['pill-reserved','Захиалагдсан'], sold: ['pill-sold','Зарагдсан'] };
+
+const formatPrice = (n) => '₮' + n.toLocaleString('en-US');
+const compactPrice = (n) => n >= 1000000000 ? (n/1000000000).toFixed(2) + 'тэрбум₮' : (n/1000000).toFixed(0) + 'сая₮';
+
+/* ============== ROUTER ============== */
+const APP_SCREENS = new Set(['dashboard','listings','listing-detail','leads','lead-detail','calendar','reports','billing']);
+let currentScreen = 'landing';
+
+function goTo(name) {
+  currentScreen = name;
+  // Determine which top-level screen container to show
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  if (APP_SCREENS.has(name)) {
+    document.querySelector('[data-screen="app"]').classList.add('active');
+    renderAppScreen(name);
+  } else {
+    const target = document.querySelector(`[data-screen="${name}"]`);
+    if (target) target.classList.add('active');
+  }
+  // Update sidebar active state
+  document.querySelectorAll('[data-nav]').forEach(el => {
+    el.classList.toggle('active', el.dataset.nav === name);
+  });
+  // Update demo pill
+  document.querySelectorAll('#demo-pill button').forEach(b => b.classList.toggle('active', b.dataset.target === name));
+  // Scroll top + sidebar close
+  window.scrollTo(0, 0);
+  toggleSidebar(false);
+  // re-render icons
+  setTimeout(() => lucide.createIcons(), 0);
+}
+
+function toggleSidebar(open) {
+  const sb = document.getElementById('sidebar');
+  const bd = document.getElementById('sb-backdrop');
+  if (!sb) return;
+  if (open === undefined) open = !sb.classList.contains('open');
+  sb.classList.toggle('open', open);
+  bd.classList.toggle('open', open);
+}
+
+function signupStep(n) {
+  for (let i = 1; i <= 3; i++) {
+    document.getElementById('signup-step-' + i).classList.toggle('hidden', i !== n);
+    const dot = document.getElementById('step-dot-' + i);
+    if (dot) {
+      dot.classList.remove('current','done','todo');
+      dot.classList.add(i < n ? 'done' : i === n ? 'current' : 'todo');
+      if (i < n) dot.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>';
+      else dot.textContent = i;
+    }
+    if (i < 3) {
+      const line = document.getElementById('step-line-' + i);
+      if (line) line.classList.toggle('done', i < n);
+    }
+  }
+}
+
+/* ============== APP SCREEN RENDERER ============== */
+function renderAppScreen(name) {
+  const main = document.getElementById('app-main');
+  if (name === 'dashboard') main.innerHTML = renderDashboard();
+  else if (name === 'listings') main.innerHTML = renderListings();
+  else if (name === 'listing-detail') main.innerHTML = renderListingDetail();
+  else if (name === 'leads') main.innerHTML = renderLeads();
+  else if (name === 'lead-detail') main.innerHTML = renderLeadDetail();
+  else if (name === 'calendar') main.innerHTML = renderCalendar();
+  else if (name === 'reports') main.innerHTML = renderReports();
+  else if (name === 'billing') main.innerHTML = renderBilling();
+}
+
+/* ============== DASHBOARD ============== */
+function renderDashboard() {
+  const stats = [
+    { label: 'Идэвхтэй зар', value: '14', delta: '+2', icon: 'building-2' },
+    { label: 'Нээлттэй lead', value: '27', delta: '+8', icon: 'users' },
+    { label: '7 хоногийн viewing', value: '8', delta: '+3', icon: 'calendar-days' },
+    { label: 'Энэ сард зарагдсан', value: '3', delta: '+1', icon: 'trending-up' }
+  ];
+  const upcoming = VIEWINGS.slice(0, 3);
+  const recent = LEADS.slice(0, 5);
+  const stale = LEADS.filter(l => l.activity.includes('хоног') || l.activity.includes('долоо')).slice(0,4);
+  const onboardingDone = state.onboardingDone || {};
+  const checklist = [
+    { id: 'profile', label: 'Профайл бөглөх', icon: 'user' },
+    { id: 'listing', label: 'Эхний зар нэмэх', icon: 'building-2' },
+    { id: 'unegui', label: 'Unegui-тэй холбох', icon: 'link' },
+    { id: 'fb', label: 'Facebook page холбох', icon: 'facebook' },
+    { id: 'team', label: 'Багийн гишүүн урих', icon: 'user-plus' }
+  ];
+  const doneCount = checklist.filter(c => onboardingDone[c.id]).length;
+  const onboardingHTML = state.onboardingHidden ? '' : `
+    <div class="onboarding-card p-5 mb-6">
+      <div class="flex items-start gap-4">
+        <div class="hidden sm:flex w-12 h-12 rounded-xl bg-[#D8E5DF] items-center justify-center text-[#1B4332] shrink-0">
+          <i data-lucide="rocket" class="w-5 h-5"></i>
+        </div>
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center gap-3 flex-wrap mb-3">
+            <h3 class="font-semibold">Эхлээд ${checklist.length} зүйлийг хийгээрэй</h3>
+            <span class="text-xs text-[#5C5C5C]"><span class="num text-[#1B4332]">${doneCount}</span> / ${checklist.length} дууссан</span>
+            <button onclick="state.onboardingHidden=true; renderAppScreen('dashboard'); setTimeout(()=>lucide.createIcons(),0);" class="ml-auto text-xs text-[#8E8E8E] hover:text-[#1A1A1A]">Хаах ✕</button>
+          </div>
+          <div class="w-full h-1.5 bg-[#E8E6DF] rounded-full mb-4 overflow-hidden">
+            <div class="h-full bg-[#1B4332] rounded-full transition-all" style="width: ${(doneCount/checklist.length)*100}%"></div>
+          </div>
+          <div class="grid sm:grid-cols-2 lg:grid-cols-5 gap-1">
+            ${checklist.map(c => `
+              <div class="check-item ${onboardingDone[c.id]?'done':''}" onclick="toggleOnboarding('${c.id}')">
+                <span class="check-circle">${onboardingDone[c.id]?'<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>':''}</span>
+                <span class="check-label text-sm">${c.label}</span>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+  return `
+    <div class="max-w-7xl mx-auto">
+      <div class="flex flex-wrap items-end justify-between gap-4 mb-6">
+        <div>
+          <h1 class="text-2xl font-semibold tracking-tight">Сайн байна уу, Эрдэнэбаатар.</h1>
+          <p class="text-sm text-[#5C5C5C] mt-1">Өнөөдөр <span class="text-[#1B4332] font-medium">3 viewing</span> бий. Эхлэх цаг: 10:00.</p>
+        </div>
+        <div class="text-xs text-[#8E8E8E]">2026 оны 5-р сарын 19, Мягмар</div>
+      </div>
+
+      ${onboardingHTML}
+
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        ${stats.map(s => `
+          <div class="card p-5">
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-xs text-[#5C5C5C]">${s.label}</span>
+              <div class="w-7 h-7 rounded-md bg-[#F5F4EF] flex items-center justify-center text-[#5C5C5C]"><i data-lucide="${s.icon}" class="w-3.5 h-3.5"></i></div>
+            </div>
+            <div class="flex items-baseline gap-2">
+              <span class="num text-3xl">${s.value}</span>
+              <span class="text-xs text-[#2D6A4F] font-medium">${s.delta}</span>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+
+      <div class="grid lg:grid-cols-3 gap-6">
+        <div class="lg:col-span-2 card p-6">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="font-semibold">Дараагийн viewing-ууд</h2>
+            <button onclick="goTo('calendar')" class="text-xs text-[#1B4332] font-medium hover:underline">Бүгдийг харах →</button>
+          </div>
+          <div class="space-y-3">
+            ${upcoming.map(v => {
+              const l = LISTINGS.find(x => x.id === v.listingId);
+              const lead = LEADS.find(x => x.id === v.leadId);
+              const dayLabel = ['Өнөөдөр','Маргааш','Лхагва','Пүрэв','Баасан'][v.day];
+              const time = `${String(Math.floor(v.start)).padStart(2,'0')}:${v.start%1?'30':'00'}`;
+              return `
+                <div class="flex items-center gap-4 p-3 rounded-lg hover:bg-[#F5F4EF] cursor-pointer" onclick="goTo('lead-detail')">
+                  <div class="w-12 h-12 rounded-lg bg-cover bg-center shrink-0" style="background-image:url('https://picsum.photos/seed/list${l.img}/100/100')"></div>
+                  <div class="flex-1 min-w-0">
+                    <div class="font-medium text-sm truncate">${l.district}, ${l.khotkhon} · ${l.rooms} өрөө ${l.area}м²</div>
+                    <div class="text-xs text-[#8E8E8E] mt-0.5">${lead.name} · ${lead.phone}</div>
+                  </div>
+                  <div class="text-right shrink-0">
+                    <div class="text-sm font-semibold">${dayLabel}</div>
+                    <div class="text-xs text-[#5C5C5C]">${time}</div>
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </div>
+
+        <div class="card p-6">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="font-semibold">Анхаарал шаардсан</h2>
+            <span class="pill pill-hot">${stale.length}</span>
+          </div>
+          <p class="text-xs text-[#8E8E8E] mb-4">3+ хоног холбоо тогтоогоогүй lead-үүд</p>
+          <div class="space-y-3">
+            ${stale.map(l => `
+              <div class="flex items-center gap-3 cursor-pointer hover:bg-[#F5F4EF] -mx-2 px-2 py-2 rounded-lg" onclick="goTo('lead-detail')">
+                <span class="w-2 h-2 rounded-full bg-[#9B2C2C] shrink-0"></span>
+                <div class="w-8 h-8 rounded-full bg-[#F5F4EF] flex items-center justify-center text-xs font-semibold text-[#5C5C5C]">${l.initials}</div>
+                <div class="flex-1 min-w-0">
+                  <div class="text-sm font-medium truncate">${l.name}</div>
+                  <div class="text-xs text-[#8E8E8E]">${l.activity}</div>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      </div>
+
+      <div class="card p-6 mt-6">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="font-semibold">Шинэ lead-үүд</h2>
+          <button onclick="goTo('leads')" class="text-xs text-[#1B4332] font-medium hover:underline">Бүгдийг харах →</button>
+        </div>
+        <div class="divide-y divide-[#E8E6DF] -mx-2">
+          ${recent.map(l => `
+            <div class="flex items-center gap-4 px-2 py-3 hover:bg-[#F5F4EF] cursor-pointer rounded-lg" onclick="goTo('lead-detail')">
+              <div class="w-9 h-9 rounded-full bg-[#1B4332] text-white flex items-center justify-center text-xs font-semibold">${l.initials}</div>
+              <div class="flex-1 min-w-0">
+                <div class="text-sm font-medium">${l.name}</div>
+                <div class="text-xs text-[#8E8E8E]">${l.phone} · ${l.rooms} өрөө, ${l.district}</div>
+              </div>
+              <span class="pill ${SOURCE_PILL[l.source]} hidden sm:inline-flex">${l.source}</span>
+              <span class="text-xs text-[#8E8E8E] w-32 text-right hidden md:block">${l.activity}</span>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+/* ============== LISTINGS ============== */
+let listingsView = 'grid';
+let listingsFilter = 'all';
+
+function renderListings() {
+  const filtered = listingsFilter === 'all' ? LISTINGS : LISTINGS.filter(l => l.status === listingsFilter);
+  const activeChips = [];
+  if (listingsFilter !== 'all') activeChips.push({ key: 'status', label: STATUS_PILL[listingsFilter][1] });
+  if (state.listingsDistrict) activeChips.push({ key: 'district', label: state.listingsDistrict });
+  if (state.listingsRooms) activeChips.push({ key: 'rooms', label: state.listingsRooms + ' өрөө' });
+  return `
+    <div class="max-w-7xl mx-auto">
+      <div class="flex flex-wrap items-end justify-between gap-3 mb-6">
+        <div>
+          <div class="eyebrow mb-1">Listing-үүд</div>
+          <h1 class="text-2xl font-semibold tracking-tight">${filtered.length} зар ${filtered.length !== LISTINGS.length ? `<span class="text-sm text-[#8E8E8E] font-normal">(${LISTINGS.length}-аас)</span>` : ''}</h1>
+        </div>
+        <button onclick="openNewListingModal()" class="btn-primary"><i data-lucide="plus" class="w-4 h-4"></i> Шинэ зар</button>
+      </div>
+
+      <div class="card p-4 mb-5">
+        <div class="flex flex-wrap items-center gap-3">
+          ${[['all','Бүгд'],['active','Идэвхтэй'],['reserved','Захиалагдсан'],['sold','Зарагдсан']].map(([k,v]) => `
+            <button onclick="listingsFilter='${k}'; renderAppScreen('listings'); setTimeout(()=>lucide.createIcons(),0);" class="px-3 py-1.5 rounded-full text-sm border ${listingsFilter===k?'bg-[#1B4332] text-white border-[#1B4332]':'border-[#E8E6DF] text-[#5C5C5C] hover:bg-[#F5F4EF]'}">${v}</button>
+          `).join('')}
+          <div class="h-6 w-px bg-[#E8E6DF] mx-2"></div>
+          <select class="input !py-1.5 !w-auto text-sm"><option>Бүх дүүрэг</option>${DISTRICTS.map(d=>`<option>${d}</option>`).join('')}</select>
+          <select class="input !py-1.5 !w-auto text-sm"><option>Өрөөний тоо</option><option>1 өрөө</option><option>2 өрөө</option><option>3 өрөө</option><option>4+ өрөө</option></select>
+          <select class="input !py-1.5 !w-auto text-sm"><option>Үнэ</option><option>200сая хүртэл</option><option>200-500сая</option><option>500сая-1тэрбум</option><option>1тэрбум+</option></select>
+          <div class="ml-auto flex items-center gap-1 bg-[#F5F4EF] rounded-lg p-1">
+            <button onclick="listingsView='grid'; renderAppScreen('listings'); setTimeout(()=>lucide.createIcons(),0);" class="px-2 py-1 rounded ${listingsView==='grid'?'bg-white shadow-sm':''}"><i data-lucide="layout-grid" class="w-4 h-4"></i></button>
+            <button onclick="listingsView='list'; renderAppScreen('listings'); setTimeout(()=>lucide.createIcons(),0);" class="px-2 py-1 rounded ${listingsView==='list'?'bg-white shadow-sm':''}"><i data-lucide="list" class="w-4 h-4"></i></button>
+          </div>
+        </div>
+        ${activeChips.length ? `
+          <div class="flex items-center gap-2 mt-4 pt-4 border-t border-[#E8E6DF] flex-wrap">
+            <span class="text-xs text-[#8E8E8E]">Идэвхтэй шүүлтүүр:</span>
+            ${activeChips.map(c => `<span class="chip">${c.label}<span class="chip-x" onclick="clearChip('${c.key}')"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></span></span>`).join('')}
+            <button onclick="clearAllChips()" class="text-xs text-[#8E8E8E] hover:text-[#1A1A1A] underline">Бүгдийг арилгах</button>
+          </div>
+        ` : ''}
+      </div>
+
+      ${filtered.length === 0 ? `
+        <div class="card p-12 text-center">
+          <div class="w-14 h-14 rounded-full bg-[#F5F4EF] flex items-center justify-center mx-auto mb-4 text-[#8E8E8E]"><i data-lucide="search-x" class="w-6 h-6"></i></div>
+          <h3 class="font-semibold mb-1">Энэ шүүлтүүртэй тохирох зар олдсонгүй</h3>
+          <p class="text-sm text-[#8E8E8E] mb-5">Шүүлтүүрээ өөрчилж эсвэл шинэ зар нэмж үзээрэй.</p>
+          <button onclick="clearAllChips()" class="btn-secondary">Шүүлтүүр арилгах</button>
+        </div>
+      ` : listingsView === 'grid' ? `
+        <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          ${filtered.map(l => renderListingCard(l)).join('')}
+        </div>
+      ` : `
+        <div class="card overflow-hidden">
+          <table class="w-full text-sm">
+            <thead class="bg-[#F5F4EF] text-[#5C5C5C] text-left text-xs uppercase tracking-wide">
+              <tr><th class="px-4 py-3">Зар</th><th class="px-4 py-3">Дүүрэг</th><th class="px-4 py-3">Өрөө</th><th class="px-4 py-3">Талбай</th><th class="px-4 py-3">Үнэ</th><th class="px-4 py-3">Төлөв</th><th></th></tr>
+            </thead>
+            <tbody class="divide-y divide-[#E8E6DF]">
+              ${filtered.map(l => `
+                <tr class="hover:bg-[#F5F4EF] cursor-pointer" onclick="goTo('listing-detail')">
+                  <td class="px-4 py-3 flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-md bg-cover bg-center" style="background-image:url('https://picsum.photos/seed/list${l.img}/100/100')"></div>
+                    <div class="font-medium">${l.khotkhon}</div>
+                  </td>
+                  <td class="px-4 py-3 text-[#5C5C5C]">${l.district}, ${l.khoroo}-р хороо</td>
+                  <td class="px-4 py-3">${l.rooms}</td>
+                  <td class="px-4 py-3 num">${l.area} м²</td>
+                  <td class="px-4 py-3 num">${formatPrice(l.price)}</td>
+                  <td class="px-4 py-3"><span class="pill ${STATUS_PILL[l.status][0]}">${STATUS_PILL[l.status][1]}</span></td>
+                  <td class="px-4 py-3 text-right"><i data-lucide="more-horizontal" class="w-4 h-4 text-[#8E8E8E]"></i></td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      `}
+    </div>
+  `;
+}
+
+function renderListingCard(l) {
+  return `
+    <div class="card overflow-hidden cursor-pointer" onclick="goTo('listing-detail')">
+      <div class="aspect-[4/3] bg-cover bg-center relative" style="background-image:url('https://picsum.photos/seed/list${l.img}/600/450')">
+        <div class="absolute top-3 left-3"><span class="pill ${STATUS_PILL[l.status][0]} bg-white/95">${STATUS_PILL[l.status][1]}</span></div>
+        <button onclick="event.stopPropagation()" class="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/95 hover:bg-white flex items-center justify-center"><i data-lucide="more-horizontal" class="w-4 h-4 text-[#5C5C5C]"></i></button>
+      </div>
+      <div class="p-5">
+        <div class="text-xs text-[#8E8E8E] mb-1">${l.district}, ${l.khoroo}-р хороо · ${l.khotkhon}</div>
+        <div class="font-semibold mb-2">${l.rooms} өрөө, ${l.area}м² · ${l.floor}</div>
+        <div class="flex items-center justify-between">
+          <div class="num text-lg">${formatPrice(l.price)}</div>
+          <div class="text-xs text-[#8E8E8E] flex items-center gap-3"><span class="flex items-center gap-1"><i data-lucide="users" class="w-3 h-3"></i> ${l.leads}</span><span class="flex items-center gap-1"><i data-lucide="eye" class="w-3 h-3"></i> ${l.views}</span></div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+/* ============== LISTING DETAIL ============== */
+function renderListingDetail() {
+  const l = LISTINGS[0];
+  const interestedLeads = LEADS.filter(x => x.listingId === l.id);
+  return `
+    <div class="max-w-7xl mx-auto">
+      <button onclick="goTo('listings')" class="text-sm text-[#5C5C5C] hover:text-[#1A1A1A] mb-4 inline-flex items-center gap-1.5"><i data-lucide="chevron-left" class="w-4 h-4"></i> Listing-үүд рүү буцах</button>
+
+      <div class="flex flex-wrap items-start justify-between gap-4 mb-6">
+        <div>
+          <div class="eyebrow mb-1">${l.district}, ${l.khoroo}-р хороо</div>
+          <h1 class="text-2xl md:text-3xl font-semibold tracking-tight">${l.khotkhon} хотхон, ${l.rooms} өрөө ${l.area}м²</h1>
+          <div class="flex items-center gap-2 mt-2 text-sm text-[#5C5C5C]">
+            <span class="pill ${STATUS_PILL[l.status][0]}">${STATUS_PILL[l.status][1]}</span>
+            <span>·</span><span>ID #${String(l.id).padStart(4,'0')}</span>
+            <span>·</span><span>Нийтэлсэн: 2026-05-02</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid lg:grid-cols-3 gap-6">
+        <div class="lg:col-span-2 space-y-6">
+          <!-- Gallery -->
+          <div class="card overflow-hidden">
+            <div class="aspect-[16/10] bg-cover bg-center" style="background-image:url('https://picsum.photos/seed/list${l.img}main/1200/750')"></div>
+            <div class="grid grid-cols-4 gap-1 p-1">
+              ${[1,2,3,4].map(i => `<div class="aspect-[4/3] bg-cover bg-center rounded-md" style="background-image:url('https://picsum.photos/seed/list${l.img}g${i}/400/300')"></div>`).join('')}
+            </div>
+          </div>
+
+          <!-- Tabs -->
+          <div class="card">
+            <div class="border-b border-[#E8E6DF] flex overflow-x-auto">
+              ${[['details','Дэлгэрэнгүй'],['desc','Тайлбар'],['leads','Lead-үүд','5'],['viewings','Үзүүлэлт','3'],['notes','Тэмдэглэл']].map(([k,v,n],i) => `
+                <button class="px-5 py-3.5 text-sm font-medium border-b-2 ${i===0?'border-[#1B4332] text-[#1B4332]':'border-transparent text-[#5C5C5C] hover:text-[#1A1A1A]'} whitespace-nowrap">${v}${n?` <span class="ml-1 text-xs text-[#8E8E8E]">${n}</span>`:''}</button>
+              `).join('')}
+            </div>
+            <div class="p-6">
+              <div class="grid sm:grid-cols-2 gap-x-8 gap-y-3 text-sm">
+                ${[
+                  ['Талбай', l.area + ' м²'],
+                  ['Давхар', l.floor],
+                  ['Ашиглалтанд орсон', '2019 он'],
+                  ['Цонх', 'Германы Vorne, 3 давхар'],
+                  ['Хаалга', 'Төмөр, баталгаажсан'],
+                  ['Шал', 'Паркет (BTW Hardwood)'],
+                  ['Гараж', '1 байр, гүний зогсоол'],
+                  ['Тагт', '2 (зүүн + урд)'],
+                  ['Дулаалга', 'Төв халаалт'],
+                  ['Төлбөрийн нөхцөл', 'Бэлэн, 50/50, банкны зээл']
+                ].map(([k,v]) => `<div class="flex justify-between border-b border-[#E8E6DF] pb-2"><span class="text-[#8E8E8E]">${k}</span><span class="font-medium">${v}</span></div>`).join('')}
+              </div>
+
+              <div class="mt-8 pt-6 border-t border-[#E8E6DF]">
+                <div class="eyebrow mb-3">Энэ зарт сонирхсон lead-үүд</div>
+                <div class="overflow-x-auto">
+                <table class="w-full text-sm min-w-[600px]">
+                  <thead class="text-left text-xs text-[#8E8E8E] uppercase">
+                    <tr><th class="py-2">Нэр</th><th class="py-2">Утас</th><th class="py-2">Эх үүсвэр</th><th class="py-2">Шат</th><th class="py-2">Сүүлд</th></tr>
+                  </thead>
+                  <tbody class="divide-y divide-[#E8E6DF]">
+                    ${interestedLeads.concat(LEADS.slice(0,3)).slice(0,5).map(ld => `
+                      <tr class="hover:bg-[#F5F4EF] cursor-pointer" onclick="goTo('lead-detail')">
+                        <td class="py-3 font-medium">${ld.name}</td>
+                        <td class="py-3 text-[#5C5C5C]">${ld.phone}</td>
+                        <td class="py-3"><span class="pill ${SOURCE_PILL[ld.source]}">${ld.source}</span></td>
+                        <td class="py-3"><span class="pill pill-active">${STAGE_LABELS[ld.stage]}</span></td>
+                        <td class="py-3 text-[#8E8E8E]">${ld.activity}</td>
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="space-y-4">
+          <div class="card p-6">
+            <div class="text-sm text-[#8E8E8E] mb-1">Зарын үнэ</div>
+            <div class="num text-3xl mb-1">${formatPrice(l.price)}</div>
+            <div class="text-xs text-[#8E8E8E] mb-5">${formatPrice(Math.round(l.price/l.area))} / м²</div>
+            <button onclick="openCreateLeadFlow({listing: LISTINGS.find(x=>x.id===${l.id})})" class="btn-primary w-full justify-center mb-2"><i data-lucide="user-plus" class="w-4 h-4"></i> Lead үүсгэх</button>
+            <button onclick="goTo('listings')" class="btn-secondary w-full justify-center"><i data-lucide="edit-3" class="w-4 h-4"></i> Засах</button>
+            <div class="border-t border-[#E8E6DF] mt-5 pt-5 grid grid-cols-3 gap-2 text-center">
+              <div><div class="num">${l.leads}</div><div class="text-xs text-[#8E8E8E]">Lead</div></div>
+              <div><div class="num">${l.views}</div><div class="text-xs text-[#8E8E8E]">Viewing</div></div>
+              <div><div class="num">142</div><div class="text-xs text-[#8E8E8E]">Үзэлт</div></div>
+            </div>
+          </div>
+
+          <div class="card p-6">
+            <div class="eyebrow mb-3">Хариуцсан агент</div>
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-full bg-[#1B4332] text-white flex items-center justify-center font-semibold text-sm">БЭ</div>
+              <div>
+                <div class="font-medium text-sm">Б. Эрдэнэбаатар</div>
+                <div class="text-xs text-[#8E8E8E]">+976 9911 5544</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card p-6">
+            <div class="eyebrow mb-3">Нийтлэгдсэн</div>
+            <div class="space-y-2 text-sm">
+              <div class="flex items-center justify-between"><span class="text-[#5C5C5C]">Unegui.mn</span><span class="pill pill-active">Идэвхтэй</span></div>
+              <div class="flex items-center justify-between"><span class="text-[#5C5C5C]">Facebook</span><span class="pill pill-active">Идэвхтэй</span></div>
+              <div class="flex items-center justify-between"><span class="text-[#5C5C5C]">Хувийн вэб</span><span class="pill pill-sold">Идэвхгүй</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+/* ============== LEADS KANBAN ============== */
+function renderLeads() {
+  const stages = ['new','contacted','viewed','negotiating','won'];
+  const wonTotal = LEADS.filter(l => l.stage === 'won').reduce((s,l) => s + (l.dealValue || 0), 0);
+  return `
+    <div class="max-w-[1600px] mx-auto">
+      <div class="flex flex-wrap items-end justify-between gap-3 mb-6">
+        <div>
+          <div class="eyebrow mb-1">Lead pipeline</div>
+          <h1 class="text-2xl font-semibold tracking-tight">${LEADS.length} lead</h1>
+        </div>
+        <div class="flex items-center gap-3">
+          <select class="input !py-2 !w-auto text-sm"><option>Сүүлийн 7 хоног</option><option>Сүүлийн 30 хоног</option><option>Энэ жил</option></select>
+          <select class="input !py-2 !w-auto text-sm"><option>Бүх агент</option><option>Зөвхөн миний</option></select>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-5 gap-4 overflow-x-auto pb-6" style="min-width: 1100px;">
+        ${stages.map(stage => {
+          const leadsIn = LEADS.filter(l => l.stage === stage);
+          return `
+            <div class="bg-[#F5F4EF] rounded-xl p-3 min-h-[400px]">
+              <div class="flex items-center justify-between mb-3 px-1">
+                <div class="flex items-center gap-2">
+                  <span class="w-2 h-2 rounded-full ${stage==='new'?'bg-[#2B6CB0]':stage==='contacted'?'bg-[#B8860B]':stage==='viewed'?'bg-[#C4661F]':stage==='negotiating'?'bg-[#1B4332]':'bg-[#2D6A4F]'}"></span>
+                  <span class="font-semibold text-sm">${STAGE_LABELS[stage]}</span>
+                  <span class="text-xs text-[#8E8E8E] num">${leadsIn.length}</span>
+                </div>
+                <button class="text-[#8E8E8E] hover:text-[#1A1A1A]"><i data-lucide="more-horizontal" class="w-4 h-4"></i></button>
+              </div>
+              <div class="space-y-2.5">
+                ${leadsIn.map(l => {
+                  const listing = LISTINGS.find(x => x.id === l.listingId);
+                  return `
+                    <div class="kanban-card card p-3 bg-white" onclick="goTo('lead-detail')">
+                      <div class="flex items-center gap-2 mb-2">
+                        <div class="w-7 h-7 rounded-full bg-[#1B4332] text-white text-[10px] font-semibold flex items-center justify-center">${l.initials}</div>
+                        <div class="flex-1 min-w-0">
+                          <div class="font-medium text-sm truncate">${l.name}</div>
+                          <div class="text-xs text-[#8E8E8E]">${l.phone.split(' ').slice(1).join(' ')}</div>
+                        </div>
+                      </div>
+                      <div class="flex items-center gap-2 bg-[#F5F4EF] rounded-md p-2 mb-2">
+                        <div class="w-8 h-8 rounded bg-cover bg-center shrink-0" style="background-image:url('https://picsum.photos/seed/list${listing.img}/60/60')"></div>
+                        <div class="text-xs flex-1 min-w-0">
+                          <div class="font-medium truncate">${listing.khotkhon} ${listing.rooms}ө</div>
+                          <div class="num text-[#5C5C5C]">${compactPrice(listing.price)}</div>
+                        </div>
+                      </div>
+                      <div class="flex items-center justify-between">
+                        <span class="pill ${SOURCE_PILL[l.source]} !text-[10px] !py-0.5">${l.source}</span>
+                        <span class="text-[10px] text-[#8E8E8E]">${l.activity}</span>
+                      </div>
+                    </div>
+                  `;
+                }).join('') || `<button onclick="openNewLeadModal()" class="w-full border-2 border-dashed border-[#E8E6DF] hover:border-[#1B4332] hover:bg-white text-[#8E8E8E] hover:text-[#1B4332] rounded-lg py-6 text-xs flex flex-col items-center gap-1.5 transition"><i data-lucide="plus" class="w-4 h-4"></i> ${STAGE_LABELS[stage]} шатанд lead нэмэх</button>`}
+              </div>
+              ${stage === 'won' ? `<div class="mt-3 pt-3 border-t border-[#E8E6DF] px-1"><div class="text-xs text-[#8E8E8E]">Нийт</div><div class="num text-sm text-[#1B4332]">= ${formatPrice(wonTotal)}</div></div>` : ''}
+            </div>
+          `;
+        }).join('')}
+      </div>
+
+      <button onclick="openNewLeadModal()" class="fixed bottom-20 right-6 lg:right-8 lg:bottom-8 btn-primary !rounded-full !px-5 !py-3.5 shadow-lg z-30"><i data-lucide="plus" class="w-4 h-4"></i> Шинэ lead</button>
+    </div>
+  `;
+}
+
+/* ============== LEAD DETAIL ============== */
+function renderLeadDetail() {
+  const l = LEADS[0];
+  const stages = ['new','contacted','viewed','negotiating','won'];
+  const currentIdx = stages.indexOf(l.stage);
+  const related = LISTINGS.filter(x => x.district === l.district && x.rooms === l.rooms).slice(0,3);
+  return `
+    <div class="max-w-6xl mx-auto">
+      <button onclick="goTo('leads')" class="text-sm text-[#5C5C5C] hover:text-[#1A1A1A] mb-4 inline-flex items-center gap-1.5"><i data-lucide="chevron-left" class="w-4 h-4"></i> Lead-үүд рүү буцах</button>
+
+      <div class="card p-6 mb-6">
+        <div class="flex flex-wrap items-start gap-4 mb-6">
+          <div class="w-14 h-14 rounded-full bg-[#1B4332] text-white text-lg font-semibold flex items-center justify-center">${l.initials}</div>
+          <div class="flex-1 min-w-0">
+            <h1 class="text-xl font-semibold">${l.name}</h1>
+            <div class="text-sm text-[#5C5C5C] flex items-center flex-wrap gap-3 mt-1">
+              <span class="flex items-center gap-1"><i data-lucide="phone" class="w-3.5 h-3.5"></i> ${l.phone}</span>
+              <span class="pill ${SOURCE_PILL[l.source]}">${l.source}</span>
+              <span>·</span><span>2026-05-18 нэмэгдсэн</span>
+            </div>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <button onclick="showToast('${l.phone}-руу залгаж байна...', 'info')" class="btn-secondary"><i data-lucide="phone" class="w-4 h-4"></i> Залгах</button>
+            <button onclick="showToast('Messenger нээгдэж байна', 'info')" class="btn-secondary"><i data-lucide="message-square" class="w-4 h-4"></i> Мессеж</button>
+            <button onclick="openNewViewingModal()" class="btn-primary"><i data-lucide="calendar-plus" class="w-4 h-4"></i> Viewing товлох</button>
+          </div>
+        </div>
+
+        <!-- Stage bar -->
+        <div class="bg-[#F5F4EF] rounded-lg p-4">
+          <div class="flex items-center justify-between mb-3">
+            <div class="eyebrow">Шат</div>
+            <div class="text-[11px] text-[#8E8E8E]">Шат дээр дарж урагшлуулна уу</div>
+          </div>
+          <div class="flex items-center">
+            ${stages.map((s,i) => `
+              <div class="flex items-center ${i === stages.length-1 ? '' : 'flex-1'}">
+                <div class="flex flex-col items-center">
+                  <div class="stage-node ${i < currentIdx ? 'done' : i === currentIdx ? 'current' : 'todo'}" onclick="advanceStage(${i}, '${stages[i]}')" title="${STAGE_LABELS[s]} рүү шилжих">${i < currentIdx ? '✓' : i+1}</div>
+                  <span class="text-[11px] text-[#5C5C5C] mt-1.5 whitespace-nowrap">${STAGE_LABELS[s]}</span>
+                </div>
+                ${i < stages.length-1 ? `<div class="stage-line ${i < currentIdx ? 'done' : ''} mx-2 mb-5"></div>` : ''}
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      </div>
+
+      <div class="grid lg:grid-cols-3 gap-6">
+        <!-- Left: info -->
+        <div class="space-y-4">
+          <div class="card p-5">
+            <div class="eyebrow mb-3">Холбоо барих</div>
+            <div class="space-y-3 text-sm">
+              <div><div class="text-xs text-[#8E8E8E]">Утас</div><div class="font-medium">${l.phone}</div></div>
+              <div><div class="text-xs text-[#8E8E8E]">И-мэйл</div><div class="font-medium">erdene.b@gmail.com</div></div>
+              <div><div class="text-xs text-[#8E8E8E]">Эх үүсвэр</div><div><span class="pill ${SOURCE_PILL[l.source]}">${l.source} Messenger</span></div></div>
+            </div>
+          </div>
+
+          <div class="card p-5">
+            <div class="eyebrow mb-3">Шаардлага</div>
+            <div class="space-y-3 text-sm">
+              <div class="flex justify-between"><span class="text-[#8E8E8E]">Төсөв</span><span class="num">₮${l.budget[0]}M – ${l.budget[1]}M</span></div>
+              <div class="flex justify-between"><span class="text-[#8E8E8E]">Өрөө</span><span class="font-medium">${l.rooms} өрөө</span></div>
+              <div class="flex justify-between"><span class="text-[#8E8E8E]">Дүүрэг</span><span class="font-medium">${l.district}</span></div>
+              <div class="flex justify-between"><span class="text-[#8E8E8E]">Нөхцөл</span><span class="font-medium">Бэлэн орох</span></div>
+              <div class="flex justify-between"><span class="text-[#8E8E8E]">Хугацаа</span><span class="font-medium">1 сарын дотор</span></div>
+            </div>
+          </div>
+
+          <div class="card p-5">
+            <div class="eyebrow mb-3">Хариуцсан агент</div>
+            <div class="flex items-center gap-3"><div class="w-9 h-9 rounded-full bg-[#1B4332] text-white text-xs font-semibold flex items-center justify-center">БЭ</div><div><div class="font-medium text-sm">Б. Эрдэнэбаатар</div><div class="text-xs text-[#8E8E8E]">Ахлах агент</div></div></div>
+          </div>
+        </div>
+
+        <!-- Mid: timeline + related -->
+        <div class="lg:col-span-2 space-y-6">
+          <div class="card p-6">
+            <div class="flex items-center justify-between mb-5">
+              <h2 class="font-semibold">Үйл ажиллагааны түүх</h2>
+              <button class="btn-secondary !py-1.5 !text-xs"><i data-lucide="plus" class="w-3.5 h-3.5"></i> Тэмдэглэл нэмэх</button>
+            </div>
+            <div class="relative space-y-5 pl-7">
+              <div class="absolute left-3 top-2 bottom-2 w-px bg-[#E8E6DF]"></div>
+              ${[
+                { icon: 'phone', color: '#1B4332', title: 'Утсаар ярилаа (15 мин)', detail: 'Хан-Уулын 3 өрөө байр сонирхож байна. Time Tower болон Olympic Residence-ийг ярилцлаа. Маргааш viewing.', time: 'Өнөөдөр 14:30' },
+                { icon: 'calendar-check', color: '#C4661F', title: 'Viewing товлосон', detail: 'Time Tower 92м² · Маргааш 16:00 · Гэр бүлийн хамт ирнэ', time: 'Өнөөдөр 11:00' },
+                { icon: 'message-square', color: '#2B6CB0', title: 'Facebook Messenger мессеж', detail: '"Сайн байна уу, Хан-Уулд 3 өрөөтэй байр сонирхож байна..."', time: 'Өчигдөр 19:42' },
+                { icon: 'user-plus', color: '#5C5C5C', title: 'Lead үүссэн', detail: 'Facebook Messenger зар дээр сонирхол үзүүлсэн', time: 'Өчигдөр 19:40' }
+              ].map(ev => `
+                <div class="relative">
+                  <div class="absolute -left-7 top-0 w-6 h-6 rounded-full bg-white border-2 flex items-center justify-center" style="border-color:${ev.color}"><i data-lucide="${ev.icon}" class="w-3 h-3" style="color:${ev.color}"></i></div>
+                  <div class="flex items-baseline justify-between gap-3 mb-1">
+                    <div class="font-medium text-sm">${ev.title}</div>
+                    <div class="text-xs text-[#8E8E8E] shrink-0">${ev.time}</div>
+                  </div>
+                  <p class="text-sm text-[#5C5C5C] leading-relaxed">${ev.detail}</p>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+
+          <div class="card p-6">
+            <div class="flex items-center justify-between mb-4">
+              <h2 class="font-semibold">Тохирох зарууд</h2>
+              <span class="text-xs text-[#8E8E8E]">${related.length} тохирол</span>
+            </div>
+            <div class="grid sm:grid-cols-3 gap-4">
+              ${related.map(r => `
+                <div class="cursor-pointer hover:bg-[#F5F4EF] rounded-lg p-2 -m-2" onclick="goTo('listing-detail')">
+                  <div class="aspect-[4/3] rounded-lg bg-cover bg-center mb-2" style="background-image:url('https://picsum.photos/seed/list${r.img}/400/300')"></div>
+                  <div class="text-xs text-[#8E8E8E]">${r.khotkhon}</div>
+                  <div class="text-sm font-medium">${r.rooms}ө, ${r.area}м²</div>
+                  <div class="num text-sm">${formatPrice(r.price)}</div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+/* ============== CALENDAR ============== */
+function renderCalendar() {
+  const days = ['Даваа','Мягмар','Лхагва','Пүрэв','Баасан','Бямба','Ням'];
+  const dates = ['5/19','5/20','5/21','5/22','5/23','5/24','5/25'];
+  const hours = Array.from({length: 11}, (_,i) => i + 9); // 9 to 19
+  const todayIdx = 1; // Мягмар = today
+  return `
+    <div class="max-w-[1400px] mx-auto">
+      <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
+        <div>
+          <div class="eyebrow mb-1">Хуанли</div>
+          <h1 class="text-2xl font-semibold tracking-tight">2026 оны 5-р сар</h1>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+          <div class="flex items-center gap-1 bg-[#F5F4EF] rounded-lg p-1">
+            ${['Өдөр','7 хоног','Сар'].map((v,i) => `<button class="px-3 py-1.5 rounded text-sm ${i===1?'bg-white shadow-sm font-medium':'text-[#5C5C5C]'}">${v}</button>`).join('')}
+          </div>
+          <select class="input !py-2 !w-auto text-sm"><option>Бүх агент</option><option>Зөвхөн миний</option></select>
+          <button class="btn-secondary !py-2"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
+          <button class="btn-secondary !py-2 !px-3 text-sm">Өнөөдөр</button>
+          <button class="btn-secondary !py-2"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
+        </div>
+      </div>
+
+      <div class="card overflow-hidden">
+        <div class="overflow-x-auto">
+        <div class="grid grid-cols-[56px_repeat(7,minmax(120px,1fr))] min-w-[900px]">
+          <!-- header -->
+          <div class="border-b border-r border-[#E8E6DF] bg-[#F5F4EF]"></div>
+          ${days.map((d,i) => `
+            <div class="border-b border-[#E8E6DF] ${i<6?'border-r':''} p-3 text-center ${i===todayIdx?'bg-[#D8E5DF]':'bg-[#F5F4EF]'}">
+              <div class="text-xs ${i===todayIdx?'text-[#1B4332] font-semibold':'text-[#5C5C5C]'}">${d}</div>
+              <div class="num text-lg ${i===todayIdx?'text-[#1B4332]':''}">${dates[i].split('/')[1]}</div>
+            </div>
+          `).join('')}
+          <!-- rows -->
+          ${hours.map(h => `
+            <div class="border-b border-r border-[#E8E6DF] p-2 text-xs text-[#8E8E8E] text-right pr-3 h-16">${String(h).padStart(2,'0')}:00</div>
+            ${days.map((_,di) => {
+              const v = VIEWINGS.find(vw => vw.day === di && Math.floor(vw.start) === h);
+              const bgToday = di === todayIdx ? 'bg-[#FAFAF7]' : '';
+              if (!v) return `<div class="border-b border-[#E8E6DF] ${di<6?'border-r':''} h-16 hover:bg-[#F5F4EF] cursor-pointer ${bgToday}"></div>`;
+              const listing = LISTINGS.find(x => x.id === v.listingId);
+              const lead = LEADS.find(x => x.id === v.leadId);
+              const colors = {
+                confirmed: 'bg-[#D8E5DF] border-[#1B4332] text-[#1B4332]',
+                tentative: 'bg-[#FBF3E2] border-[#B8860B] text-[#8a6608]',
+                completed: 'bg-[#EFEDE5] border-[#8E8E8E] text-[#5C5C5C] line-through'
+              };
+              return `
+                <div class="border-b border-[#E8E6DF] ${di<6?'border-r':''} h-16 p-1 ${bgToday}">
+                  <div class="${colors[v.status]} border-l-4 rounded-md p-1.5 text-[11px] h-full overflow-hidden cursor-pointer hover:shadow-sm" onclick="goTo('lead-detail')" style="height:${v.dur*64-4}px">
+                    <div class="font-semibold truncate">${listing.khotkhon}</div>
+                    <div class="truncate opacity-80">${lead.name}</div>
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          `).join('')}
+        </div>
+        </div>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-4 mt-4 text-xs text-[#5C5C5C]">
+        <div class="flex items-center gap-2"><span class="w-3 h-3 rounded bg-[#D8E5DF] border-l-4 border-[#1B4332]"></span> Баталгаажсан</div>
+        <div class="flex items-center gap-2"><span class="w-3 h-3 rounded bg-[#FBF3E2] border-l-4 border-[#B8860B]"></span> Хүлээгдэж буй</div>
+        <div class="flex items-center gap-2"><span class="w-3 h-3 rounded bg-[#EFEDE5] border-l-4 border-[#8E8E8E]"></span> Дууссан</div>
+      </div>
+    </div>
+  `;
+}
+
+/* ============== REPORTS ============== */
+function renderReports() {
+  const funnel = [
+    { label: 'Lead', count: 47, width: '100%' },
+    { label: 'Холбогдсон', count: 38, width: '81%', conv: '81%' },
+    { label: 'Үзүүлэлт', count: 23, width: '60%', conv: '61%' },
+    { label: 'Хэлэлцэж буй', count: 11, width: '40%', conv: '48%' },
+    { label: 'Дуусгасан', count: 5, width: '24%', conv: '45%' }
+  ];
+  const agents = [
+    { name: 'Б. Эрдэнэбаатар', initials: 'БЭ', listings: 6, converted: 12, revenue: 18500000 },
+    { name: 'Д. Болормаа', initials: 'ДБ', listings: 4, converted: 9, revenue: 14200000 },
+    { name: 'Г. Энхтайван', initials: 'ГЭ', listings: 3, converted: 5, revenue: 7800000 },
+    { name: 'Ц. Сарангэрэл', initials: 'ЦС', listings: 2, converted: 3, revenue: 4500000 },
+    { name: 'Н. Мөнхбат', initials: 'НМ', listings: 1, converted: 1, revenue: 1800000 }
+  ];
+  const sources = [
+    { name: 'Facebook', pct: 45, color: '#2B6CB0' },
+    { name: 'Unegui.mn', pct: 28, color: '#C4661F' },
+    { name: 'Walk-in', pct: 12, color: '#1B4332' },
+    { name: 'Referral', pct: 10, color: '#B8860B' },
+    { name: 'Бусад', pct: 5, color: '#8E8E8E' }
+  ];
+
+  // Build donut conic-gradient
+  let acc = 0;
+  const donut = sources.map(s => {
+    const start = acc; acc += s.pct;
+    return `${s.color} ${start*3.6}deg ${acc*3.6}deg`;
+  }).join(', ');
+
+  return `
+    <div class="max-w-7xl mx-auto">
+      <div class="flex flex-wrap items-end justify-between gap-3 mb-6">
+        <div>
+          <div class="eyebrow mb-1">Тайлан</div>
+          <h1 class="text-2xl font-semibold tracking-tight">Гүйцэтгэлийн тойм</h1>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+          <select class="input !py-2 !w-auto text-sm"><option>Сүүлийн 30 хоног</option><option>Сүүлийн 7 хоног</option><option>Энэ улирал</option><option>Энэ жил</option></select>
+          <button onclick="showToast('Excel файл татагдаж байна...', 'info'); setTimeout(()=>showToast('zooch-tailan-2026-05.xlsx бэлэн боллоо', 'success'), 1200);" class="btn-secondary"><i data-lucide="download" class="w-4 h-4"></i> Excel-руу татах</button>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        ${[
+          ['Шинэ lead-үүд','47','+22%','users'],
+          ['Viewing хийсэн','23','+15%','eye'],
+          ['Хаасан хэлцэл','5','+25%','check-circle'],
+          ['Орлого олсон','₮42.0M','+18%','wallet']
+        ].map(([l,v,d,i]) => `
+          <div class="card p-5">
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-xs text-[#5C5C5C]">${l}</span>
+              <div class="w-7 h-7 rounded-md bg-[#D8E5DF] text-[#1B4332] flex items-center justify-center"><i data-lucide="${i}" class="w-3.5 h-3.5"></i></div>
+            </div>
+            <div class="flex items-baseline gap-2"><span class="num text-2xl">${v}</span><span class="text-xs text-[#2D6A4F]">${d}</span></div>
+          </div>
+        `).join('')}
+      </div>
+
+      <div class="grid lg:grid-cols-3 gap-6 mb-6">
+        <!-- Funnel -->
+        <div class="lg:col-span-2 card p-6">
+          <h2 class="font-semibold mb-1">Lead funnel</h2>
+          <p class="text-xs text-[#8E8E8E] mb-5">Сүүлийн 30 хоног</p>
+          <div class="space-y-3">
+            ${funnel.map(f => `
+              <div class="funnel-row">
+                <div class="w-32 text-sm text-[#5C5C5C] shrink-0">${f.label}</div>
+                <div class="flex-1 flex items-center gap-3">
+                  <div class="funnel-bar" style="width: ${f.width}">${f.count}</div>
+                  ${f.conv ? `<span class="text-xs text-[#5C5C5C] num">${f.conv}</span>` : ''}
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+
+        <!-- Source donut -->
+        <div class="card p-6">
+          <h2 class="font-semibold mb-1">Эх үүсвэр</h2>
+          <p class="text-xs text-[#8E8E8E] mb-5">Lead-ийн гарал үүсэл</p>
+          <div class="flex items-center justify-center mb-5">
+            <div class="relative w-40 h-40 rounded-full" style="background: conic-gradient(${donut});">
+              <div class="absolute inset-5 rounded-full bg-white flex flex-col items-center justify-center">
+                <div class="text-xs text-[#8E8E8E]">Нийт</div>
+                <div class="num text-xl">47</div>
+              </div>
+            </div>
+          </div>
+          <div class="space-y-2 text-sm">
+            ${sources.map(s => `
+              <div class="flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full" style="background:${s.color}"></span>
+                <span class="flex-1">${s.name}</span>
+                <span class="num text-[#5C5C5C]">${s.pct}%</span>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      </div>
+
+      <!-- Agent leaderboard -->
+      <div class="card p-6">
+        <div class="flex items-center justify-between mb-5">
+          <h2 class="font-semibold">Агент бүрийн гүйцэтгэл</h2>
+          <span class="text-xs text-[#8E8E8E]">5 агент</span>
+        </div>
+        <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="text-left text-xs text-[#8E8E8E] uppercase tracking-wide border-b border-[#E8E6DF]">
+            <tr><th class="py-3">№</th><th class="py-3">Агент</th><th class="py-3">Идэвхтэй зар</th><th class="py-3">Хөрвүүлсэн lead</th><th class="py-3 text-right">Орлого</th></tr>
+          </thead>
+          <tbody class="divide-y divide-[#E8E6DF]">
+            ${agents.map((a,i) => `
+              <tr class="hover:bg-[#F5F4EF]">
+                <td class="py-4 num text-[#8E8E8E] w-8">${i+1}</td>
+                <td class="py-4">
+                  <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-full bg-[#1B4332] text-white text-xs font-semibold flex items-center justify-center">${a.initials}</div>
+                    <span class="font-medium">${a.name}</span>
+                  </div>
+                </td>
+                <td class="py-4 num">${a.listings}</td>
+                <td class="py-4 num">${a.converted}</td>
+                <td class="py-4 num text-right">${formatPrice(a.revenue)}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+/* ============== BILLING ============== */
+function renderBilling() {
+  const invoices = [
+    { date: '2026-05-15', amount: 199000, status: 'paid', id: 'INV-2026-0512' },
+    { date: '2026-04-15', amount: 199000, status: 'paid', id: 'INV-2026-0411' },
+    { date: '2026-03-15', amount: 199000, status: 'paid', id: 'INV-2026-0309' },
+    { date: '2026-02-15', amount: 99000, status: 'paid', id: 'INV-2026-0207' },
+    { date: '2026-01-15', amount: 99000, status: 'paid', id: 'INV-2026-0105' },
+    { date: '2025-12-15', amount: 99000, status: 'paid', id: 'INV-2025-1204' }
+  ];
+  return `
+    <div class="max-w-5xl mx-auto">
+      <div class="mb-6">
+        <div class="eyebrow mb-1">Төлбөр</div>
+        <h1 class="text-2xl font-semibold tracking-tight">Багц, төлбөрийн түүх</h1>
+      </div>
+
+      <!-- Current plan -->
+      <div class="card p-6 mb-6 bg-gradient-to-br from-[#1B4332] to-[#15362A] text-white border-[#1B4332]">
+        <div class="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <div class="inline-flex items-center gap-2 bg-white/15 px-2.5 py-1 rounded-full text-xs font-medium mb-3">
+              <span class="w-1.5 h-1.5 rounded-full bg-white"></span> Идэвхтэй
+            </div>
+            <h2 class="text-2xl font-semibold">Pro Plan</h2>
+            <p class="text-sm text-white/70 mt-1">10 хүртэлх агент, бүх боломж нээлттэй</p>
+          </div>
+          <div class="text-right">
+            <div class="num text-3xl">199,000₮</div>
+            <div class="text-xs text-white/60">/сар</div>
+          </div>
+        </div>
+        <div class="flex flex-wrap items-center justify-between gap-3 mt-6 pt-5 border-t border-white/15">
+          <div class="text-sm text-white/80">Дараагийн төлбөр: <span class="font-medium text-white">2026 оны 6-р сарын 15</span></div>
+          <div class="flex gap-2">
+            <button class="bg-white/15 hover:bg-white/25 transition rounded-lg px-3.5 py-2 text-sm">Багц солих</button>
+            <button class="bg-white text-[#1B4332] rounded-lg px-3.5 py-2 text-sm font-medium hover:bg-white/90"><i data-lucide="qr-code" class="w-4 h-4 inline mr-1"></i>QPay-ээр төлөх</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- QPay flow + Plan comparison -->
+      <div class="grid lg:grid-cols-5 gap-6 mb-6">
+        <div class="lg:col-span-2 card p-6">
+          <h3 class="font-semibold mb-1">QPay-ээр төлөх</h3>
+          <p class="text-xs text-[#8E8E8E] mb-4">QR кодыг банкны аппаараа уншуулна уу</p>
+          <div class="bg-white border border-[#E8E6DF] rounded-lg p-4 mx-auto" style="width: 200px;">
+            <!-- Simple SVG QR-like pattern -->
+            <svg viewBox="0 0 100 100" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+              ${(() => {
+                let s = '';
+                const grid = [
+                  [1,1,1,1,1,1,1,0,1,0,1,0,1,1,1,1,1,1,1],
+                  [1,0,0,0,0,0,1,1,0,1,0,1,1,0,0,0,0,0,1],
+                  [1,0,1,1,1,0,1,0,1,1,1,0,1,0,1,1,1,0,1],
+                  [1,0,1,1,1,0,1,1,1,0,1,1,1,0,1,1,1,0,1],
+                  [1,0,1,1,1,0,1,0,0,1,0,0,1,0,1,1,1,0,1],
+                  [1,0,0,0,0,0,1,1,1,1,1,1,1,0,0,0,0,0,1],
+                  [1,1,1,1,1,1,1,0,1,0,1,0,1,1,1,1,1,1,1],
+                  [0,0,0,0,0,0,0,1,1,1,0,1,0,0,0,0,0,0,0],
+                  [1,1,0,1,0,1,1,0,1,1,1,0,1,0,1,1,1,0,0],
+                  [0,1,1,0,1,1,0,1,0,1,0,1,0,1,1,0,1,1,1],
+                  [1,0,1,1,1,0,1,0,1,1,1,0,1,0,1,1,0,0,1],
+                  [0,1,0,1,1,1,0,1,0,1,0,1,0,1,1,1,1,0,0],
+                  [1,1,1,1,1,1,1,0,1,1,0,1,0,1,0,1,1,1,1],
+                  [0,0,0,0,0,0,0,1,1,0,1,0,1,0,1,0,0,1,0],
+                  [1,1,1,1,1,1,1,0,1,1,0,1,1,1,1,0,1,0,1],
+                  [1,0,0,0,0,0,1,1,0,1,1,0,1,0,1,0,1,1,1],
+                  [1,0,1,1,1,0,1,0,1,1,0,1,1,1,1,1,0,0,1],
+                  [1,0,1,1,1,0,1,1,0,1,1,1,0,1,0,1,1,1,0],
+                  [1,0,0,0,0,0,1,0,1,0,1,0,1,0,1,1,0,1,1]
+                ];
+                grid.forEach((r, y) => r.forEach((c, x) => { if (c) s += `<rect x="${x*5+2.5}" y="${y*5+2.5}" width="5" height="5" fill="#1A1A1A"/>`; }));
+                return s;
+              })()}
+            </svg>
+          </div>
+          <div class="text-center mt-4">
+            <div class="num text-xl">199,000₮</div>
+            <div class="text-xs text-[#8E8E8E]">2026-05-19 17:42 хүртэл хүчинтэй</div>
+          </div>
+          <div class="flex items-center justify-center gap-3 mt-4 text-[10px] text-[#8E8E8E]">
+            <span class="px-2 py-1 bg-[#F5F4EF] rounded">Хаан Банк</span>
+            <span class="px-2 py-1 bg-[#F5F4EF] rounded">Голомт</span>
+            <span class="px-2 py-1 bg-[#F5F4EF] rounded">ТDB</span>
+            <span class="px-2 py-1 bg-[#F5F4EF] rounded">Хас</span>
+          </div>
+        </div>
+
+        <div class="lg:col-span-3">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="font-semibold">Багц харьцуулах</h3>
+            <div class="flex items-center gap-2 bg-[#F5F4EF] rounded-lg p-1 text-xs">
+              <button class="px-3 py-1.5 rounded text-[#5C5C5C]">Сараар</button>
+              <button class="px-3 py-1.5 rounded bg-white shadow-sm font-medium">Жилээр <span class="ml-1 pill pill-hot !text-[10px] !py-0">2 сар үнэгүй</span></button>
+            </div>
+          </div>
+          <div class="card overflow-x-auto">
+            <table class="w-full text-sm min-w-[500px]">
+              <thead class="bg-[#F5F4EF]">
+                <tr class="text-left">
+                  <th class="px-4 py-3 text-xs text-[#5C5C5C] uppercase">Боломж</th>
+                  <th class="px-4 py-3 text-center"><div class="font-semibold">Free</div><div class="text-xs text-[#8E8E8E]">0₮</div></th>
+                  <th class="px-4 py-3 text-center"><div class="font-semibold">Starter</div><div class="text-xs text-[#8E8E8E]">99K</div></th>
+                  <th class="px-4 py-3 text-center bg-[#D8E5DF]"><div class="font-semibold text-[#1B4332]">Pro</div><div class="text-xs text-[#1B4332]">199K</div></th>
+                  <th class="px-4 py-3 text-center"><div class="font-semibold">Office</div><div class="text-xs text-[#8E8E8E]">499K</div></th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-[#E8E6DF]">
+                ${[
+                  ['Агент','1','3','10','Хязгааргүй'],
+                  ['Listing','10','✓','✓','✓'],
+                  ['Lead pipeline','—','✓','✓','✓'],
+                  ['Тайлан','—','—','✓','✓'],
+                  ['QPay интеграц','—','—','✓','✓'],
+                  ['API хандалт','—','—','—','✓'],
+                  ['Тусгай дэмжлэг','—','—','✓','24/7']
+                ].map(row => `
+                  <tr>
+                    <td class="px-4 py-3 text-[#5C5C5C]">${row[0]}</td>
+                    ${row.slice(1).map((c,i) => `<td class="px-4 py-3 text-center ${i===2?'bg-[#F0F4F1]':''} ${c==='✓'?'text-[#1B4332] font-semibold':c==='—'?'text-[#8E8E8E]':''}">${c}</td>`).join('')}
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Invoice history -->
+      <div class="card overflow-hidden">
+        <div class="p-6 border-b border-[#E8E6DF] flex items-center justify-between">
+          <h3 class="font-semibold">Төлбөрийн түүх</h3>
+          <button class="text-xs text-[#1B4332] font-medium hover:underline">Бүгдийг харах →</button>
+        </div>
+        <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="text-left text-xs text-[#8E8E8E] uppercase">
+            <tr><th class="px-6 py-3">Огноо</th><th class="px-6 py-3">Дугаар</th><th class="px-6 py-3">Дүн</th><th class="px-6 py-3">Төлөв</th><th class="px-6 py-3"></th></tr>
+          </thead>
+          <tbody class="divide-y divide-[#E8E6DF]">
+            ${invoices.map(inv => `
+              <tr class="hover:bg-[#F5F4EF]">
+                <td class="px-6 py-3.5 num">${inv.date}</td>
+                <td class="px-6 py-3.5 text-[#5C5C5C]">${inv.id}</td>
+                <td class="px-6 py-3.5 num">${formatPrice(inv.amount)}</td>
+                <td class="px-6 py-3.5"><span class="pill pill-active">Төлөгдсөн</span></td>
+                <td class="px-6 py-3.5 text-right"><button class="text-[#5C5C5C] hover:text-[#1A1A1A]"><i data-lucide="download" class="w-4 h-4"></i></button></td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+        </div>
+      </div>
+
+      <div class="text-center mt-8 mb-4">
+        <button onclick="openCancelConfirm()" class="text-xs text-[#8E8E8E] hover:text-[#9B2C2C] underline">Захиалгаа цуцлах</button>
+      </div>
+    </div>
+  `;
+}
+
+/* ============== DEMO PILL ============== */
+const DEMO_SCREENS = [
+  { key: 'landing', icon: 'home', label: 'Эхлэл' },
+  { key: 'signup', icon: 'user-plus', label: 'Бүртгүүлэх' },
+  { key: 'dashboard', icon: 'layout-dashboard', label: 'Хяналт' },
+  { key: 'listings', icon: 'building-2', label: 'Зарууд' },
+  { key: 'listing-detail', icon: 'building', label: 'Зарын дэлгэрэнгүй' },
+  { key: 'leads', icon: 'users', label: 'Lead pipeline' },
+  { key: 'lead-detail', icon: 'user', label: 'Lead дэлгэрэнгүй' },
+  { key: 'calendar', icon: 'calendar', label: 'Хуанли' },
+  { key: 'reports', icon: 'bar-chart-3', label: 'Тайлан' },
+  { key: 'billing', icon: 'credit-card', label: 'Төлбөр' }
+];
+
+function buildDemoPill() {
+  const pill = document.getElementById('demo-pill');
+  pill.innerHTML = DEMO_SCREENS.map(s => `
+    <button data-target="${s.key}" onclick="goTo('${s.key}')" title="${s.label}">
+      <i data-lucide="${s.icon}" class="w-4 h-4"></i>
+      <span class="tip">${s.label}</span>
+    </button>
+  `).join('');
+}
+
+/* ============== BOOT ============== */
+const state = { onboardingDone: { profile: true, listing: true }, onboardingHidden: false, listingsDistrict: '', listingsRooms: '' };
+
+/* --- Toast --- */
+function showToast(msg, kind = 'success', opts = {}) {
+  const wrap = document.getElementById('toast-wrap');
+  const t = document.createElement('div');
+  t.className = 'toast ' + kind;
+  const iconMap = { success: 'check-circle-2', info: 'info', warning: 'alert-triangle', danger: 'alert-circle' };
+  const colorMap = { success: '#2D6A4F', info: '#2B6CB0', warning: '#B8860B', danger: '#9B2C2C' };
+  t.innerHTML = `<div class="mt-0.5" style="color:${colorMap[kind]}"><i data-lucide="${iconMap[kind]}" class="w-4 h-4"></i></div>
+    <div class="flex-1 text-sm">${msg}</div>
+    <button class="text-[#8E8E8E] hover:text-[#1A1A1A]" onclick="this.parentElement.remove()"><i data-lucide="x" class="w-3.5 h-3.5"></i></button>`;
+  wrap.appendChild(t);
+  lucide.createIcons();
+  setTimeout(() => { t.classList.add('leaving'); setTimeout(() => t.remove(), 200); }, opts.duration || 3000);
+}
+
+/* --- Modal --- */
+function openModal(html, size = '') {
+  const bd = document.getElementById('modal-backdrop');
+  const shell = document.getElementById('modal-shell');
+  shell.className = 'modal ' + size;
+  shell.innerHTML = html;
+  bd.classList.add('open');
+  document.body.style.overflow = 'hidden';
+  setTimeout(() => lucide.createIcons(), 0);
+}
+function closeModal() {
+  document.getElementById('modal-backdrop').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function openNewListingModal() {
+  openModal(`
+    <div class="modal-head">
+      <div><h3 class="font-semibold text-lg">Шинэ зар нэмэх</h3><p class="text-xs text-[#8E8E8E] mt-0.5">Зарын үндсэн мэдээллийг бөглөнө үү</p></div>
+      <button onclick="closeModal()" class="text-[#8E8E8E] hover:text-[#1A1A1A]"><i data-lucide="x" class="w-5 h-5"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="grid sm:grid-cols-2 gap-4 mb-4">
+        <div><label class="text-xs font-medium text-[#5C5C5C] mb-1.5 block">Дүүрэг</label>
+          <select class="input"><option>Хан-Уул</option><option>Баянзүрх</option><option>Сүхбаатар</option><option>Чингэлтэй</option><option>Сонгинохайрхан</option></select></div>
+        <div><label class="text-xs font-medium text-[#5C5C5C] mb-1.5 block">Хороо</label>
+          <input class="input" placeholder="15-р хороо" /></div>
+        <div><label class="text-xs font-medium text-[#5C5C5C] mb-1.5 block">Хотхон</label>
+          <input class="input" placeholder="Time Tower" /></div>
+        <div><label class="text-xs font-medium text-[#5C5C5C] mb-1.5 block">Өрөөний тоо</label>
+          <select class="input"><option>1 өрөө</option><option>2 өрөө</option><option selected>3 өрөө</option><option>4+ өрөө</option></select></div>
+        <div><label class="text-xs font-medium text-[#5C5C5C] mb-1.5 block">Талбай (м²)</label>
+          <input class="input" placeholder="92" /></div>
+        <div><label class="text-xs font-medium text-[#5C5C5C] mb-1.5 block">Давхар</label>
+          <input class="input" placeholder="8/22" /></div>
+      </div>
+      <label class="text-xs font-medium text-[#5C5C5C] mb-1.5 block">Үнэ (₮)</label>
+      <input class="input mb-4" placeholder="420,000,000" />
+      <label class="text-xs font-medium text-[#5C5C5C] mb-1.5 block">Зураг</label>
+      <div class="border-2 border-dashed border-[#E8E6DF] rounded-lg p-6 text-center hover:bg-[#FAFAF7] cursor-pointer">
+        <i data-lucide="upload-cloud" class="w-6 h-6 text-[#8E8E8E] mx-auto mb-2"></i>
+        <div class="text-sm">Зураг чирэх эсвэл <span class="text-[#1B4332] font-medium">сонгох</span></div>
+        <div class="text-xs text-[#8E8E8E] mt-1">PNG, JPG · хамгийн ихдээ 10 зураг</div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button onclick="closeModal()" class="btn-secondary">Цуцлах</button>
+      <button onclick="closeModal(); showToast('Шинэ зар амжилттай нэмэгдлээ', 'success');" class="btn-primary">Зар нэмэх</button>
+    </div>
+  `, 'lg');
+}
+
+function openNewLeadModal() {
+  openCreateLeadFlow();
+}
+
+/* ===== Multi-step lead creation flow ===== */
+const leadFlow = { step: 1, data: {} };
+
+function openCreateLeadFlow(opts = {}) {
+  leadFlow.step = 1;
+  leadFlow.data = {
+    name: '', phone: '', email: '', source: 'Facebook',
+    listingId: opts.listing ? opts.listing.id : null,
+    listingLocked: !!opts.listing,
+    rooms: opts.listing ? opts.listing.rooms : 3,
+    district: opts.listing ? opts.listing.district : 'Хан-Уул',
+    budgetMin: opts.listing ? Math.round(opts.listing.price * 0.92 / 1000000) : '',
+    budgetMax: opts.listing ? Math.round(opts.listing.price * 1.06 / 1000000) : '',
+    moveIn: '1 сарын дотор',
+    notes: '',
+    scheduleViewing: !!opts.listing,
+    viewingDate: '2026-05-20',
+    viewingTime: '16:00',
+    sendSms: true,
+    stage: 'new',
+    agent: 'БЭ'
+  };
+  renderLeadFlow();
+}
+
+function renderLeadFlow() {
+  const step = leadFlow.step;
+  const steps = [
+    { num: 1, label: 'Холбоо барих', icon: 'user' },
+    { num: 2, label: 'Шаардлага', icon: 'home' },
+    { num: 3, label: 'Дараагийн алхам', icon: 'flag' }
+  ];
+  const stepperHTML = `<div class="flex items-center">${steps.map((s,i) => `
+    <div class="flex items-center gap-2 ${i < steps.length-1 ? 'flex-1' : ''}">
+      <div class="flex items-center gap-2 shrink-0">
+        <div class="stage-node ${step > s.num ? 'done' : step === s.num ? 'current' : 'todo'}">${step > s.num ? '✓' : s.num}</div>
+        <span class="text-sm hidden sm:inline ${step === s.num ? 'font-medium text-[#1B4332]' : 'text-[#8E8E8E]'}">${s.label}</span>
+      </div>
+      ${i < steps.length-1 ? `<div class="stage-line ${step > s.num ? 'done' : ''} mx-3"></div>` : ''}
+    </div>
+  `).join('')}</div>`;
+
+  let body = '', foot = '';
+  if (step === 1) {
+    body = renderLeadFlowStep1();
+    foot = `<button onclick="closeModal()" class="btn-secondary">Цуцлах</button>
+      <button onclick="leadFlowNext()" class="btn-primary">Үргэлжлүүлэх <i data-lucide="arrow-right" class="w-4 h-4"></i></button>`;
+  } else if (step === 2) {
+    body = renderLeadFlowStep2();
+    foot = `<button onclick="leadFlowPrev()" class="btn-secondary"><i data-lucide="arrow-left" class="w-4 h-4"></i> Буцах</button>
+      <button onclick="leadFlowNext()" class="btn-primary">Үргэлжлүүлэх <i data-lucide="arrow-right" class="w-4 h-4"></i></button>`;
+  } else {
+    body = renderLeadFlowStep3();
+    foot = `<button onclick="leadFlowPrev()" class="btn-secondary"><i data-lucide="arrow-left" class="w-4 h-4"></i> Буцах</button>
+      <button onclick="leadFlowSubmit()" class="btn-primary"><i data-lucide="check" class="w-4 h-4"></i> Lead үүсгэх</button>`;
+  }
+
+  openModal(`
+    <div class="modal-head">
+      <div class="flex-1 min-w-0">
+        <h3 class="font-semibold text-lg">Шинэ lead үүсгэх</h3>
+        <p class="text-xs text-[#8E8E8E] mt-0.5">${step}/3 алхам · ${steps[step-1].label}</p>
+      </div>
+      <button onclick="closeModal()" class="text-[#8E8E8E] hover:text-[#1A1A1A]"><i data-lucide="x" class="w-5 h-5"></i></button>
+    </div>
+    <div class="px-6 pt-5 pb-3 border-b border-[#E8E6DF]">${stepperHTML}</div>
+    <div class="modal-body">${body}</div>
+    <div class="modal-foot">${foot}</div>
+  `, 'lg');
+}
+
+function renderLeadFlowStep1() {
+  const d = leadFlow.data;
+  const sources = ['Facebook', 'Unegui.mn', 'Walk-in', 'Referral', 'Бусад'];
+  return `
+    <div class="space-y-5">
+      <div>
+        <label class="text-xs font-medium text-[#5C5C5C] mb-1.5 block">Овог нэр <span style="color:#9B2C2C">*</span></label>
+        <input data-lf="name" value="${d.name}" class="input" placeholder="Б. Эрдэнэбаатар" autofocus />
+      </div>
+      <div class="grid sm:grid-cols-2 gap-4">
+        <div>
+          <label class="text-xs font-medium text-[#5C5C5C] mb-1.5 block">Утас <span style="color:#9B2C2C">*</span></label>
+          <div class="flex gap-2">
+            <div class="input !w-auto !py-2.5 flex items-center gap-1.5 text-sm text-[#5C5C5C] shrink-0">+976</div>
+            <input data-lf="phone" maxlength="8" value="${d.phone}" class="input" placeholder="9911 5544" />
+          </div>
+        </div>
+        <div>
+          <label class="text-xs font-medium text-[#5C5C5C] mb-1.5 block">И-мэйл <span class="text-[#8E8E8E]">(заавал биш)</span></label>
+          <input data-lf="email" value="${d.email}" class="input" placeholder="erdene@gmail.com" />
+        </div>
+      </div>
+      <div>
+        <label class="text-xs font-medium text-[#5C5C5C] mb-2 block">Эх үүсвэр</label>
+        <div class="grid grid-cols-2 sm:grid-cols-5 gap-2">
+          ${sources.map(s => `<div onclick="setLeadFlowField('source','${s}')" class="src-chip ${d.source===s?'selected':''}" data-field="source" data-val="${s}">${s}</div>`).join('')}
+        </div>
+        <input type="hidden" data-lf="source" value="${d.source}" />
+      </div>
+      <div class="flex items-start gap-2 text-xs text-[#8E8E8E] p-3 bg-[#F5F4EF] rounded-lg">
+        <i data-lucide="info" class="w-3.5 h-3.5 mt-0.5 shrink-0"></i>
+        <span>Утсаар найдвартай холбогдох боломжтой бол үйлчлүүлэгчдэд хариу хүлээх хугацаа 50%-иар буурдаг.</span>
+      </div>
+    </div>
+  `;
+}
+
+function renderLeadFlowStep2() {
+  const d = leadFlow.data;
+  const listing = d.listingId ? LISTINGS.find(l => l.id === d.listingId) : null;
+  const moveOptions = ['1 сарын дотор','2-3 сар','Цаг үлдэхгүй','Тодорхойгүй'];
+  return `
+    <div class="space-y-5">
+      ${listing ? `
+        <div>
+          <div class="eyebrow mb-2">Сонирхсон зар</div>
+          <div class="card p-3 bg-[#F0F4F1] border-[#D8E5DF] flex items-center gap-3">
+            <div class="w-14 h-14 rounded-lg bg-cover bg-center shrink-0" style="background-image:url('https://picsum.photos/seed/list${listing.img}/100/100')"></div>
+            <div class="flex-1 min-w-0">
+              <div class="font-medium text-sm">${listing.khotkhon} · ${listing.rooms}ө ${listing.area}м²</div>
+              <div class="text-xs text-[#8E8E8E]">${listing.district}, ${listing.khoroo}-р хороо</div>
+              <div class="num text-sm mt-0.5">${formatPrice(listing.price)}</div>
+            </div>
+            ${d.listingLocked ? '<span class="pill pill-active">Холбоотой</span>' : `<button onclick="leadFlow.data.listingId=null; renderLeadFlow();" class="text-[#8E8E8E] hover:text-[#9B2C2C] p-1.5 rounded hover:bg-white"><i data-lucide="x" class="w-4 h-4"></i></button>`}
+          </div>
+        </div>
+      ` : `
+        <div>
+          <label class="text-xs font-medium text-[#5C5C5C] mb-1.5 block">Сонирхсон зар <span class="text-[#8E8E8E]">(заавал биш)</span></label>
+          <select data-lf="listingId" onchange="leadFlow.data.listingId = parseInt(this.value) || null; renderLeadFlow();" class="input">
+            <option value="">— Зар сонгох —</option>
+            ${LISTINGS.filter(l=>l.status==='active').map(l => `<option value="${l.id}">${l.khotkhon} · ${l.rooms}ө ${l.area}м² · ${formatPrice(l.price)}</option>`).join('')}
+          </select>
+        </div>
+      `}
+
+      <div class="grid sm:grid-cols-2 gap-4">
+        <div>
+          <label class="text-xs font-medium text-[#5C5C5C] mb-1.5 block">Өрөөний тоо</label>
+          <select data-lf="rooms" class="input">
+            ${[1,2,3,4].map(r => `<option value="${r}" ${d.rooms==r?'selected':''}>${r}${r===4?'+':''} өрөө</option>`).join('')}
+          </select>
+        </div>
+        <div>
+          <label class="text-xs font-medium text-[#5C5C5C] mb-1.5 block">Дүүрэг</label>
+          <select data-lf="district" class="input">
+            ${DISTRICTS.map(dist => `<option ${d.district===dist?'selected':''}>${dist}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+
+      <div>
+        <label class="text-xs font-medium text-[#5C5C5C] mb-1.5 block">Төсөв (сая ₮)</label>
+        <div class="grid grid-cols-[1fr_auto_1fr] gap-2 items-center">
+          <input data-lf="budgetMin" value="${d.budgetMin}" class="input" placeholder="300" inputmode="numeric" />
+          <span class="text-[#8E8E8E]">—</span>
+          <input data-lf="budgetMax" value="${d.budgetMax}" class="input" placeholder="450" inputmode="numeric" />
+        </div>
+      </div>
+
+      <div>
+        <label class="text-xs font-medium text-[#5C5C5C] mb-2 block">Хэзээ нүүх</label>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          ${moveOptions.map(t => `<div onclick="setLeadFlowField('moveIn','${t}')" class="src-chip ${d.moveIn===t?'selected':''}" data-field="moveIn" data-val="${t}">${t}</div>`).join('')}
+        </div>
+        <input type="hidden" data-lf="moveIn" value="${d.moveIn}" />
+      </div>
+
+      <div>
+        <label class="text-xs font-medium text-[#5C5C5C] mb-1.5 block">Тэмдэглэл <span class="text-[#8E8E8E]">(заавал биш)</span></label>
+        <textarea data-lf="notes" class="input" rows="3" placeholder="Юу анхаарах ёстой вэ? Гэр бүл, тэжээвэр амьтан, бэлэн орох нөхцөл...">${d.notes}</textarea>
+      </div>
+    </div>
+  `;
+}
+
+function renderLeadFlowStep3() {
+  const d = leadFlow.data;
+  const listing = d.listingId ? LISTINGS.find(l => l.id === d.listingId) : null;
+  return `
+    <div class="space-y-5">
+      <div class="card p-5 bg-[#F0F4F1] border-[#D8E5DF]">
+        <div class="eyebrow mb-3" style="color:#1B4332">Шинэ lead-ийн товчоо</div>
+        <div class="space-y-2 text-sm">
+          <div class="flex items-baseline justify-between gap-3"><span class="text-[#8E8E8E]">Нэр</span><span class="font-medium">${d.name || '—'}</span></div>
+          <div class="flex items-baseline justify-between gap-3"><span class="text-[#8E8E8E]">Утас</span><span class="font-medium num">+976 ${d.phone || '—'}</span></div>
+          ${d.email ? `<div class="flex items-baseline justify-between gap-3"><span class="text-[#8E8E8E]">И-мэйл</span><span class="font-medium">${d.email}</span></div>` : ''}
+          <div class="flex items-baseline justify-between gap-3"><span class="text-[#8E8E8E]">Эх үүсвэр</span><span class="pill ${SOURCE_PILL[d.source]||''}">${d.source}</span></div>
+          <div class="flex items-baseline justify-between gap-3"><span class="text-[#8E8E8E]">Шаардлага</span><span class="font-medium">${d.rooms} өрөө · ${d.district}</span></div>
+          ${d.budgetMin || d.budgetMax ? `<div class="flex items-baseline justify-between gap-3"><span class="text-[#8E8E8E]">Төсөв</span><span class="num">₮${d.budgetMin||'?'}M – ${d.budgetMax||'?'}M</span></div>` : ''}
+          <div class="flex items-baseline justify-between gap-3"><span class="text-[#8E8E8E]">Нүүх хугацаа</span><span class="font-medium">${d.moveIn}</span></div>
+          ${listing ? `<div class="flex items-baseline justify-between gap-3"><span class="text-[#8E8E8E]">Сонирхсон зар</span><span class="font-medium">${listing.khotkhon} · ${listing.rooms}ө</span></div>` : ''}
+        </div>
+      </div>
+
+      <div>
+        <div class="eyebrow mb-3">Сонголтууд</div>
+
+        <div class="opt-card ${d.scheduleViewing?'checked':''} mb-2" onclick="toggleLeadFlowField('scheduleViewing')">
+          <input type="checkbox" ${d.scheduleViewing?'checked':''} onclick="event.stopPropagation()" onchange="toggleLeadFlowField('scheduleViewing')" />
+          <div class="flex-1">
+            <div class="font-medium text-sm">Шууд viewing товлох</div>
+            <div class="text-xs text-[#5C5C5C] mt-0.5">${listing ? listing.khotkhon + ' дээр' : 'Сонгосон зар дээр'} үзүүлэлтийн цаг хадгална</div>
+            ${d.scheduleViewing ? `
+              <div class="grid sm:grid-cols-2 gap-3 mt-3" onclick="event.stopPropagation()">
+                <input data-lf="viewingDate" type="date" value="${d.viewingDate}" class="input" />
+                <select data-lf="viewingTime" class="input">
+                  ${['10:00','11:00','14:00','15:00','16:00','17:00'].map(t => `<option ${d.viewingTime===t?'selected':''}>${t}</option>`).join('')}
+                </select>
+              </div>
+            ` : ''}
+          </div>
+        </div>
+
+        <div class="opt-card ${d.sendSms?'checked':''}" onclick="toggleLeadFlowField('sendSms')">
+          <input type="checkbox" ${d.sendSms?'checked':''} onclick="event.stopPropagation()" onchange="toggleLeadFlowField('sendSms')" />
+          <div class="flex-1">
+            <div class="font-medium text-sm">SMS сануулга илгээх</div>
+            <div class="text-xs text-[#5C5C5C] mt-0.5">Viewing-ийн 24 цагийн өмнө автомат мессеж явна</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid sm:grid-cols-2 gap-4">
+        <div>
+          <label class="text-xs font-medium text-[#5C5C5C] mb-1.5 block">Эхний шат</label>
+          <select data-lf="stage" class="input">
+            ${Object.entries(STAGE_LABELS).map(([k,v]) => `<option value="${k}" ${d.stage===k?'selected':''}>${v}</option>`).join('')}
+          </select>
+        </div>
+        <div>
+          <label class="text-xs font-medium text-[#5C5C5C] mb-1.5 block">Хариуцсан агент</label>
+          <select data-lf="agent" class="input">
+            <option value="БЭ" ${d.agent==='БЭ'?'selected':''}>Би (Б. Эрдэнэбаатар)</option>
+            <option value="ДБ" ${d.agent==='ДБ'?'selected':''}>Д. Болормаа</option>
+            <option value="ГЭ" ${d.agent==='ГЭ'?'selected':''}>Г. Энхтайван</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function setLeadFlowField(field, val) {
+  leadFlow.data[field] = val;
+  document.querySelectorAll(`[data-field="${field}"]`).forEach(el => {
+    el.classList.toggle('selected', el.dataset.val === val);
+  });
+  const hidden = document.querySelector(`[data-lf="${field}"]`);
+  if (hidden) hidden.value = val;
+}
+
+function toggleLeadFlowField(field) {
+  collectLeadFlowData();
+  leadFlow.data[field] = !leadFlow.data[field];
+  renderLeadFlow();
+}
+
+function collectLeadFlowData() {
+  const modal = document.getElementById('modal-shell');
+  if (!modal) return;
+  modal.querySelectorAll('[data-lf]').forEach(el => {
+    const key = el.dataset.lf;
+    if (el.type === 'checkbox') leadFlow.data[key] = el.checked;
+    else if (key === 'listingId') leadFlow.data[key] = el.value ? parseInt(el.value) : null;
+    else if (key === 'rooms') leadFlow.data[key] = parseInt(el.value);
+    else leadFlow.data[key] = el.value;
+  });
+}
+
+function leadFlowNext() {
+  collectLeadFlowData();
+  if (leadFlow.step === 1) {
+    if (!leadFlow.data.name.trim()) { showToast('Нэрийг бөглөнө үү', 'warning'); return; }
+    if (!leadFlow.data.phone.trim() || leadFlow.data.phone.length < 8) { showToast('8 оронтой утасны дугаар бөглөнө үү', 'warning'); return; }
+  }
+  leadFlow.step++;
+  renderLeadFlow();
+}
+
+function leadFlowPrev() {
+  collectLeadFlowData();
+  leadFlow.step--;
+  renderLeadFlow();
+}
+
+function leadFlowSubmit() {
+  collectLeadFlowData();
+  const d = leadFlow.data;
+  // Add to LEADS array so it actually shows up
+  const newLead = {
+    id: LEADS.length + 1,
+    name: d.name,
+    phone: '+976 ' + d.phone,
+    source: d.source === 'Бусад' ? 'Walk-in' : (d.source === 'Unegui.mn' ? 'Unegui' : d.source),
+    stage: d.stage,
+    budget: [parseInt(d.budgetMin)||300, parseInt(d.budgetMax)||450],
+    rooms: d.rooms,
+    district: d.district,
+    listingId: d.listingId || 1,
+    agent: d.agent,
+    activity: 'Дөнгөж сая',
+    initials: (d.name.split(' ').map(p => p[0]).join('').slice(0,2) || 'ШН').toUpperCase()
+  };
+  LEADS.unshift(newLead);
+  closeModal();
+  showToast(`<strong>${d.name}</strong> — шинэ lead амжилттай үүсгэгдлээ`, 'success');
+  if (d.scheduleViewing) {
+    setTimeout(() => showToast(`Viewing товлогдлоо · ${d.viewingDate} ${d.viewingTime}`, 'info', { duration: 3500 }), 700);
+  }
+  if (d.sendSms) {
+    setTimeout(() => showToast(`SMS сануулга илгээх дараалалд оруулсан`, 'info', { duration: 3000 }), 1400);
+  }
+  setTimeout(() => goTo('lead-detail'), 500);
+}
+
+/* ===== End multi-step lead flow ===== */
+
+function openNewViewingModal() {
+  openModal(`
+    <div class="modal-head">
+      <div><h3 class="font-semibold text-lg">Viewing товлох</h3><p class="text-xs text-[#8E8E8E] mt-0.5">Үзэх цаг товлоно уу</p></div>
+      <button onclick="closeModal()" class="text-[#8E8E8E] hover:text-[#1A1A1A]"><i data-lucide="x" class="w-5 h-5"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="grid sm:grid-cols-2 gap-4 mb-4">
+        <div><label class="text-xs font-medium text-[#5C5C5C] mb-1.5 block">Огноо</label>
+          <input class="input" type="date" value="2026-05-20" /></div>
+        <div><label class="text-xs font-medium text-[#5C5C5C] mb-1.5 block">Цаг</label>
+          <select class="input"><option>10:00</option><option>11:00</option><option>14:00</option><option selected>16:00</option><option>17:00</option></select></div>
+      </div>
+      <label class="text-xs font-medium text-[#5C5C5C] mb-1.5 block">Үргэлжлэх хугацаа</label>
+      <select class="input mb-4"><option>30 мин</option><option selected>1 цаг</option><option>1.5 цаг</option><option>2 цаг</option></select>
+      <label class="text-xs font-medium text-[#5C5C5C] mb-1.5 block">Зар</label>
+      <div class="card p-3 bg-[#F5F4EF] border-[#E8E6DF] flex items-center gap-3 mb-4">
+        <div class="w-12 h-12 rounded-md bg-cover bg-center" style="background-image:url('https://picsum.photos/seed/list1/100/100')"></div>
+        <div class="flex-1 min-w-0"><div class="font-medium text-sm">Time Tower 92м²</div><div class="text-xs text-[#8E8E8E]">Хан-Уул, 15-р хороо · ₮420,000,000</div></div>
+      </div>
+      <label class="flex items-center gap-2 text-sm"><input type="checkbox" checked class="rounded" /> SMS сануулга илгээх (24 цагийн өмнө)</label>
+    </div>
+    <div class="modal-foot">
+      <button onclick="closeModal()" class="btn-secondary">Цуцлах</button>
+      <button onclick="closeModal(); showToast('Viewing товлогдлоо · Маргааш 16:00', 'success');" class="btn-primary">Товлох</button>
+    </div>
+  `);
+}
+
+function openCancelConfirm() {
+  openModal(`
+    <div class="modal-head">
+      <h3 class="font-semibold text-lg">Захиалгаа цуцлах уу?</h3>
+      <button onclick="closeModal()" class="text-[#8E8E8E] hover:text-[#1A1A1A]"><i data-lucide="x" class="w-5 h-5"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="flex items-start gap-3 p-3 bg-[#FBF3E2] rounded-lg mb-4">
+        <i data-lucide="alert-triangle" class="w-5 h-5 text-[#B8860B] shrink-0 mt-0.5"></i>
+        <div class="text-sm text-[#5C5C5C]">Цуцалсан тохиолдолд таны Pro эрх <span class="font-semibold text-[#1A1A1A]">2026-06-15</span> хүртэл хэвээр үлдэх ба үүний дараа Free багц руу шилжинэ.</div>
+      </div>
+      <label class="text-xs font-medium text-[#5C5C5C] mb-1.5 block">Шалтгаан (заавал биш)</label>
+      <textarea class="input" rows="3" placeholder="Юу сайжруулмаар байна?"></textarea>
+    </div>
+    <div class="modal-foot">
+      <button onclick="closeModal()" class="btn-secondary">Үргэлжлүүлэн ашиглах</button>
+      <button onclick="closeModal(); showToast('Захиалга цуцлагдлаа. Бид санагдан байх болно.', 'warning');" class="bg-[#9B2C2C] text-white rounded-lg px-4 py-2.5 text-sm font-medium hover:bg-[#7B2222]">Тийм, цуцлах</button>
+    </div>
+  `, 'sm');
+}
+
+/* --- Onboarding --- */
+function toggleOnboarding(id) {
+  state.onboardingDone[id] = !state.onboardingDone[id];
+  if (state.onboardingDone[id]) showToast('Сайн байна! Алхам дууссан', 'success', { duration: 1500 });
+  renderAppScreen('dashboard');
+  setTimeout(() => lucide.createIcons(), 0);
+}
+
+/* --- Stage advance --- */
+function advanceStage(idx, stageKey) {
+  LEADS[0].stage = stageKey;
+  renderAppScreen('lead-detail');
+  setTimeout(() => lucide.createIcons(), 0);
+  showToast(`Шат: <strong>${STAGE_LABELS[stageKey]}</strong>-руу шилжүүллээ`, 'success', { duration: 2000 });
+}
+
+/* --- Filter chips --- */
+function clearChip(key) {
+  if (key === 'status') listingsFilter = 'all';
+  if (key === 'district') state.listingsDistrict = '';
+  if (key === 'rooms') state.listingsRooms = '';
+  renderAppScreen('listings');
+  setTimeout(() => lucide.createIcons(), 0);
+}
+function clearAllChips() {
+  listingsFilter = 'all';
+  state.listingsDistrict = '';
+  state.listingsRooms = '';
+  renderAppScreen('listings');
+  setTimeout(() => lucide.createIcons(), 0);
+}
+
+/* --- Notifications --- */
+const NOTIFICATIONS = [
+  { icon: 'phone-missed', color: '#9B2C2C', title: 'Б. Эрдэнэбаатар-аас 2 удаа залгасан', time: '5 мин', read: false },
+  { icon: 'calendar-clock', color: '#C4661F', title: 'Маргаашийн viewing — Time Tower, 16:00', time: '1 цаг', read: false },
+  { icon: 'user-plus', color: '#2D6A4F', title: 'Шинэ lead: Д. Болормаа (Unegui)', time: '3 цаг', read: false },
+  { icon: 'check-circle-2', color: '#2D6A4F', title: 'Хэлцэл хаагдлаа — Olympic Residence', time: 'Өчигдөр', read: true },
+  { icon: 'message-square', color: '#2B6CB0', title: 'Facebook Messenger: Ц. Сарангэрэл', time: 'Өчигдөр', read: true }
+];
+
+function toggleNotif(e) {
+  e.stopPropagation();
+  const p = document.getElementById('notif-panel');
+  if (p.classList.contains('open')) { p.classList.remove('open'); return; }
+  p.innerHTML = `
+    <div class="px-4 py-3 border-b border-[#E8E6DF] flex items-center justify-between">
+      <div><div class="font-semibold text-sm">Мэдэгдэл</div><div class="text-xs text-[#8E8E8E]">${NOTIFICATIONS.filter(n=>!n.read).length} шинэ</div></div>
+      <button onclick="markAllRead()" class="text-xs text-[#1B4332] font-medium hover:underline">Бүгдийг уншсан гэж</button>
+    </div>
+    <div class="max-h-80 overflow-y-auto">
+      ${NOTIFICATIONS.map(n => `
+        <div class="notif-item ${n.read?'read':''}" onclick="closeNotif()">
+          <span class="dot"></span>
+          <div class="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style="background:${n.color}15; color:${n.color}"><i data-lucide="${n.icon}" class="w-4 h-4"></i></div>
+          <div class="flex-1 min-w-0">
+            <div class="text-sm ${n.read?'text-[#5C5C5C]':'font-medium'}">${n.title}</div>
+            <div class="text-xs text-[#8E8E8E] mt-0.5">${n.time}-ын өмнө</div>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+    <div class="px-4 py-2.5 border-t border-[#E8E6DF] text-center"><button class="text-xs text-[#1B4332] font-medium hover:underline">Бүх мэдэгдэл харах</button></div>
+  `;
+  p.classList.add('open');
+  lucide.createIcons();
+  setTimeout(() => document.addEventListener('click', closeNotifOnOutside), 0);
+}
+function closeNotifOnOutside(e) {
+  if (!e.target.closest('#notif-panel')) {
+    closeNotif();
+    document.removeEventListener('click', closeNotifOnOutside);
+  }
+}
+function closeNotif() {
+  const p = document.getElementById('notif-panel');
+  if (p) p.classList.remove('open');
+}
+function markAllRead() {
+  NOTIFICATIONS.forEach(n => n.read = true);
+  document.getElementById('notif-dot').style.display = 'none';
+  toggleNotif({ stopPropagation: () => {} });
+  toggleNotif({ stopPropagation: () => {} });
+}
+
+/* --- Command palette --- */
+const CMD_SCREENS = [
+  { type: 'screen', key: 'dashboard', label: 'Хяналтын самбар', icon: 'layout-dashboard' },
+  { type: 'screen', key: 'listings', label: 'Listing-үүд', icon: 'building-2' },
+  { type: 'screen', key: 'leads', label: 'Lead pipeline', icon: 'users' },
+  { type: 'screen', key: 'calendar', label: 'Хуанли', icon: 'calendar' },
+  { type: 'screen', key: 'reports', label: 'Тайлан', icon: 'bar-chart-3' },
+  { type: 'screen', key: 'billing', label: 'Төлбөр, багц', icon: 'credit-card' },
+  { type: 'screen', key: 'landing', label: 'Эхлэлийн хуудас', icon: 'home' }
+];
+const CMD_ACTIONS = [
+  { type: 'action', key: 'new-listing', label: 'Шинэ зар нэмэх', icon: 'plus', fn: openNewListingModal },
+  { type: 'action', key: 'new-lead', label: 'Шинэ lead нэмэх', icon: 'user-plus', fn: openNewLeadModal },
+  { type: 'action', key: 'new-viewing', label: 'Viewing товлох', icon: 'calendar-plus', fn: openNewViewingModal },
+  { type: 'action', key: 'export', label: 'Excel-руу татах', icon: 'download', fn: () => showToast('Excel татаж байна...', 'info') }
+];
+let cmdSelected = 0;
+
+function openCmd() {
+  document.getElementById('cmd-backdrop').classList.add('open');
+  document.getElementById('cmd-input').value = '';
+  cmdSelected = 0;
+  renderCmdList('');
+  setTimeout(() => document.getElementById('cmd-input').focus(), 30);
+}
+function closeCmd() {
+  document.getElementById('cmd-backdrop').classList.remove('open');
+}
+function renderCmdList(q) {
+  const ql = q.toLowerCase().trim();
+  const matchScreens = CMD_SCREENS.filter(s => !ql || s.label.toLowerCase().includes(ql));
+  const matchActions = CMD_ACTIONS.filter(a => !ql || a.label.toLowerCase().includes(ql));
+  const matchLeads = LEADS.filter(l => !ql || l.name.toLowerCase().includes(ql) || l.phone.includes(ql)).slice(0, 5);
+  const matchListings = LISTINGS.filter(l => !ql || l.khotkhon.toLowerCase().includes(ql) || l.district.toLowerCase().includes(ql)).slice(0, 5);
+
+  const all = [];
+  if (matchScreens.length) all.push({ group: 'Скрин', items: matchScreens });
+  if (matchActions.length) all.push({ group: 'Үйлдэл', items: matchActions });
+  if (matchLeads.length) all.push({ group: 'Lead-үүд', items: matchLeads.map(l => ({ type: 'lead', key: l.id, label: l.name, sub: l.phone, icon: 'user' })) });
+  if (matchListings.length) all.push({ group: 'Listing-үүд', items: matchListings.map(l => ({ type: 'listing', key: l.id, label: `${l.khotkhon} · ${l.rooms}ө ${l.area}м²`, sub: l.district + ', ' + l.khoroo + '-р хороо', icon: 'building-2' })) });
+
+  const flat = all.flatMap(g => g.items);
+  cmdSelected = Math.min(cmdSelected, Math.max(flat.length - 1, 0));
+
+  const list = document.getElementById('cmd-list');
+  if (!flat.length) { list.innerHTML = '<div class="cmd-empty">Үр дүн олдсонгүй</div>'; return; }
+
+  let idx = 0;
+  list.innerHTML = all.map(g => `
+    <div class="cmd-group-title">${g.group}</div>
+    ${g.items.map(it => {
+      const i = idx++;
+      return `<div class="cmd-item ${i===cmdSelected?'selected':''}" data-idx="${i}" onclick="runCmd(${i})">
+        <i data-lucide="${it.icon}" class="w-4 h-4"></i>
+        <div class="flex-1 min-w-0"><div class="truncate">${it.label}</div>${it.sub?`<div class="text-xs text-[#8E8E8E]">${it.sub}</div>`:''}</div>
+        <i data-lucide="corner-down-left" class="cmd-arrow w-3.5 h-3.5"></i>
+      </div>`;
+    }).join('')}
+  `).join('');
+  window._cmdFlat = flat;
+  lucide.createIcons();
+}
+function runCmd(i) {
+  const it = window._cmdFlat[i];
+  if (!it) return;
+  closeCmd();
+  if (it.type === 'screen') goTo(it.key);
+  else if (it.type === 'action') it.fn();
+  else if (it.type === 'lead') goTo('lead-detail');
+  else if (it.type === 'listing') goTo('listing-detail');
+}
+
+/* --- Help / FAQ launcher --- */
+function openHelp() {
+  openModal(`
+    <div class="modal-head">
+      <div><h3 class="font-semibold text-lg">Тусламж</h3><p class="text-xs text-[#8E8E8E] mt-0.5">Бид танд тусална</p></div>
+      <button onclick="closeModal()" class="text-[#8E8E8E] hover:text-[#1A1A1A]"><i data-lucide="x" class="w-5 h-5"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="grid sm:grid-cols-2 gap-3 mb-5">
+        <button class="card p-4 text-left hover:bg-[#F5F4EF]"><div class="w-9 h-9 rounded-md bg-[#D8E5DF] text-[#1B4332] flex items-center justify-center mb-3"><i data-lucide="message-circle" class="w-4 h-4"></i></div><div class="font-medium text-sm">Чат бичих</div><div class="text-xs text-[#8E8E8E] mt-0.5">Дундаж хариу: 5 мин</div></button>
+        <button onclick="showToast('+976 7711 8800 рүү залгана уу', 'info')" class="card p-4 text-left hover:bg-[#F5F4EF]"><div class="w-9 h-9 rounded-md bg-[#F5E4D7] text-[#C4661F] flex items-center justify-center mb-3"><i data-lucide="phone" class="w-4 h-4"></i></div><div class="font-medium text-sm">Утсаар холбогдох</div><div class="text-xs text-[#8E8E8E] mt-0.5">9:00 — 18:00, Да-Ба</div></button>
+      </div>
+      <div class="eyebrow mb-2">Түгээмэл асуултууд</div>
+      <div class="divide-y divide-[#E8E6DF] border-t border-b border-[#E8E6DF]">
+        <details class="py-3 group"><summary class="cursor-pointer list-none flex justify-between items-center text-sm font-medium">Excel-ээс мэдээллээ хэрхэн оруулах вэ?<i data-lucide="chevron-down" class="w-4 h-4 group-open:rotate-180 transition"></i></summary><p class="text-sm text-[#5C5C5C] mt-2">Тохиргоо → Импорт цэснээс .xlsx файлаа хийгээрэй.</p></details>
+        <details class="py-3 group"><summary class="cursor-pointer list-none flex justify-between items-center text-sm font-medium">Lead-ийг хэрхэн солих вэ?<i data-lucide="chevron-down" class="w-4 h-4 group-open:rotate-180 transition"></i></summary><p class="text-sm text-[#5C5C5C] mt-2">Lead pipeline дээрх картыг чирэх эсвэл lead дотор шат дээр дарна уу.</p></details>
+      </div>
+    </div>
+  `, 'lg');
+}
+
+/* --- Keyboard --- */
+document.addEventListener('keydown', (e) => {
+  if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+    e.preventDefault();
+    openCmd();
+  }
+  if (e.key === 'Escape') {
+    closeCmd();
+    if (document.getElementById('modal-backdrop').classList.contains('open')) closeModal();
+  }
+  if (document.getElementById('cmd-backdrop').classList.contains('open')) {
+    if (e.key === 'ArrowDown') { e.preventDefault(); cmdSelected++; renderCmdList(document.getElementById('cmd-input').value); }
+    if (e.key === 'ArrowUp') { e.preventDefault(); cmdSelected = Math.max(0, cmdSelected - 1); renderCmdList(document.getElementById('cmd-input').value); }
+    if (e.key === 'Enter') { e.preventDefault(); runCmd(cmdSelected); }
+  }
+});
+document.getElementById('cmd-input').addEventListener('input', e => { cmdSelected = 0; renderCmdList(e.target.value); });
+
+/* --- Mobile bnav sync inside goTo --- */
+const _origGoTo = goTo;
+goTo = function(name) {
+  _origGoTo(name);
+  document.body.classList.toggle('in-app', APP_SCREENS.has(name));
+  document.querySelectorAll('[data-bnav]').forEach(b => b.classList.toggle('active', b.dataset.bnav === name));
+};
+
+buildDemoPill();
+goTo('landing');
+lucide.createIcons();
+</script>
+
+</body>
+</html>
