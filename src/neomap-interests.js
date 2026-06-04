@@ -16,10 +16,46 @@
 */
 
 const INTEREST_LIFESTYLES = [
-  { key: 'family',    icon: 'users',         label: 'Гэр бүл',           sub: '2-3 унтл., сургууль ойр, цэцэрлэг',           presetBedrooms: [2,3], presetBathroomsMin: 2, presetOffice: false, presetMustHaves: ['school','park','quiet','parking'] },
-  { key: 'young-pro', icon: 'briefcase',     label: 'Залуу мэргэжилтэн', sub: '1 унтл., хотын төв, шинэ барилга',           presetBedrooms: [1],   presetBathroomsMin: 1, presetOffice: true,  presetMustHaves: ['newproject','furnished'] },
-  { key: 'student',   icon: 'graduation-cap',label: 'Оюутан',            sub: 'Хямд, сургуулийн ойролцоо',                  presetBedrooms: [1],   presetBathroomsMin: 1, presetOffice: false, presetMustHaves: ['school','furnished'] },
-  { key: 'investor',  icon: 'trending-up',   label: 'Хөрөнгө оруулагч',  sub: 'Үнэ цэн өсөх, шинэ хороолол',                presetBedrooms: [1,2], presetBathroomsMin: 0, presetOffice: false, presetMustHaves: ['newproject','view'] }
+  {
+    key: 'family',
+    icon: 'users',
+    label: 'Гэр бүл',
+    sub: '2-3 унтл., сургууль ойр, цэцэрлэг',
+    presetBedrooms: [2, 3],
+    presetBathroomsMin: 2,
+    presetOffice: false,
+    presetMustHaves: ['school', 'park', 'quiet', 'parking'],
+  },
+  {
+    key: 'young-pro',
+    icon: 'briefcase',
+    label: 'Залуу мэргэжилтэн',
+    sub: '1 унтл., хотын төв, шинэ барилга',
+    presetBedrooms: [1],
+    presetBathroomsMin: 1,
+    presetOffice: true,
+    presetMustHaves: ['newproject', 'furnished'],
+  },
+  {
+    key: 'student',
+    icon: 'graduation-cap',
+    label: 'Оюутан',
+    sub: 'Хямд, сургуулийн ойролцоо',
+    presetBedrooms: [1],
+    presetBathroomsMin: 1,
+    presetOffice: false,
+    presetMustHaves: ['school', 'furnished'],
+  },
+  {
+    key: 'investor',
+    icon: 'trending-up',
+    label: 'Хөрөнгө оруулагч',
+    sub: 'Үнэ цэн өсөх, шинэ хороолол',
+    presetBedrooms: [1, 2],
+    presetBathroomsMin: 0,
+    presetOffice: false,
+    presetMustHaves: ['newproject', 'view'],
+  },
 ];
 
 /* Бэлэн листинг дээр унтлагын өрөө/нойл/ажлын өрөөний тоо байхгүй учир хэлбэрээр нь тооцно.
@@ -32,9 +68,9 @@ function getListingDetails(l) {
   const area = Number(l.area) || 0;
   const bedrooms = Math.max(0, rooms - 1);
   let bathrooms;
-  if (area >= 150) bathrooms = (l.id % 2 === 0) ? 3 : 2;
+  if (area >= 150) bathrooms = l.id % 2 === 0 ? 3 : 2;
   else if (area >= 100) bathrooms = 2;
-  else if (area >= 70) bathrooms = (l.id % 3 === 0) ? 2 : 1;
+  else if (area >= 70) bathrooms = l.id % 3 === 0 ? 2 : 1;
   else bathrooms = 1;
   const feats = (l.features || []).join(' ').toLowerCase();
   const desc = String(l.desc || '').toLowerCase();
@@ -44,22 +80,22 @@ function getListingDetails(l) {
 window.getListingDetails = getListingDetails;
 
 const INTEREST_MUST_HAVES = [
-  { key: 'school',     icon: 'school',        label: 'Сургууль ойр' },
-  { key: 'park',       icon: 'trees',         label: 'Цэцэрлэгт хүрээлэн' },
-  { key: 'newproject', icon: 'sparkles',      label: 'Шинэ барилга' },
-  { key: 'view',       icon: 'mountain',      label: 'Сайхан үзэмж' },
-  { key: 'elevator',   icon: 'arrow-up',      label: 'Лифттэй' },
-  { key: 'parking',    icon: 'square-parking',label: 'Зогсоол' },
-  { key: 'quiet',      icon: 'volume-x',      label: 'Чимээгүй гудамж' },
-  { key: 'pet',        icon: 'paw-print',     label: 'Тэжээвэртэй' },
-  { key: 'furnished',  icon: 'sofa',          label: 'Тавилгатай' }
+  { key: 'school', icon: 'school', label: 'Сургууль ойр' },
+  { key: 'park', icon: 'trees', label: 'Цэцэрлэгт хүрээлэн' },
+  { key: 'newproject', icon: 'sparkles', label: 'Шинэ барилга' },
+  { key: 'view', icon: 'mountain', label: 'Сайхан үзэмж' },
+  { key: 'elevator', icon: 'arrow-up', label: 'Лифттэй' },
+  { key: 'parking', icon: 'square-parking', label: 'Зогсоол' },
+  { key: 'quiet', icon: 'volume-x', label: 'Чимээгүй гудамж' },
+  { key: 'pet', icon: 'paw-print', label: 'Тэжээвэртэй' },
+  { key: 'furnished', icon: 'sofa', label: 'Тавилгатай' },
 ];
 
 const INTEREST_VIBES = [
-  { key: 'downtown',     icon: 'building-2', label: 'Хотын төв',           sub: 'Идэвхтэй амьдрал, дэлгүүр, ресторан' },
-  { key: 'quiet-street', icon: 'leaf',       label: 'Чимээгүй гудамж',     sub: 'Тайван, амралттай орчин' },
-  { key: 'park-near',    icon: 'trees',      label: 'Цэцэрлэгт хүрээлэнтэй', sub: 'Алхах, спортоор хичээллэх боломж' },
-  { key: 'new-area',     icon: 'construction', label: 'Шинэ хороолол',     sub: 'Орчин үеийн дэд бүтэц' }
+  { key: 'downtown', icon: 'building-2', label: 'Хотын төв', sub: 'Идэвхтэй амьдрал, дэлгүүр, ресторан' },
+  { key: 'quiet-street', icon: 'leaf', label: 'Чимээгүй гудамж', sub: 'Тайван, амралттай орчин' },
+  { key: 'park-near', icon: 'trees', label: 'Цэцэрлэгт хүрээлэнтэй', sub: 'Алхах, спортоор хичээллэх боломж' },
+  { key: 'new-area', icon: 'construction', label: 'Шинэ хороолол', sub: 'Орчин үеийн дэд бүтэц' },
 ];
 
 /* ============== MATCH SCORING ============== */
@@ -84,16 +120,17 @@ function computeMatchScore(listing, interests) {
   }
 
   // 2. Budget (25 оноо)
-  const bMin = interests.budgetMin, bMax = interests.budgetMax;
+  const bMin = interests.budgetMin,
+    bMax = interests.budgetMax;
   if (bMax == null && bMin == null) {
     score += 12; // нейтрал
   } else {
-    const inMin = (bMin == null) || (listing.price >= bMin);
-    const inMax = (bMax == null) || (listing.price <= bMax);
+    const inMin = bMin == null || listing.price >= bMin;
+    const inMax = bMax == null || listing.price <= bMax;
     if (inMin && inMax) {
       score += 25;
       reasons.push({ icon: 'banknote', text: 'Танай төсөвт тохирно', kind: 'good' });
-    } else if ((!inMax && bMax && listing.price <= bMax * 1.15)) {
+    } else if (!inMax && bMax && listing.price <= bMax * 1.15) {
       score += 12; // 15% хүртэл хэтэрсэн — хагас
       reasons.push({ icon: 'banknote', text: 'Төсвөөс бага зэрэг дээгүүр', kind: 'soft' });
     }
@@ -133,31 +170,31 @@ function computeMatchScore(listing, interests) {
   if (mh.length === 0) {
     score += 15;
   } else {
-    const features = (listing.features || []).map(f => String(f).toLowerCase());
+    const features = (listing.features || []).map((f) => String(f).toLowerCase());
     const desc = String(listing.desc || '').toLowerCase();
     const haystack = features.join(' ') + ' ' + desc;
     let matched = 0;
     const featureMap = {
-      school:     ['сургууль'],
-      park:       ['цэцэрлэгт','хүрээлэн','парк'],
-      newproject: ['шинэ','новый'],
-      view:       ['харц','үзэмж','уулын','голын'],
-      elevator:   ['лифт'],
-      parking:    ['зогсоол','гараж'],
-      quiet:      ['чимээгүй','тайван'],
-      pet:        ['тэжээвэр'],
-      furnished:  ['тавилга']
+      school: ['сургууль'],
+      park: ['цэцэрлэгт', 'хүрээлэн', 'парк'],
+      newproject: ['шинэ', 'новый'],
+      view: ['харц', 'үзэмж', 'уулын', 'голын'],
+      elevator: ['лифт'],
+      parking: ['зогсоол', 'гараж'],
+      quiet: ['чимээгүй', 'тайван'],
+      pet: ['тэжээвэр'],
+      furnished: ['тавилга'],
     };
-    mh.forEach(key => {
+    mh.forEach((key) => {
       const terms = featureMap[key] || [];
-      if (terms.some(t => haystack.includes(t))) {
+      if (terms.some((t) => haystack.includes(t))) {
         matched++;
-        const meta = INTEREST_MUST_HAVES.find(x => x.key === key);
+        const meta = INTEREST_MUST_HAVES.find((x) => x.key === key);
         if (meta && reasons.length < 4) reasons.push({ icon: meta.icon, text: meta.label, kind: 'good' });
       }
       // 'newproject' үед year-ийг ч шалгах
       if (key === 'newproject' && listing.year && listing.year >= 2021) {
-        if (!terms.some(t => haystack.includes(t))) {
+        if (!terms.some((t) => haystack.includes(t))) {
           matched++;
           if (reasons.length < 4) reasons.push({ icon: 'sparkles', text: 'Шинэ барилга', kind: 'good' });
         }
@@ -185,11 +222,11 @@ function matchedListings(opts = {}) {
   const minScore = opts.minScore != null ? opts.minScore : 40;
   const excludeDismissed = opts.excludeDismissed !== false;
   const dismissed = new Set(state.interestsDismissedIds || []);
-  const source = ((typeof LISTINGS !== 'undefined' ? LISTINGS : [])).filter(l => l.status !== 'sold');
+  const source = (typeof LISTINGS !== 'undefined' ? LISTINGS : []).filter((l) => l.status !== 'sold');
   return source
-    .map(l => ({ listing: l, ...computeMatchScore(l, interests) }))
-    .filter(x => x.score >= minScore)
-    .filter(x => !excludeDismissed || !dismissed.has(x.listing.id))
+    .map((l) => ({ listing: l, ...computeMatchScore(l, interests) }))
+    .filter((x) => x.score >= minScore)
+    .filter((x) => !excludeDismissed || !dismissed.has(x.listing.id))
     .sort((a, b) => b.score - a.score);
 }
 window.matchedListings = matchedListings;
@@ -198,37 +235,44 @@ window.matchedListings = matchedListings;
 function newMatchCount() {
   if (!state.userInterests) return 0;
   const dismissed = new Set(state.interestsDismissedIds || []);
-  const list = (typeof LISTINGS !== 'undefined') ? LISTINGS : [];
-  const savedSet = (typeof SAVED_IDS !== 'undefined') ? SAVED_IDS : null;
+  const list = typeof LISTINGS !== 'undefined' ? LISTINGS : [];
+  const savedSet = typeof SAVED_IDS !== 'undefined' ? SAVED_IDS : null;
   return list
-    .filter(l => l.status === 'new' || (l.listedDays != null && l.listedDays <= 7))
-    .filter(l => !dismissed.has(l.id))
-    .filter(l => !(savedSet && savedSet.has(l.id)))
-    .map(l => computeMatchScore(l, state.userInterests))
-    .filter(m => m.score >= 65)
-    .length;
+    .filter((l) => l.status === 'new' || (l.listedDays != null && l.listedDays <= 7))
+    .filter((l) => !dismissed.has(l.id))
+    .filter((l) => !(savedSet && savedSet.has(l.id)))
+    .map((l) => computeMatchScore(l, state.userInterests))
+    .filter((m) => m.score >= 65).length;
 }
 window.newMatchCount = newMatchCount;
 
 /* Behavior learning — хадгалсан зараас implicit interests суурь нь болно */
 function inferInterestsFromBehavior() {
-  const savedSet = (typeof SAVED_IDS !== 'undefined') ? SAVED_IDS : null;
-  const list = (typeof LISTINGS !== 'undefined') ? LISTINGS : null;
+  const savedSet = typeof SAVED_IDS !== 'undefined' ? SAVED_IDS : null;
+  const list = typeof LISTINGS !== 'undefined' ? LISTINGS : null;
   if (!savedSet || !list) return null;
-  const savedListings = list.filter(l => savedSet.has(l.id));
+  const savedListings = list.filter((l) => savedSet.has(l.id));
   if (savedListings.length < 2) return null;
   // Хамгийн их давтагдсан district, mode, rooms, дунд үнэ
-  const tally = (arr) => arr.reduce((m, v) => { m[v] = (m[v]||0) + 1; return m; }, {});
-  const topKeys = (obj, n) => Object.entries(obj).sort((a,b) => b[1]-a[1]).slice(0, n).map(x => x[0]);
-  const distTally = tally(savedListings.map(l => l.district));
-  const roomsTally = tally(savedListings.map(l => l.rooms));
-  const modeTally = tally(savedListings.map(l => l.mode));
-  const avgPrice = savedListings.reduce((s,l) => s + l.price, 0) / savedListings.length;
+  const tally = (arr) =>
+    arr.reduce((m, v) => {
+      m[v] = (m[v] || 0) + 1;
+      return m;
+    }, {});
+  const topKeys = (obj, n) =>
+    Object.entries(obj)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, n)
+      .map((x) => x[0]);
+  const distTally = tally(savedListings.map((l) => l.district));
+  const roomsTally = tally(savedListings.map((l) => l.rooms));
+  const modeTally = tally(savedListings.map((l) => l.mode));
+  const avgPrice = savedListings.reduce((s, l) => s + l.price, 0) / savedListings.length;
   return {
     districts: topKeys(distTally, 2),
     rooms: topKeys(roomsTally, 2).map(Number),
     mode: topKeys(modeTally, 1)[0] || 'sale',
-    avgPrice
+    avgPrice,
   };
 }
 window.inferInterestsFromBehavior = inferInterestsFromBehavior;
@@ -295,9 +339,9 @@ function removeInterestsProfile(id) {
     showToast('Сүүлчийн профайлыг устгах боломжгүй', 'info', { duration: 1500 });
     return;
   }
-  const p = list.find(x => x.id === id);
+  const p = list.find((x) => x.id === id);
   if (!confirm(`"${p ? p.name : 'Профайл'}"-ыг устгах уу?`)) return;
-  state.userInterestsList = list.filter(x => x.id !== id);
+  state.userInterestsList = list.filter((x) => x.id !== id);
   if (state.activeInterestsId === id) {
     state.activeInterestsId = state.userInterestsList[0].id;
   }
@@ -324,21 +368,19 @@ function startInterestsWizard(mode) {
   // 'edit' үед одоогийн идэвхтэй профайлаас уншина; 'create' үед шинээр эхэлнэ
   const cur = m === 'edit' ? state.userInterests : null;
   // inferred.rooms нь нийт өрөө учир унтлагын өрөө руу хөрвүүлнэ
-  const inferredBedrooms = inferred
-    ? [...new Set(inferred.rooms.map(r => Math.max(1, Math.min(4, r - 1))))]
-    : [];
+  const inferredBedrooms = inferred ? [...new Set(inferred.rooms.map((r) => Math.max(1, Math.min(4, r - 1))))] : [];
   state.interestsWizardStep = 1;
   state.interestsWizardDraft = {
     lifestyle: cur ? cur.lifestyle : null,
-    mode: cur ? cur.mode : (inferred ? inferred.mode : (state.mode || 'sale')),
+    mode: cur ? cur.mode : inferred ? inferred.mode : state.mode || 'sale',
     budgetMin: cur ? cur.budgetMin : null,
-    budgetMax: cur ? cur.budgetMax : (inferred ? Math.round(inferred.avgPrice * 1.2) : null),
+    budgetMax: cur ? cur.budgetMax : inferred ? Math.round(inferred.avgPrice * 1.2) : null,
     bedrooms: cur && cur.bedrooms ? [...cur.bedrooms] : inferredBedrooms,
     bathroomsMin: cur && cur.bathroomsMin != null ? cur.bathroomsMin : null,
     office: cur && cur.office != null ? cur.office : null,
-    districts: cur && cur.districts ? [...cur.districts] : (inferred ? inferred.districts : []),
+    districts: cur && cur.districts ? [...cur.districts] : inferred ? inferred.districts : [],
     mustHaves: cur && cur.mustHaves ? [...cur.mustHaves] : [],
-    vibe: cur ? cur.vibe : null
+    vibe: cur ? cur.vibe : null,
   };
   renderWizardModal();
 }
@@ -368,7 +410,8 @@ function renderWizardModal() {
     return false;
   })();
 
-  openModal(`
+  openModal(
+    `
     <div style="padding: 0; width: 100%;">
       <!-- Header: progress + step label + close -->
       <div style="padding: 18px 24px 14px 24px; border-bottom: 1px solid var(--border);">
@@ -405,20 +448,24 @@ function renderWizardModal() {
         </button>
       </div>
     </div>
-  `, 'wide');
+  `,
+    'wide',
+  );
   setTimeout(() => lucide.createIcons(), 0);
 }
 window.renderWizardModal = renderWizardModal;
 
 function stepTitle(step) {
-  return [
-    'Та өөрийгөө хэн гэж бодож вэ?',
-    'Танай төсөв хэр вэ?',
-    'Хэдэн өрөөтэй байр хайж байна?',
-    'Аль дүүрэг танд илүү таалагдах вэ?',
-    'Танд юу чухал вэ?',
-    'Ямар орчинд амьдрах дуртай?'
-  ][step - 1] || '';
+  return (
+    [
+      'Та өөрийгөө хэн гэж бодож вэ?',
+      'Танай төсөв хэр вэ?',
+      'Хэдэн өрөөтэй байр хайж байна?',
+      'Аль дүүрэг танд илүү таалагдах вэ?',
+      'Танд юу чухал вэ?',
+      'Ямар орчинд амьдрах дуртай?',
+    ][step - 1] || ''
+  );
 }
 
 /* ----- Wizard steps ----- */
@@ -426,7 +473,8 @@ function wizardStepLifestyle(d) {
   return `
     <p style="color: var(--text-2); font-size: 13px; margin-bottom: 16px;">Танд хамгийн илүү тохирох сонголтыг олгохын тулд.</p>
     <div class="grid grid-cols-2 gap-3">
-      ${INTEREST_LIFESTYLES.map(opt => `
+      ${INTEREST_LIFESTYLES.map(
+        (opt) => `
         <button onclick="wizardSetLifestyle('${opt.key}')"
           class="interest-card ${d.lifestyle === opt.key ? 'selected' : ''}"
           style="text-align: left; padding: 16px; border-radius: 14px; border: 1.5px solid ${d.lifestyle === opt.key ? 'var(--gold-brand)' : 'var(--border)'}; background: ${d.lifestyle === opt.key ? 'rgba(201,162,39,.06)' : 'var(--surface)'}; transition: all .15s;">
@@ -436,7 +484,8 @@ function wizardStepLifestyle(d) {
           <div style="font-weight: 700; color: var(--text); font-size: 14px; margin-bottom: 4px;">${opt.label}</div>
           <div style="font-size: 11.5px; color: var(--text-3); line-height: 1.4;">${opt.sub}</div>
         </button>
-      `).join('')}
+      `,
+      ).join('')}
     </div>
   `;
 }
@@ -449,25 +498,26 @@ function wizardStepBudget(d) {
         { label: '1-2сая', min: 1000000, max: 2000000 },
         { label: '2-3сая', min: 2000000, max: 3000000 },
         { label: '3-5сая', min: 3000000, max: 5000000 },
-        { label: '5сая+', min: 5000000, max: null }
+        { label: '5сая+', min: 5000000, max: null },
       ]
     : [
         { label: '< 200сая', min: null, max: 200000000 },
         { label: '200-400сая', min: 200000000, max: 400000000 },
         { label: '400-600сая', min: 400000000, max: 600000000 },
         { label: '600сая-1тэрбум', min: 600000000, max: 1000000000 },
-        { label: '1тэрбум+', min: 1000000000, max: null }
+        { label: '1тэрбум+', min: 1000000000, max: null },
       ];
   return `
     <div class="flex gap-2 mb-4">
-      <button onclick="wizardSetMode('sale')" class="${d.mode==='sale'?'btn btn-primary':'btn btn-secondary'}" style="padding: 8px 16px; font-size: 13px;">Худалдах</button>
-      <button onclick="wizardSetMode('rent')" class="${d.mode==='rent'?'btn btn-primary':'btn btn-secondary'}" style="padding: 8px 16px; font-size: 13px;">Түрээслэх</button>
+      <button onclick="wizardSetMode('sale')" class="${d.mode === 'sale' ? 'btn btn-primary' : 'btn btn-secondary'}" style="padding: 8px 16px; font-size: 13px;">Худалдах</button>
+      <button onclick="wizardSetMode('rent')" class="${d.mode === 'rent' ? 'btn btn-primary' : 'btn btn-secondary'}" style="padding: 8px 16px; font-size: 13px;">Түрээслэх</button>
     </div>
     <p style="color: var(--text-2); font-size: 13px; margin-bottom: 14px;">Танд тохирох үнийн хязгаарыг сонгоно уу.</p>
     <div class="grid grid-cols-1 gap-2">
-      ${ranges.map(r => {
-        const active = d.budgetMin === r.min && d.budgetMax === r.max;
-        return `
+      ${ranges
+        .map((r) => {
+          const active = d.budgetMin === r.min && d.budgetMax === r.max;
+          return `
           <button onclick="wizardSetBudget(${r.min}, ${r.max})"
             style="text-align: left; padding: 14px 16px; border-radius: 12px; border: 1.5px solid ${active ? 'var(--gold-brand)' : 'var(--border)'}; background: ${active ? 'rgba(201,162,39,.06)' : 'var(--surface)'}; display: flex; align-items: center; gap: 12px;">
             <div style="width: 24px; height: 24px; border-radius: 50%; border: 2px solid ${active ? 'var(--gold-brand)' : 'var(--border-strong)'}; background: ${active ? 'var(--gold-brand)' : 'transparent'}; display:inline-flex;align-items:center;justify-content:center;">
@@ -476,7 +526,8 @@ function wizardStepBudget(d) {
             <span style="font-weight: 600; color: var(--text); font-size: 14px;">${r.label}${isRent ? '' : ' ₮'}</span>
           </button>
         `;
-      }).join('')}
+        })
+        .join('')}
     </div>
   `;
 }
@@ -490,13 +541,13 @@ function wizardStepRooms(d) {
     { n: 1, totalLabel: '2 өрөө' },
     { n: 2, totalLabel: '3 өрөө' },
     { n: 3, totalLabel: '4 өрөө' },
-    { n: 4, totalLabel: '5+ өрөө' }
+    { n: 4, totalLabel: '5+ өрөө' },
   ];
   const bathOpts = [
     { v: 0, label: 'Хамаагүй' },
     { v: 1, label: '1+' },
     { v: 2, label: '2+' },
-    { v: 3, label: '3+' }
+    { v: 3, label: '3+' },
   ];
   return `
     <p style="color: var(--text-2); font-size: 13px; margin-bottom: 14px;">Танай өрөөний тохиргоог дэлгэрэнгүй сонгоно уу.</p>
@@ -509,16 +560,18 @@ function wizardStepRooms(d) {
         <div style="font-size: 11.5px; color: var(--text-3); margin-left: auto;">олныг сонгож болно</div>
       </div>
       <div class="flex flex-wrap gap-2">
-        ${bedroomOpts.map(opt => {
-          const active = bedrooms.includes(opt.n);
-          return `
+        ${bedroomOpts
+          .map((opt) => {
+            const active = bedrooms.includes(opt.n);
+            return `
             <button onclick="wizardToggleBedroom(${opt.n})"
               style="padding: 10px 14px; border-radius: 12px; border: 1.5px solid ${active ? 'var(--gold-brand)' : 'var(--border)'}; background: ${active ? 'rgba(201,162,39,.1)' : 'var(--surface)'}; color: var(--text); text-align: left; min-width: 110px;">
               <div style="font-weight: 700; font-size: 14px;">${opt.n}${opt.n === 4 ? '+' : ''} унтлагатай</div>
               <div style="font-size: 11px; color: var(--text-3); margin-top: 2px;">${opt.totalLabel}</div>
             </button>
           `;
-        }).join('')}
+          })
+          .join('')}
       </div>
     </div>
 
@@ -530,15 +583,17 @@ function wizardStepRooms(d) {
         <div style="font-size: 11.5px; color: var(--text-3); margin-left: auto;">хамгийн багадаа</div>
       </div>
       <div class="flex flex-wrap gap-2">
-        ${bathOpts.map(opt => {
-          const active = bathMin === opt.v;
-          return `
+        ${bathOpts
+          .map((opt) => {
+            const active = bathMin === opt.v;
+            return `
             <button onclick="wizardSetBathroomsMin(${opt.v})"
               style="padding: 10px 16px; border-radius: 12px; border: 1.5px solid ${active ? 'var(--gold-brand)' : 'var(--border)'}; background: ${active ? 'var(--gold-brand)' : 'var(--surface)'}; color: ${active ? '#07111F' : 'var(--text)'}; font-weight: 700; font-size: 13px; min-width: 64px;">
               ${opt.label}
             </button>
           `;
-        }).join('')}
+          })
+          .join('')}
       </div>
     </div>
 
@@ -567,9 +622,10 @@ function wizardStepDistricts(d) {
   return `
     <p style="color: var(--text-2); font-size: 13px; margin-bottom: 16px;">Хамгийн 3 хүртэл дүүрэг сонгоно.</p>
     <div class="grid grid-cols-2 gap-2">
-      ${((typeof DISTRICTS !== 'undefined' ? DISTRICTS : [])).map(dist => {
-        const active = sel.includes(dist);
-        return `
+      ${(typeof DISTRICTS !== 'undefined' ? DISTRICTS : [])
+        .map((dist) => {
+          const active = sel.includes(dist);
+          return `
           <button onclick="wizardToggleDistrict('${dist}')"
             style="padding: 12px 14px; border-radius: 12px; border: 1.5px solid ${active ? 'var(--gold-brand)' : 'var(--border)'}; background: ${active ? 'rgba(201,162,39,.08)' : 'var(--surface)'}; text-align: left; display: flex; align-items: center; gap: 10px;">
             <div style="width: 22px; height: 22px; border-radius: 6px; border: 1.5px solid ${active ? 'var(--gold-brand)' : 'var(--border-strong)'}; background: ${active ? 'var(--gold-brand)' : 'transparent'}; display: inline-flex; align-items: center; justify-content: center;">
@@ -578,7 +634,8 @@ function wizardStepDistricts(d) {
             <span style="font-weight: 600; color: var(--text); font-size: 13.5px;">${dist}</span>
           </button>
         `;
-      }).join('')}
+        })
+        .join('')}
     </div>
   `;
 }
@@ -588,7 +645,7 @@ function wizardStepMustHaves(d) {
   return `
     <p style="color: var(--text-2); font-size: 13px; margin-bottom: 16px;">Танд хамгийн чухал зүйлсээ сонгоно (заавал биш).</p>
     <div class="flex flex-wrap gap-2">
-      ${INTEREST_MUST_HAVES.map(opt => {
+      ${INTEREST_MUST_HAVES.map((opt) => {
         const active = sel.includes(opt.key);
         return `
           <button onclick="wizardToggleMustHave('${opt.key}')"
@@ -606,7 +663,7 @@ function wizardStepVibe(d) {
   return `
     <p style="color: var(--text-2); font-size: 13px; margin-bottom: 16px;">Танд хамгийн дотно мэдрэгдэх орчныг сонгоно.</p>
     <div class="grid grid-cols-1 gap-2.5">
-      ${INTEREST_VIBES.map(opt => {
+      ${INTEREST_VIBES.map((opt) => {
         const active = d.vibe === opt.key;
         return `
           <button onclick="wizardSetVibe('${opt.key}')"
@@ -629,7 +686,7 @@ function wizardStepVibe(d) {
 function wizardSetLifestyle(key) {
   state.interestsWizardDraft.lifestyle = key;
   // Preset bedrooms / bathrooms / office / must-haves авч идэвхжүүлэх
-  const meta = INTEREST_LIFESTYLES.find(x => x.key === key);
+  const meta = INTEREST_LIFESTYLES.find((x) => x.key === key);
   if (meta) {
     if (!state.interestsWizardDraft.bedrooms || state.interestsWizardDraft.bedrooms.length === 0) {
       state.interestsWizardDraft.bedrooms = [...meta.presetBedrooms];
@@ -666,7 +723,8 @@ window.wizardSetBudget = wizardSetBudget;
 function wizardToggleBedroom(n) {
   const arr = state.interestsWizardDraft.bedrooms || [];
   const idx = arr.indexOf(n);
-  if (idx === -1) arr.push(n); else arr.splice(idx, 1);
+  if (idx === -1) arr.push(n);
+  else arr.splice(idx, 1);
   state.interestsWizardDraft.bedrooms = arr;
   renderWizardModal();
 }
@@ -702,7 +760,8 @@ window.wizardToggleDistrict = wizardToggleDistrict;
 function wizardToggleMustHave(k) {
   const arr = state.interestsWizardDraft.mustHaves || [];
   const idx = arr.indexOf(k);
-  if (idx === -1) arr.push(k); else arr.splice(idx, 1);
+  if (idx === -1) arr.push(k);
+  else arr.splice(idx, 1);
   state.interestsWizardDraft.mustHaves = arr;
   renderWizardModal();
 }
@@ -753,17 +812,17 @@ function finishInterestsWizard() {
     districts: d.districts || [],
     mustHaves: d.mustHaves || [],
     vibe: d.vibe,
-    updatedAt: new Date().toISOString()
+    updatedAt: new Date().toISOString(),
   };
   const list = state.userInterestsList || [];
-  const nextId = () => (list.reduce((m, p) => Math.max(m, Number(p.id) || 0), 0) + 1) || 1;
+  const nextId = () => list.reduce((m, p) => Math.max(m, Number(p.id) || 0), 0) + 1 || 1;
   if (mode === 'create') {
     profile.id = nextId();
     profile.name = makeInterestsProfileName(profile);
     list.push(profile);
     state.activeInterestsId = profile.id;
   } else {
-    const idx = list.findIndex(p => p.id === state.activeInterestsId);
+    const idx = list.findIndex((p) => p.id === state.activeInterestsId);
     if (idx >= 0) {
       profile.id = list[idx].id;
       profile.name = list[idx].name || makeInterestsProfileName(profile);
@@ -793,8 +852,15 @@ window.finishInterestsWizard = finishInterestsWizard;
 
 /* ============== UPGRADE MODAL ============== */
 const PRO_PLANS = [
-  { key: 'monthly', label: 'Сар бүр',  price: 19900,  unit: '/сар',  sub: 'Хэдийд ч цуцалж болно',            savings: null },
-  { key: 'yearly',  label: 'Жил тутам', price: 199000, unit: '/жил', sub: '2 сар үнэгүй (16,583₮/сар)',       savings: '17% хямд' }
+  { key: 'monthly', label: 'Сар бүр', price: 19900, unit: '/сар', sub: 'Хэдийд ч цуцалж болно', savings: null },
+  {
+    key: 'yearly',
+    label: 'Жил тутам',
+    price: 199000,
+    unit: '/жил',
+    sub: '2 сар үнэгүй (16,583₮/сар)',
+    savings: '17% хямд',
+  },
 ];
 
 function showInterestsUpgradeModal() {
@@ -805,8 +871,9 @@ window.showInterestsUpgradeModal = showInterestsUpgradeModal;
 
 function renderUpgradeModal() {
   const selected = state.upgradeDraftPlan || 'yearly';
-  const sel = PRO_PLANS.find(p => p.key === selected) || PRO_PLANS[0];
-  openModal(`
+  const sel = PRO_PLANS.find((p) => p.key === selected) || PRO_PLANS[0];
+  openModal(
+    `
     <div style="padding: 0;">
       <div style="padding: 26px 28px 16px 28px; text-align: center; background: linear-gradient(135deg, rgba(201,162,39,.12), rgba(14,93,111,.08)); border-bottom: 1px solid var(--border); position: relative;">
         <button onclick="closeModal()" style="position: absolute; top: 14px; right: 14px; color: var(--text-3); padding: 6px;" title="Хаах"><i data-lucide="x" class="w-5 h-5"></i></button>
@@ -820,10 +887,12 @@ function renderUpgradeModal() {
       <div style="padding: 18px 24px 6px 24px;">
         <div style="display: grid; gap: 10px; margin-bottom: 16px;">
           ${[
-            { icon: 'sparkles', title: 'Хязгааргүй хүсэл',      sub: 'Гэр бүл, хөрөнгө оруулалт, түрээслэгчид тус тусдаа.' },
-            { icon: 'target',   title: 'Илүү нарийн тааруулга', sub: 'Хүсэл бүр өөрийн дүүрэг, төсөв, шаардлагатай.' },
-            { icon: 'bell',     title: 'Тусгай мэдэгдэл',        sub: 'Хүсэл тус бүрт шинэ зар орох тутамд push.' }
-          ].map(b => `
+            { icon: 'sparkles', title: 'Хязгааргүй хүсэл', sub: 'Гэр бүл, хөрөнгө оруулалт, түрээслэгчид тус тусдаа.' },
+            { icon: 'target', title: 'Илүү нарийн тааруулга', sub: 'Хүсэл бүр өөрийн дүүрэг, төсөв, шаардлагатай.' },
+            { icon: 'bell', title: 'Тусгай мэдэгдэл', sub: 'Хүсэл тус бүрт шинэ зар орох тутамд push.' },
+          ]
+            .map(
+              (b) => `
             <div style="display: flex; gap: 11px; padding: 10px 12px; border-radius: 11px; background: var(--surface-2); border: 1px solid var(--border);">
               <div style="width: 32px; height: 32px; border-radius: 9px; background: rgba(201,162,39,.15); color: var(--gold-brand); display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;">
                 <i data-lucide="${b.icon}" class="w-4 h-4"></i>
@@ -833,12 +902,14 @@ function renderUpgradeModal() {
                 <div style="font-size: 11.5px; color: var(--text-3); line-height: 1.45;">${b.sub}</div>
               </div>
             </div>
-          `).join('')}
+          `,
+            )
+            .join('')}
         </div>
 
         <div style="font-size: 11.5px; font-weight: 700; color: var(--text-3); letter-spacing: .08em; text-transform: uppercase; margin-bottom: 8px;">Багц сонгох</div>
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 4px;">
-          ${PRO_PLANS.map(p => {
+          ${PRO_PLANS.map((p) => {
             const active = p.key === selected;
             return `
               <button onclick="selectProPlan('${p.key}')"
@@ -868,7 +939,9 @@ function renderUpgradeModal() {
         </button>
       </div>
     </div>
-  `, 'wide');
+  `,
+    'wide',
+  );
   setTimeout(() => lucide.createIcons(), 0);
 }
 window.renderUpgradeModal = renderUpgradeModal;
@@ -881,14 +954,16 @@ window.selectProPlan = selectProPlan;
 
 function upgradeUserTier() {
   const planKey = state.upgradeDraftPlan || 'yearly';
-  const plan = PRO_PLANS.find(p => p.key === planKey) || PRO_PLANS[0];
+  const plan = PRO_PLANS.find((p) => p.key === planKey) || PRO_PLANS[0];
   state.userTier = 'pro';
   state.userTierPlan = plan.key;
   state.userTierActivatedAt = new Date().toISOString();
   saveUserTier();
   state.upgradeDraftPlan = null;
   closeModal();
-  showToast(`👑 Pro эрх идэвхжлээ (${plan.label} · ${plan.price.toLocaleString('mn-MN')}₮)`, 'success', { duration: 2400 });
+  showToast(`👑 Pro эрх идэвхжлээ (${plan.label} · ${plan.price.toLocaleString('mn-MN')}₮)`, 'success', {
+    duration: 2400,
+  });
   refreshInterestsBadge();
   // Хэрэв байнгын interests хуудсан дээр бол refresh
   if (state.currentScreen === 'interests') renderAppScreen('interests');
@@ -908,7 +983,7 @@ function spawnConfetti() {
     const delay = Math.random() * 0.3;
     const color = colors[i % colors.length];
     const size = 6 + Math.random() * 6;
-    p.style.cssText = `position:absolute;top:-10px;left:${left}%;width:${size}px;height:${size}px;background:${color};border-radius:2px;opacity:.9;animation:confettiFall 1.6s ease-in ${delay}s forwards;transform:rotate(${Math.random()*360}deg);`;
+    p.style.cssText = `position:absolute;top:-10px;left:${left}%;width:${size}px;height:${size}px;background:${color};border-radius:2px;opacity:.9;animation:confettiFall 1.6s ease-in ${delay}s forwards;transform:rotate(${Math.random() * 360}deg);`;
     wrap.appendChild(p);
   }
   document.body.appendChild(wrap);
@@ -935,52 +1010,66 @@ function renderInterests() {
   }
 
   const results = matchedListings({ minScore: 40 });
-  const lifestyleMeta = INTEREST_LIFESTYLES.find(x => x.key === interests.lifestyle);
-  const vibeMeta = INTEREST_VIBES.find(x => x.key === interests.vibe);
+  const lifestyleMeta = INTEREST_LIFESTYLES.find((x) => x.key === interests.lifestyle);
+  const vibeMeta = INTEREST_VIBES.find((x) => x.key === interests.vibe);
   const list = state.userInterestsList || [];
   const isPro = state.userTier === 'pro';
   const canAdd = isPro || list.length < 1;
 
   return `
     <section class="max-w-7xl mx-auto px-4 lg:px-8 py-8">
-      ${list.length > 0 ? `
+      ${
+        list.length > 0
+          ? `
         <!-- Profile tabs -->
         <div class="taste-profiles" style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom: 14px;">
-          ${list.map(p => {
-            const active = p.id === state.activeInterestsId;
-            return `
+          ${list
+            .map((p) => {
+              const active = p.id === state.activeInterestsId;
+              return `
               <div style="display:inline-flex; align-items:stretch; border-radius: 10px; overflow: hidden; border: 1.5px solid ${active ? 'var(--gold-brand)' : 'var(--border)'}; background: ${active ? 'rgba(201,162,39,.1)' : 'var(--surface)'};">
                 <button onclick="switchInterestsProfile(${p.id})"
                   style="padding: 8px 12px; font-weight: ${active ? 700 : 600}; color: var(--text); font-size: 13px; display:inline-flex; align-items:center; gap:6px;">
                   ${active ? '<i data-lucide="check" class="w-3.5 h-3.5" style="color: var(--gold-brand);"></i>' : ''}
                   ${p.name || 'Хүсэл'}
                 </button>
-                ${list.length > 1 ? `
+                ${
+                  list.length > 1
+                    ? `
                   <button onclick="removeInterestsProfile(${p.id})" title="Устгах"
                     style="padding: 8px 10px; color: var(--text-3); border-left: 1px solid var(--border);">
                     <i data-lucide="x" class="w-3.5 h-3.5"></i>
                   </button>
-                ` : ''}
+                `
+                    : ''
+                }
               </div>
             `;
-          }).join('')}
+            })
+            .join('')}
           <button onclick="tryAddInterestsProfile()"
             style="padding: 8px 14px; border-radius: 10px; border: 1.5px dashed ${canAdd ? 'var(--border-strong)' : 'var(--border)'}; background: transparent; color: ${canAdd ? 'var(--text-2)' : 'var(--text-3)'}; font-weight: 600; font-size: 13px; display:inline-flex; align-items:center; gap:6px;">
             <i data-lucide="${canAdd ? 'plus' : 'crown'}" class="w-3.5 h-3.5"></i>
             ${canAdd ? 'Шинэ хүсэл' : 'Pro эрхээр илүү нэмэх'}
           </button>
-          ${!isPro ? `
+          ${
+            !isPro
+              ? `
             <button onclick="showInterestsUpgradeModal()"
               style="margin-left: auto; padding: 5px 10px; border-radius: 999px; font-size: 11.5px; color: var(--gold-brand); background: rgba(201,162,39,.08); border: 1px solid rgba(201,162,39,.25); display:inline-flex; align-items:center; gap:5px; font-weight: 600;">
               <i data-lucide="crown" class="w-3 h-3"></i> Pro болох
             </button>
-          ` : `
+          `
+              : `
             <span style="margin-left: auto; font-size: 11.5px; color: var(--gold-brand); display:inline-flex; align-items:center; gap:4px;">
               <i data-lucide="crown" class="w-3 h-3"></i> Pro эрх · ${list.length} профайл
             </span>
-          `}
+          `
+          }
         </div>
-      ` : ''}
+      `
+          : ''
+      }
 
       <!-- Header strip -->
       <div class="taste-header">
@@ -992,10 +1081,21 @@ function renderInterests() {
             <div class="taste-header-tags">
               ${lifestyleMeta ? `<span class="taste-tag"><i data-lucide="${lifestyleMeta.icon}" class="w-3 h-3"></i>${lifestyleMeta.label}</span>` : ''}
               <span class="taste-tag"><i data-lucide="${interests.mode === 'rent' ? 'key-round' : 'home'}" class="w-3 h-3"></i>${interests.mode === 'rent' ? 'Түрээс' : 'Худалдах'}</span>
-              ${(interests.bedrooms || []).length > 0 ? `<span class="taste-tag"><i data-lucide="bed-double" class="w-3 h-3"></i>${interests.bedrooms.slice().sort((a,b)=>a-b).map(n => `${n}${n===4?'+':''}`).join('/')} унтл.</span>` : ''}
+              ${
+                (interests.bedrooms || []).length > 0
+                  ? `<span class="taste-tag"><i data-lucide="bed-double" class="w-3 h-3"></i>${interests.bedrooms
+                      .slice()
+                      .sort((a, b) => a - b)
+                      .map((n) => `${n}${n === 4 ? '+' : ''}`)
+                      .join('/')} унтл.</span>`
+                  : ''
+              }
               ${interests.bathroomsMin ? `<span class="taste-tag"><i data-lucide="bath" class="w-3 h-3"></i>${interests.bathroomsMin}+ нойл</span>` : ''}
               ${interests.office ? `<span class="taste-tag"><i data-lucide="briefcase" class="w-3 h-3"></i>Ажлын өрөө</span>` : ''}
-              ${(interests.districts || []).slice(0,3).map(d => `<span class="taste-tag"><i data-lucide="map-pin" class="w-3 h-3"></i>${d}</span>`).join('')}
+              ${(interests.districts || [])
+                .slice(0, 3)
+                .map((d) => `<span class="taste-tag"><i data-lucide="map-pin" class="w-3 h-3"></i>${d}</span>`)
+                .join('')}
               ${vibeMeta ? `<span class="taste-tag"><i data-lucide="${vibeMeta.icon}" class="w-3 h-3"></i>${vibeMeta.label}</span>` : ''}
             </div>
           </div>
@@ -1010,25 +1110,36 @@ function renderInterests() {
         </div>
       </div>
 
-      ${results.length === 0 ? `
+      ${
+        results.length === 0
+          ? `
         <div class="text-center py-20" style="background: var(--surface); border-radius: 14px; border: 1px solid var(--border); margin-top: 18px;">
           <i data-lucide="search-x" class="w-12 h-12 mx-auto mb-3" style="color: var(--text-3);"></i>
           <h3 style="font-size: 16px; font-weight: 600; color: var(--text); margin-bottom: 6px;">Тохирох зар олдсонгүй</h3>
           <p style="color: var(--text-2); font-size: 14px; margin-bottom: 16px;">Хүслээ өөрчилж үзнэ үү — өргөн хайхад илүү олон зар олдоно.</p>
           <button onclick="startInterestsWizard('edit')" class="btn btn-primary">Шинэчлэх</button>
         </div>
-      ` : `
+      `
+          : `
         <div class="taste-grid">
-          ${results.slice(0, 18).map(({ listing, score, reasons }) => renderMatchCard(listing, score, reasons)).join('')}
+          ${results
+            .slice(0, 18)
+            .map(({ listing, score, reasons }) => renderMatchCard(listing, score, reasons))
+            .join('')}
         </div>
-        ${(state.interestsDismissedIds || []).length > 0 ? `
+        ${
+          (state.interestsDismissedIds || []).length > 0
+            ? `
           <div class="text-center mt-6">
             <button onclick="restoreDismissed()" class="btn btn-ghost" style="font-size: 13px; color: var(--text-3);">
               <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i> Алгассан ${state.interestsDismissedIds.length} зарыг буцаах
             </button>
           </div>
-        ` : ''}
-      `}
+        `
+            : ''
+        }
+      `
+      }
     </section>
   `;
 }
@@ -1036,10 +1147,8 @@ window.renderInterests = renderInterests;
 
 function renderMatchCard(l, score, reasons) {
   const tier = score >= 85 ? 'high' : score >= 65 ? 'mid' : 'low';
-  const priceStr = l.mode === 'rent'
-    ? `${fmtCompact(l.price)}/сар`
-    : `${fmtCompact(l.price)}`;
-  const isSaved = (typeof SAVED_IDS !== 'undefined') && SAVED_IDS.has(l.id);
+  const priceStr = l.mode === 'rent' ? `${fmtCompact(l.price)}/сар` : `${fmtCompact(l.price)}`;
+  const isSaved = typeof SAVED_IDS !== 'undefined' && SAVED_IDS.has(l.id);
   return `
     <article class="taste-card" data-listing-id="${l.id}">
       <div class="taste-card-img" onclick="state.currentListingId=${l.id}; goTo('property')">
@@ -1062,15 +1171,24 @@ function renderMatchCard(l, score, reasons) {
         </div>
         <div style="font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 2px;">${l.khotkhon}</div>
         <div style="font-size: 12px; color: var(--text-3); margin-bottom: 10px;">${l.district} · ${l.rooms} өрөө · ${l.area}м²</div>
-        ${reasons.length > 0 ? `
+        ${
+          reasons.length > 0
+            ? `
           <div class="taste-reasons">
-            ${reasons.slice(0, 3).map(r => `
+            ${reasons
+              .slice(0, 3)
+              .map(
+                (r) => `
               <span class="taste-reason ${r.kind === 'soft' ? 'soft' : ''}">
                 <i data-lucide="${r.icon}" class="w-3 h-3"></i>${r.text}
               </span>
-            `).join('')}
+            `,
+              )
+              .join('')}
           </div>
-        ` : ''}
+        `
+            : ''
+        }
       </div>
     </article>
   `;

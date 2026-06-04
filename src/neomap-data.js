@@ -2,6 +2,71 @@
 
 const DISTRICTS = ['Хан-Уул', 'Баянзүрх', 'Сүхбаатар', 'Чингэлтэй', 'Сонгинохайрхан', 'Налайх', 'Баянгол', 'Багануур', 'Багахангай'];
 
+/* ============== ӨРӨӨНИЙ ТӨРӨЛ (room types lookup) — Wizard Excel sheet 2 ============== */
+/* Орон сууц, амины сууц, оффис, үйлчилгээний барилгад ашиглах өрөөнүүд.
+   Tag-уудыг өрөөний нэрнээс хамаарч динамикаар үзүүлнэ. */
+const ROOM_TAGS_BY_TYPE = {
+  generic:  ['Тагттай', 'Террастай', 'Цонхтой'],
+  bedroom:  ['Хувцасны өрөөтэй', 'Тагттай', 'Террастай', 'Цонхтой'],
+  master:   ['Ариун цэврийн өрөөтэй', 'Хувцасны өрөөтэй', 'Тагттай', 'Террастай', 'Ажлын хэсэгтэй', 'Цонхтой'],
+  bath:     ['Угаалтуур', 'Суултуур', 'Душ', 'Ванн', 'Жакуза', 'Сауна', 'Гоо сайхны хэсэг', 'Цонхтой'],
+  livingrm: ['Тагттай', 'Террастай', 'Цонхтой'],
+  kitchen:  ['Тагттай', 'Цонхтой'],
+  dining:   ['Тагттай', 'Цонхтой'],
+};
+
+const ROOM_TYPES = [
+  { key: 'entry',         label: 'Үүдний өрөө, хэсэг',          tagGroup: 'generic',  group: 'living' },
+  { key: 'foyer',         label: 'Үүдний танхим',               tagGroup: 'generic',  group: 'living' },
+  { key: 'coat',          label: 'Үүдний хувцасны өрөө',        tagGroup: 'generic',  group: 'living' },
+  { key: 'mudroom',       label: 'Хөлийн өрөө',                 tagGroup: 'generic',  group: 'living' },
+  { key: 'living',        label: 'Зочны өрөө',                  tagGroup: 'livingrm', group: 'living' },
+  { key: 'dining',        label: 'Хооллох хэсэг',               tagGroup: 'dining',   group: 'living' },
+  { key: 'kitchen',       label: 'Гал тогоо',                   tagGroup: 'kitchen',  group: 'kitchen' },
+  { key: 'kitchen-aux',   label: 'Туслах гал тогоо',            tagGroup: 'kitchen',  group: 'kitchen' },
+  { key: 'pantry',        label: 'Гал тогооны агуулах',         tagGroup: 'generic',  group: 'kitchen' },
+  { key: 'bedroom',       label: 'Унтлагын өрөө',               tagGroup: 'bedroom',  group: 'sleep' },
+  { key: 'bedroom-master',label: 'Мастер унтлагын өрөө',        tagGroup: 'master',   group: 'sleep' },
+  { key: 'bath',          label: 'Ариун цэврийн өрөө',          tagGroup: 'bath',     group: 'sleep' },
+  { key: 'closet',        label: 'Хувцасны өрөө',               tagGroup: 'generic',  group: 'sleep' },
+  { key: 'office',        label: 'Ажлын өрөө',                  tagGroup: 'generic',  group: 'utility' },
+  { key: 'laundry',       label: 'Угаалгын өрөө (Laundry)',     tagGroup: 'generic',  group: 'utility' },
+  { key: 'family',        label: 'Гэр бүлийн хэсэг',            tagGroup: 'livingrm', group: 'living' },
+  { key: 'stairs',        label: 'Шат',                         tagGroup: 'generic',  group: 'transit' },
+  { key: 'landing',       label: 'Шатны хонгил',                tagGroup: 'generic',  group: 'transit' },
+  { key: 'corridor',      label: 'Коридор',                     tagGroup: 'generic',  group: 'transit' },
+  { key: 'balcony',       label: 'Тагт',                        tagGroup: 'generic',  group: 'outdoor' },
+  { key: 'terrace',       label: 'Террас',                      tagGroup: 'generic',  group: 'outdoor' },
+  { key: 'roof-deck',     label: 'Ашиглалттай дээвэр / Дээврийн террас', tagGroup: 'generic', group: 'outdoor' },
+  { key: 'veranda',       label: 'Веранд',                      tagGroup: 'generic',  group: 'outdoor' },
+  { key: 'loggia',        label: 'Лодж',                        tagGroup: 'generic',  group: 'outdoor' },
+  { key: 'garage',        label: 'Авто дулаан зогсоол',         tagGroup: 'generic',  group: 'utility' },
+  { key: 'tech',          label: 'Техникийн өрөө',              tagGroup: 'generic',  group: 'utility' },
+  { key: 'storage',       label: 'Агуулах',                     tagGroup: 'generic',  group: 'utility' },
+  { key: 'entertainment', label: 'Энтертайнмент өрөө',          tagGroup: 'livingrm', group: 'leisure' },
+  { key: 'mens-cave',     label: "Men's cave",                  tagGroup: 'livingrm', group: 'leisure' },
+  { key: 'playroom',      label: 'Тоглоомын өрөө',              tagGroup: 'livingrm', group: 'leisure' },
+  { key: 'wine',          label: 'Дарсны агуулах',              tagGroup: 'generic',  group: 'leisure' },
+  { key: 'sauna',         label: 'Сауна',                       tagGroup: 'generic',  group: 'leisure' },
+  { key: 'pool',          label: 'Усан бассейн',                tagGroup: 'generic',  group: 'leisure' },
+  { key: 'lounge',        label: 'Амралтын өрөө',               tagGroup: 'livingrm', group: 'leisure' },
+  { key: 'maid',          label: 'Үйлчлэгчийн өрөө',            tagGroup: 'bedroom',  group: 'service' },
+  { key: 'waiting',       label: 'Хүлээлгийн өрөө',             tagGroup: 'generic',  group: 'service' },
+  { key: 'smoking',       label: 'Тамхины өрөө',                tagGroup: 'generic',  group: 'leisure' },
+];
+
+/* Цонхны 8 чиглэл — талбайн хажуудаа цонхны тоог оруулна */
+const WIND_DIRECTIONS = [
+  { key: 'N',  short: 'З',  label: 'Зүүн (N)' },
+  { key: 'NE', short: 'ЗУ', label: 'Зүүн-урагш (NE)' },
+  { key: 'E',  short: 'У',  label: 'Урд (E)' },
+  { key: 'SE', short: 'БУ', label: 'Баруун-урагш (SE)' },
+  { key: 'S',  short: 'Б',  label: 'Баруун (S)' },
+  { key: 'SW', short: 'БХ', label: 'Баруун-хойш (SW)' },
+  { key: 'W',  short: 'Х',  label: 'Хойд (W)' },
+  { key: 'NW', short: 'ЗХ', label: 'Зүүн-хойш (NW)' },
+];
+
 const KHOTKHON = [
   'Time Tower', 'Encanto', 'Olympic Residence', 'Twin Tower', 'Energy Residence',
   'Sky Tower', 'Buyant-Ukhaa-2', 'Tokyo Residence', 'Global Garden', 'Riverside',
