@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="mn">
+<head>
+<meta charset="UTF-8">
+<title>NEOMAP — Процессын зураг</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, "SF Pro Display", "Helvetica Neue", sans-serif;
+    background: #0b1020;
+    color: #e6e9f2;
+    padding: 32px 24px 64px;
+    min-height: 100vh;
+  }
+  h1 { font-size: 22px; font-weight: 700; margin-bottom: 4px; letter-spacing: -0.01em; }
+  .sub { color: #8b93a7; font-size: 13px; margin-bottom: 28px; }
+
+  .canvas {
+    max-width: 1280px;
+    margin: 0 auto;
+    background: #11162a;
+    border: 1px solid #1f2742;
+    border-radius: 16px;
+    padding: 28px 24px;
+    box-shadow: 0 16px 48px rgba(0,0,0,0.35);
+  }
+
+  .row {
+    display: flex;
+    gap: 14px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-bottom: 8px;
+  }
+
+  .node {
+    min-width: 150px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    text-align: center;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.3;
+    border: 1px solid rgba(255,255,255,0.08);
+    position: relative;
+  }
+  .node small {
+    display: block;
+    font-size: 10.5px;
+    font-weight: 500;
+    opacity: 0.7;
+    margin-top: 3px;
+    letter-spacing: 0.02em;
+  }
+
+  .start  { background: linear-gradient(135deg,#0ea5e9,#06b6d4); color: #fff; }
+  .auth   { background: linear-gradient(135deg,#6366f1,#8b5cf6); color: #fff; }
+  .onboard{ background: linear-gradient(135deg,#a855f7,#ec4899); color: #fff; }
+  .core   { background: linear-gradient(135deg,#10b981,#14b8a6); color: #fff; }
+  .browse { background: linear-gradient(135deg,#3b82f6,#6366f1); color: #fff; }
+  .action { background: linear-gradient(135deg,#f59e0b,#f97316); color: #fff; }
+  .done   { background: linear-gradient(135deg,#22c55e,#16a34a); color: #fff; }
+  .side   { background: #1c2342; color: #cdd3e7; border-color:#2a345a; }
+  .sub2   { background: #161c36; color: #8b93a7; border:1px dashed #2a345a; font-weight:500; }
+
+  .arrow {
+    display: flex;
+    justify-content: center;
+    color: #4b5575;
+    font-size: 18px;
+    margin: 6px 0 6px;
+  }
+  .arrow.down::after { content: "▼"; }
+
+  .group {
+    background: rgba(255,255,255,0.02);
+    border: 1px dashed #2a345a;
+    border-radius: 14px;
+    padding: 18px 16px 14px;
+    margin-bottom: 18px;
+  }
+  .group-title {
+    font-size: 11px;
+    color: #8b93a7;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+    text-align: center;
+  }
+
+  .branch {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+    margin-top: 6px;
+  }
+
+  .legend {
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-top: 22px;
+    padding-top: 18px;
+    border-top: 1px solid #1f2742;
+  }
+  .legend span {
+    font-size: 11.5px;
+    color: #8b93a7;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .dot { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+  .d-auth   { background: #8b5cf6; }
+  .d-onb    { background: #ec4899; }
+  .d-core   { background: #10b981; }
+  .d-browse { background: #6366f1; }
+  .d-action { background: #f97316; }
+  .d-done   { background: #22c55e; }
+  .d-side   { background: #2a345a; }
+
+  .state {
+    margin-top: 22px;
+    padding: 14px 16px;
+    background: #0e1428;
+    border-radius: 10px;
+    border-left: 3px solid #06b6d4;
+  }
+  .state h3 { font-size: 12px; color:#06b6d4; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 8px;}
+  .state code { color: #e6e9f2; font-size: 12px; background: #1a2140; padding: 2px 6px; border-radius: 4px; margin: 2px; display:inline-block; }
+</style>
+</head>
+<body>
+
+<h1>NEOMAP — Хэрэглэгчийн процессын зураг</h1>
+<div class="sub">Үл хөдлөх хөрөнгийн ухаалаг хайлтын платформ · NEO.html → renderAppScreen()</div>
+
+<div class="canvas">
+
+  <!-- START -->
+  <div class="row"><div class="node start">🚀 ЭХЛЭЛ<small>NEO.html ачаалах</small></div></div>
+  <div class="arrow down"></div>
+
+  <!-- AUTH -->
+  <div class="group">
+    <div class="group-title">1 · Нэвтрэлт</div>
+    <div class="row"><div class="node auth">🔐 auth<small>renderAuth() · утсаар нэвтрэх</small></div></div>
+  </div>
+
+  <div class="arrow down"></div>
+
+  <!-- ONBOARDING -->
+  <div class="group">
+    <div class="group-title">2 · Хүсэл тохируулах (анх удаагийн)</div>
+    <div class="row"><div class="node onboard">🎯 interests<small>renderInterests() · 6 алхамт wizard</small></div></div>
+    <div class="branch" style="margin-top:14px;">
+      <div class="node sub2">Алхам 1<small>Амьдралын хэв маяг</small></div>
+      <div class="node sub2">Алхам 2<small>Төсөв</small></div>
+      <div class="node sub2">Алхам 3<small>Өрөөний тоо</small></div>
+      <div class="node sub2">Алхам 4<small>Дүүрэг</small></div>
+      <div class="node sub2">Алхам 5<small>Чухал зайнууд</small></div>
+      <div class="node sub2">Алхам 6<small>Баталгаажуулалт</small></div>
+    </div>
+  </div>
+
+  <div class="arrow down"></div>
+
+  <!-- HOME -->
+  <div class="group">
+    <div class="group-title">3 · Үндсэн дэлгэц</div>
+    <div class="row">
+      <div class="node core">🗺️ home<small>Газрын зураг · Худалдах/Түрээс toggle · шүүлтүүр</small></div>
+    </div>
+  </div>
+
+  <div class="arrow down"></div>
+
+  <!-- BROWSE -->
+  <div class="group">
+    <div class="group-title">4 · Хайлт · Үзэх · Захиалах</div>
+    <div class="branch">
+      <div class="node browse">📋 results<small>renderResults() · grid + sort + pagination</small></div>
+      <div class="node browse">🏠 property<small>renderProperty() · зураг, agent, POI</small></div>
+      <div class="node action">📅 schedule<small>renderSchedule() · огноо + цаг</small></div>
+      <div class="node done">✅ confirmation<small>renderConfirmation()</small></div>
+    </div>
+    <div class="arrow">→ → → → →</div>
+    <div class="row">
+      <div class="node side">💰 Ипотекийн тооцоолуур<small>Хаан, Хас, Голомт банкууд</small></div>
+      <div class="node side">📍 POI · "Миний газрууд"<small>сургууль, ажил, гэр хүртэлх зам</small></div>
+      <div class="node side">📸 Photo lightbox<small>orloo-features.js</small></div>
+    </div>
+  </div>
+
+  <div class="arrow down"></div>
+
+  <!-- SECONDARY -->
+  <div class="group">
+    <div class="group-title">5 · Туслах дэлгэцүүд (home → goTo)</div>
+    <div class="branch">
+      <div class="node side">❤️ saved<small>listings · searches tabs</small></div>
+      <div class="node side">🔔 alerts<small>үнэ буурсан мэдэгдэл</small></div>
+      <div class="node side">🕒 activity<small>миний үзлэгүүд · .ics экспорт</small></div>
+      <div class="node side">👤 profile<small>currentUser</small></div>
+      <div class="node side">📰 news<small>renderNews()</small></div>
+      <div class="node side">➕ list-property<small>3 алхамт зар нэмэх</small></div>
+      <div class="node side">🏢 rental-mgmt<small>түрээслүүлэгчийн самбар</small></div>
+    </div>
+  </div>
+
+  <!-- STATE -->
+  <div class="state">
+    <h3>Гол state хувьсагчид</h3>
+    <code>mode: sale | rent</code>
+    <code>filterDistrict</code>
+    <code>filterRooms</code>
+    <code>filterPriceMin/Max</code>
+    <code>filterLifestyle[]</code>
+    <code>sortBy</code>
+    <code>mapZoom · mapPanX/Y</code>
+    <code>drawnPolygon</code>
+    <code>currentUser</code>
+    <code>interestsWizardStep</code>
+    <code>savedTab</code>
+  </div>
+
+  <!-- LEGEND -->
+  <div class="legend">
+    <span><i class="dot d-auth"></i>Нэвтрэлт</span>
+    <span><i class="dot d-onb"></i>Onboarding</span>
+    <span><i class="dot d-core"></i>Үндсэн</span>
+    <span><i class="dot d-browse"></i>Хайлт</span>
+    <span><i class="dot d-action"></i>Үйлдэл</span>
+    <span><i class="dot d-done"></i>Амжилттай</span>
+    <span><i class="dot d-side"></i>Туслах</span>
+  </div>
+
+</div>
+
+</body>
+</html>

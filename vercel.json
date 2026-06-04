@@ -1,5 +1,3 @@
 {
-  "rewrites": [
-    { "source": "/", "destination": "/NEO.html" }
-  ]
+  "cleanUrls": true
 }

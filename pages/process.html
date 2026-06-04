@@ -1,0 +1,959 @@
+<!DOCTYPE html>
+<html lang="mn">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>NEOMAP - Процессын зураг</title>
+<style>
+  :root {
+    --bg: #f6f8fb;
+    --paper: #ffffff;
+    --ink: #0f172a;
+    --muted: #64748b;
+    --line: #d9e2ee;
+    --line-strong: #b8c5d6;
+    --navy: #123c69;
+    --navy-2: #0b1f33;
+    --gold: #c9a227;
+    --gold-soft: #fff7dc;
+    --blue: #2563eb;
+    --blue-soft: #e8f0ff;
+    --green: #0f766e;
+    --green-soft: #e5f7f4;
+    --violet: #7c3aed;
+    --violet-soft: #f0e8ff;
+    --orange: #b45309;
+    --orange-soft: #fff1df;
+    --red: #b42318;
+    --red-soft: #fff0ee;
+    --shadow: 0 18px 44px rgba(15, 23, 42, .08);
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background:
+      radial-gradient(circle at 8% 0%, rgba(201, 162, 39, .10), transparent 28%),
+      radial-gradient(circle at 92% 8%, rgba(18, 60, 105, .12), transparent 32%),
+      var(--bg);
+    color: var(--ink);
+    font-family: Inter, "Noto Sans", Arial, sans-serif;
+    line-height: 1.45;
+  }
+
+  .wrap {
+    width: min(1440px, calc(100% - 40px));
+    margin: 0 auto;
+    padding: 28px 0 72px;
+  }
+
+  .hero {
+    min-height: 190px;
+    background:
+      linear-gradient(135deg, rgba(11, 31, 51, .96), rgba(18, 60, 105, .92)),
+      linear-gradient(90deg, var(--navy), var(--navy-2));
+    color: #fff;
+    border-radius: 18px;
+    padding: 28px;
+    box-shadow: var(--shadow);
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::after {
+    content: "";
+    position: absolute;
+    inset: auto -8% -42% auto;
+    width: 480px;
+    height: 480px;
+    border-radius: 50%;
+    border: 1px solid rgba(201, 162, 39, .22);
+    background: radial-gradient(circle, rgba(201, 162, 39, .18), transparent 58%);
+  }
+  .hero-kicker {
+    color: #f3c766;
+    text-transform: uppercase;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: .14em;
+  }
+  h1 {
+    margin: 8px 0 10px;
+    font-size: clamp(30px, 4vw, 54px);
+    line-height: .98;
+    letter-spacing: -0.03em;
+  }
+  .hero p {
+    max-width: 820px;
+    margin: 0;
+    color: rgba(255, 255, 255, .78);
+    font-size: 15px;
+  }
+  .hero-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 22px;
+  }
+  .meta-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 8px 11px;
+    border-radius: 999px;
+    background: rgba(255,255,255,.08);
+    border: 1px solid rgba(255,255,255,.14);
+    color: rgba(255,255,255,.86);
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--gold);
+  }
+
+  .toc {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 10px;
+    margin: 18px 0;
+  }
+  .toc a {
+    color: var(--navy);
+    background: rgba(255,255,255,.78);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 10px 12px;
+    text-decoration: none;
+    font-size: 12px;
+    font-weight: 800;
+    box-shadow: 0 8px 22px rgba(15,23,42,.04);
+  }
+
+  section {
+    margin-top: 18px;
+    background: rgba(255,255,255,.88);
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+  .section-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 18px;
+    align-items: flex-start;
+    padding: 20px 22px 16px;
+    border-bottom: 1px solid var(--line);
+    background: linear-gradient(180deg, #fff, #fbfdff);
+  }
+  .section-head h2 {
+    margin: 0;
+    font-size: 20px;
+    letter-spacing: -0.02em;
+  }
+  .section-head p {
+    margin: 4px 0 0;
+    color: var(--muted);
+    font-size: 13px;
+    max-width: 780px;
+  }
+  .section-tag {
+    flex-shrink: 0;
+    padding: 6px 9px;
+    border-radius: 999px;
+    background: var(--gold-soft);
+    border: 1px solid rgba(201, 162, 39, .26);
+    color: #8a6a00;
+    font-size: 11px;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: .1em;
+  }
+  .section-body { padding: 22px; }
+
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 18px;
+  }
+  .legend .item {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 7px 9px;
+    border-radius: 999px;
+    background: #fff;
+    border: 1px solid var(--line);
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 800;
+  }
+  .swatch { width: 10px; height: 10px; border-radius: 3px; }
+  .swatch.start { background: var(--navy); }
+  .swatch.ai { background: var(--violet); }
+  .swatch.data { background: var(--green); }
+  .swatch.action { background: var(--orange); }
+  .swatch.guard { background: var(--red); }
+  .swatch.done { background: var(--gold); }
+
+  .flow-grid {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(160px, 1fr));
+    gap: 12px;
+    align-items: stretch;
+    overflow-x: auto;
+    padding-bottom: 8px;
+  }
+  .stage {
+    min-width: 160px;
+    min-height: 180px;
+    position: relative;
+  }
+  .stage::after {
+    content: "";
+    position: absolute;
+    top: 42px;
+    right: -12px;
+    width: 12px;
+    height: 2px;
+    background: var(--line-strong);
+  }
+  .stage:last-child::after { display: none; }
+  .stage-index {
+    width: 28px;
+    height: 28px;
+    border-radius: 9px;
+    background: var(--navy);
+    color: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 900;
+    margin-bottom: 8px;
+  }
+  .card {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 12px;
+    height: calc(100% - 36px);
+  }
+  .card h3 {
+    margin: 0;
+    font-size: 14px;
+    letter-spacing: -0.01em;
+  }
+  .card p {
+    margin: 6px 0 0;
+    color: var(--muted);
+    font-size: 12px;
+  }
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-top: 10px;
+  }
+  .chip {
+    padding: 4px 7px;
+    border-radius: 999px;
+    font-size: 10.5px;
+    font-weight: 800;
+    background: var(--blue-soft);
+    color: #1d4ed8;
+  }
+  .chip.ai { background: var(--violet-soft); color: var(--violet); }
+  .chip.data { background: var(--green-soft); color: var(--green); }
+  .chip.action { background: var(--orange-soft); color: var(--orange); }
+  .chip.guard { background: var(--red-soft); color: var(--red); }
+  .chip.done { background: var(--gold-soft); color: #8a6a00; }
+
+  .swimlane {
+    display: grid;
+    grid-template-columns: 150px repeat(5, minmax(170px, 1fr));
+    gap: 10px;
+    overflow-x: auto;
+    padding-bottom: 8px;
+  }
+  .lane-title {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    min-height: 86px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    background: var(--navy);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 900;
+  }
+  .lane-cell {
+    min-height: 86px;
+    padding: 10px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: #fff;
+    position: relative;
+  }
+  .lane-cell::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    right: -10px;
+    width: 10px;
+    height: 2px;
+    background: var(--line-strong);
+  }
+  .lane-cell:last-child::after { display: none; }
+  .lane-cell strong {
+    display: block;
+    font-size: 12.5px;
+    margin-bottom: 3px;
+  }
+  .lane-cell span {
+    color: var(--muted);
+    font-size: 11.5px;
+  }
+  .lane-cell.ai { background: var(--violet-soft); border-color: #d8c5ff; }
+  .lane-cell.data { background: var(--green-soft); border-color: #b8e6dd; }
+  .lane-cell.action { background: var(--orange-soft); border-color: #ffd4a6; }
+  .lane-cell.guard { background: var(--red-soft); border-color: #ffc4bd; }
+
+  .module-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+  }
+  .module {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 14px;
+  }
+  .module h3 {
+    margin: 0 0 9px;
+    font-size: 14px;
+  }
+  .module ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    gap: 7px;
+  }
+  .module li {
+    display: flex;
+    gap: 8px;
+    color: var(--muted);
+    font-size: 12px;
+  }
+  .module li::before {
+    content: "";
+    width: 7px;
+    height: 7px;
+    margin-top: 7px;
+    border-radius: 50%;
+    background: var(--gold);
+    flex-shrink: 0;
+  }
+
+  .decision-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+  }
+  .decision {
+    padding: 14px;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+  }
+  .diamond {
+    width: 38px;
+    height: 38px;
+    transform: rotate(45deg);
+    background: var(--gold-soft);
+    border: 1px solid rgba(201, 162, 39, .36);
+    margin: 0 0 12px 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .diamond span {
+    transform: rotate(-45deg);
+    color: #8a6a00;
+    font-weight: 900;
+    font-size: 13px;
+  }
+  .decision h3 {
+    margin: 0 0 6px;
+    font-size: 14px;
+  }
+  .decision p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 12px;
+  }
+
+  .data-map {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  .state-box {
+    padding: 15px;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    background: #fff;
+  }
+  .state-box h3 {
+    margin: 0 0 10px;
+    font-size: 14px;
+  }
+  .code-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  code {
+    padding: 5px 7px;
+    border-radius: 8px;
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    color: #334155;
+    font-size: 11px;
+    font-weight: 800;
+  }
+
+  .print-note {
+    margin-top: 18px;
+    color: var(--muted);
+    font-size: 12px;
+    text-align: right;
+  }
+
+  @media (max-width: 1100px) {
+    .toc { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .module-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .decision-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+  @media (max-width: 720px) {
+    .wrap { width: min(100% - 20px, 1440px); padding-top: 10px; }
+    .hero { padding: 20px; border-radius: 14px; }
+    .toc { grid-template-columns: 1fr; }
+    .section-head { display: block; padding: 16px; }
+    .section-tag { display: inline-flex; margin-top: 12px; }
+    .section-body { padding: 16px; }
+    .module-grid, .decision-grid, .data-map { grid-template-columns: 1fr; }
+  }
+
+  @media print {
+    body { background: #fff; }
+    .wrap { width: 100%; padding: 0; }
+    .hero, section { box-shadow: none; break-inside: avoid; }
+    .toc { display: none; }
+  }
+</style>
+</head>
+<body>
+  <main class="wrap">
+    <header class="hero">
+      <div class="hero-kicker">NEOMAP project process canvas</div>
+      <h1>Үл хөдлөхийн ухаалаг хайлтын процессын зураг</h1>
+      <p>
+        Энэ зураг нь одоогийн project-ийн UI router, state, AI хайлт, map/listing flow,
+        үзэлт товлох, хадгалсан хайлт, зар оруулах болон түрээсийн менежментийн урсгалыг нэг дор харуулна.
+      </p>
+      <div class="hero-meta">
+        <span class="meta-pill"><span class="dot"></span> index.html</span>
+        <span class="meta-pill"><span class="dot"></span> src/neomap-app.js router/state</span>
+        <span class="meta-pill"><span class="dot"></span> src/neomap-screens.js screens</span>
+        <span class="meta-pill"><span class="dot"></span> src/neomap-data.js mock data</span>
+        <span class="meta-pill"><span class="dot"></span> src/neomap-interests.js matching</span>
+      </div>
+    </header>
+
+    <nav class="toc" aria-label="Process sections">
+      <a href="#overview">1. Ерөнхий урсгал</a>
+      <a href="#swimlane">2. Swimlane</a>
+      <a href="#ai">3. AI хайлт</a>
+      <a href="#modules">4. Модулиуд</a>
+      <a href="#decisions">5. Decision points</a>
+      <a href="#state">6. State/Data</a>
+    </nav>
+
+    <section id="overview">
+      <div class="section-head">
+        <div>
+          <h2>1. Хэрэглэгчийн үндсэн journey</h2>
+          <p>Зочин хэрэглэгч home screen-ээс эхлээд хайлт, газрын зураг, зарын дэлгэрэнгүй, агенттай холбогдох эсвэл үзэлт товлох хүртэл явна.</p>
+        </div>
+        <span class="section-tag">main flow</span>
+      </div>
+      <div class="section-body">
+        <div class="legend">
+          <span class="item"><span class="swatch start"></span> Screen/router</span>
+          <span class="item"><span class="swatch ai"></span> AI/зөвлөмж</span>
+          <span class="item"><span class="swatch data"></span> Data/state</span>
+          <span class="item"><span class="swatch action"></span> User action</span>
+          <span class="item"><span class="swatch guard"></span> Auth guard</span>
+          <span class="item"><span class="swatch done"></span> Completed</span>
+        </div>
+
+        <div class="flow-grid">
+          <div class="stage">
+            <div class="stage-index">01</div>
+            <div class="card">
+              <h3>App boot</h3>
+              <p>HTML, CSS, data болон screen functions ачаална. localStorage-оос auth, interests, myPlaces уншина.</p>
+              <div class="chips">
+                <span class="chip data">localStorage</span>
+                <span class="chip">goTo('home')</span>
+              </div>
+            </div>
+          </div>
+          <div class="stage">
+            <div class="stage-index">02</div>
+            <div class="card">
+              <h3>Home хайлт</h3>
+              <p>Худалдах/түрээс горим, filter column, listing preview, map area, global AI chat харагдана.</p>
+              <div class="chips">
+                <span class="chip">renderHome()</span>
+                <span class="chip ai">AI туслах</span>
+              </div>
+            </div>
+          </div>
+          <div class="stage">
+            <div class="stage-index">03</div>
+            <div class="card">
+              <h3>AI эсвэл manual filter</h3>
+              <p>AI query-г extractFilters логик задлаад state.filter* утгуудыг шинэчилнэ.</p>
+              <div class="chips">
+                <span class="chip ai">runAISearch</span>
+                <span class="chip data">state.filter*</span>
+              </div>
+            </div>
+          </div>
+          <div class="stage">
+            <div class="stage-index">04</div>
+            <div class="card">
+              <h3>Results + Map</h3>
+              <p>Жагсаалт, sort, pagination, map pins, heatmap, district summary, full-map overlay.</p>
+              <div class="chips">
+                <span class="chip">renderResults()</span>
+                <span class="chip action">openFullMap()</span>
+              </div>
+            </div>
+          </div>
+          <div class="stage">
+            <div class="stage-index">05</div>
+            <div class="card">
+              <h3>Property detail</h3>
+              <p>Зарын зураг, үнэ, agent, POI, mortgage, commute, reviews, schedule CTA.</p>
+              <div class="chips">
+                <span class="chip">renderProperty()</span>
+                <span class="chip data">currentListingId</span>
+              </div>
+            </div>
+          </div>
+          <div class="stage">
+            <div class="stage-index">06</div>
+            <div class="card">
+              <h3>Schedule/Auth</h3>
+              <p>Үзэлт товлох нь protected. Нэвтрээгүй бол auth screen рүү шилжинэ.</p>
+              <div class="chips">
+                <span class="chip guard">PROTECTED</span>
+                <span class="chip action">renderSchedule()</span>
+              </div>
+            </div>
+          </div>
+          <div class="stage">
+            <div class="stage-index">07</div>
+            <div class="card">
+              <h3>Confirmation</h3>
+              <p>VIEWINGS массивт шинэ үзэлт нэмэгдэж, activity screen дээр харагдана.</p>
+              <div class="chips">
+                <span class="chip done">VIEWINGS.push</span>
+                <span class="chip">activity</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="swimlane">
+      <div class="section-head">
+        <div>
+          <h2>2. Swimlane диаграм</h2>
+          <p>Хэрэглэгч, UI layer, router/state, data layer болон business action-ууд ямар дарааллаар ажиллаж байгааг харуулсан.</p>
+        </div>
+        <span class="section-tag">interaction</span>
+      </div>
+      <div class="section-body">
+        <div class="swimlane">
+          <div class="lane-title">Хэрэглэгч</div>
+          <div class="lane-cell"><strong>Хайх нөхцөл оруулна</strong><span>дүүрэг, үнэ, өрөө, lifestyle</span></div>
+          <div class="lane-cell"><strong>Map/list дээр харьцуулна</strong><span>pin, heatmap, full map</span></div>
+          <div class="lane-cell"><strong>Зар сонгоно</strong><span>property detail нээнэ</span></div>
+          <div class="lane-cell"><strong>Үзэлт товлоно</strong><span>огноо, цаг сонгоно</span></div>
+          <div class="lane-cell"><strong>Хянана</strong><span>activity, saved, alerts</span></div>
+
+          <div class="lane-title">UI Screens</div>
+          <div class="lane-cell"><strong>home</strong><span>filter column, AI chat, listing cards</span></div>
+          <div class="lane-cell"><strong>results</strong><span>renderResults + mapBackground</span></div>
+          <div class="lane-cell"><strong>property</strong><span>gallery, agent, mortgage, POI</span></div>
+          <div class="lane-cell guard"><strong>auth/schedule</strong><span>protected screen guard</span></div>
+          <div class="lane-cell"><strong>activity/saved/alerts</strong><span>дараагийн follow-up</span></div>
+
+          <div class="lane-title">Router + State</div>
+          <div class="lane-cell data"><strong>goTo('home')</strong><span>currentScreen sync</span></div>
+          <div class="lane-cell data"><strong>state.filter*</strong><span>filteredListings()</span></div>
+          <div class="lane-cell data"><strong>state.currentListingId</strong><span>openProperty(id)</span></div>
+          <div class="lane-cell data"><strong>scheduleDate/time</strong><span>confirmSchedule()</span></div>
+          <div class="lane-cell data"><strong>saved/search/viewing</strong><span>local arrays update</span></div>
+
+          <div class="lane-title">Data layer</div>
+          <div class="lane-cell data"><strong>LISTINGS</strong><span>орон сууц, үнэ, байршил</span></div>
+          <div class="lane-cell data"><strong>DISTRICT_ZONES</strong><span>polygon, heat bucket</span></div>
+          <div class="lane-cell data"><strong>AGENTS/BANKS/POI</strong><span>agent, loan, nearby info</span></div>
+          <div class="lane-cell data"><strong>VIEWINGS</strong><span>шинэ appointment</span></div>
+          <div class="lane-cell data"><strong>SAVED_SEARCHES</strong><span>alert trigger source</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="ai">
+      <div class="section-head">
+        <div>
+          <h2>3. AI хайлт ба зөвлөмжийн процесс</h2>
+          <p>AI chat нь хэрэглэгчийн чөлөөт текстийг project-ийн state filter болгон хувиргаж, results screen дээр шууд хэрэглэдэг.</p>
+        </div>
+        <span class="section-tag">AI flow</span>
+      </div>
+      <div class="section-body">
+        <div class="flow-grid" style="grid-template-columns: repeat(6, minmax(170px, 1fr));">
+          <div class="stage">
+            <div class="stage-index">A1</div>
+            <div class="card">
+              <h3>Message</h3>
+              <p>home-ai-input эсвэл suggestion chip-ээр query орно.</p>
+              <div class="chips"><span class="chip ai">sendHomeAIMessage()</span></div>
+            </div>
+          </div>
+          <div class="stage">
+            <div class="stage-index">A2</div>
+            <div class="card">
+              <h3>Parse intent</h3>
+              <p>Дүүрэг, өрөө, үнэ, lifestyle, school, income гэх мэт түлхүүр нөхцөл гаргана.</p>
+              <div class="chips"><span class="chip ai">extractFilters</span></div>
+            </div>
+          </div>
+          <div class="stage">
+            <div class="stage-index">A3</div>
+            <div class="card">
+              <h3>Update state</h3>
+              <p>state.aiQuery, aiExtracted, filterPriceMax, filterDistrict зэрэг шинэчлэгдэнэ.</p>
+              <div class="chips"><span class="chip data">state.aiExtracted</span></div>
+            </div>
+          </div>
+          <div class="stage">
+            <div class="stage-index">A4</div>
+            <div class="card">
+              <h3>Filter listings</h3>
+              <p>modeListings() болон filteredListings() нь LISTINGS дээр нөхцөл хэрэглэнэ.</p>
+              <div class="chips"><span class="chip data">LISTINGS</span></div>
+            </div>
+          </div>
+          <div class="stage">
+            <div class="stage-index">A5</div>
+            <div class="card">
+              <h3>Render answer</h3>
+              <p>AI chat хариулт, suggestion, result count болон хайлтын chips гарна.</p>
+              <div class="chips"><span class="chip">refreshAIChatSurface()</span></div>
+            </div>
+          </div>
+          <div class="stage">
+            <div class="stage-index">A6</div>
+            <div class="card">
+              <h3>Go results</h3>
+              <p>Хэрэглэгч бүх үр дүнг үзэхэд results + map руу шилжинэ.</p>
+              <div class="chips"><span class="chip done">goTo('results')</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="modules">
+      <div class="section-head">
+        <div>
+          <h2>4. Project модулиуд ба хариуцлага</h2>
+          <p>Одоогийн файлууд UI, feature logic, mock data, interests engine гэсэн тодорхой үүрэгтэйгээр салсан байна.</p>
+        </div>
+        <span class="section-tag">modules</span>
+      </div>
+      <div class="section-body">
+        <div class="module-grid">
+          <div class="module">
+            <h3>index.html</h3>
+            <ul>
+              <li>Global CSS, theme token, layout shell</li>
+              <li>Header, screen containers, modal/toast slots</li>
+              <li>External scripts болон app bootstrap include</li>
+            </ul>
+          </div>
+          <div class="module">
+            <h3>src/neomap-app.js</h3>
+            <ul>
+              <li>Global state object, localStorage load/save</li>
+              <li>goTo router, renderAppScreen dispatcher</li>
+              <li>Auth guard, AI search, schedule confirm, modal actions</li>
+            </ul>
+          </div>
+          <div class="module">
+            <h3>src/neomap-screens.js</h3>
+            <ul>
+              <li>Home, results, property, schedule, saved, news screens</li>
+              <li>Map pins, heatmap, full-map overlay, draw zone</li>
+              <li>AI chat surface болон UI row/card builders</li>
+            </ul>
+          </div>
+          <div class="module">
+            <h3>src/neomap-features.js</h3>
+            <ul>
+              <li>Lightbox, compare, reviews, detailed stats modal</li>
+              <li>Place picker, onboarding, commute helper</li>
+              <li>Home Leaflet map integration</li>
+            </ul>
+          </div>
+          <div class="module">
+            <h3>src/neomap-data.js</h3>
+            <ul>
+              <li>LISTINGS, AGENTS, DISTRICTS, DISTRICT_ZONES</li>
+              <li>SAVED_SEARCHES, VIEWINGS, BANKS, POI datasets</li>
+              <li>Mock product data болон helper metadata</li>
+            </ul>
+          </div>
+          <div class="module">
+            <h3>src/neomap-interests.js</h3>
+            <ul>
+              <li>6 алхамт interests wizard</li>
+              <li>computeMatchScore болон matchedListings</li>
+              <li>Dismiss/restore, upgrade modal, personalized feed</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="decisions">
+      <div class="section-head">
+        <div>
+          <h2>5. Decision points ба салаалсан урсгал</h2>
+          <p>Project дотор хэрэглэгчийн эрх, хайлтын үр дүн, map interaction, зар нэмэх зэрэг хэд хэдэн шийдвэрийн цэг байна.</p>
+        </div>
+        <span class="section-tag">logic</span>
+      </div>
+      <div class="section-body">
+        <div class="decision-grid">
+          <div class="decision">
+            <div class="diamond"><span>?</span></div>
+            <h3>Нэвтэрсэн үү?</h3>
+            <p>profile, activity, saved, alerts, rental-mgmt, list-property, schedule screen-үүд protected. Үгүй бол auth руу очно.</p>
+          </div>
+          <div class="decision">
+            <div class="diamond"><span>?</span></div>
+            <h3>AI query байна уу?</h3>
+            <p>Байвал AI extracted chips болон filter state шинэчлэгдэж, results context өөрчлөгдөнө.</p>
+          </div>
+          <div class="decision">
+            <div class="diamond"><span>?</span></div>
+            <h3>Дүүрэг сонгосон уу?</h3>
+            <p>Map polygon selected бол zone-summary, district stats, dimmed zones, filtered listings идэвхжинэ.</p>
+          </div>
+          <div class="decision">
+            <div class="diamond"><span>?</span></div>
+            <h3>Full map нээгдсэн үү?</h3>
+            <p>map-fs-overlay гарч, sidebar жагсаалт + map stage + compact AI launcher зэрэг тусгай UX ажиллана.</p>
+          </div>
+          <div class="decision">
+            <div class="diamond"><span>?</span></div>
+            <h3>Result хоосон уу?</h3>
+            <p>Empty state гарч, clearAllFilters эсвэл AI дахин хайлт санал болгоно.</p>
+          </div>
+          <div class="decision">
+            <div class="diamond"><span>?</span></div>
+            <h3>Зар хадгалсан уу?</h3>
+            <p>SAVED_IDS болон SAVED_SEARCHES tabs дээр хадгалсан зар, хайлт, alert flow гарна.</p>
+          </div>
+          <div class="decision">
+            <div class="diamond"><span>?</span></div>
+            <h3>Зар оруулах mode?</h3>
+            <p>listPropMode нь rent/sale байж, price/deposit/mortgage fields өөрөөр харагдана.</p>
+          </div>
+          <div class="decision">
+            <div class="diamond"><span>?</span></div>
+            <h3>Interests profile бий юу?</h3>
+            <p>Байвал match score бүхий personalized feed, байхгүй бол setup wizard эхэлнэ.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="state">
+      <div class="section-head">
+        <div>
+          <h2>6. State ба data mapping</h2>
+          <p>Screen renderer-үүдийн гол оролт нь state object болон mock dataset-үүд. Доорх mapping нь аль screen ямар state/data ашиглаж байгааг товчилсон.</p>
+        </div>
+        <span class="section-tag">state</span>
+      </div>
+      <div class="section-body">
+        <div class="data-map">
+          <div class="state-box">
+            <h3>Router state</h3>
+            <div class="code-list">
+              <code>currentScreen</code>
+              <code>APP_SCREENS</code>
+              <code>PROTECTED_SCREENS</code>
+              <code>state.fullMap</code>
+              <code>state.mobileView</code>
+              <code>state.viewMode</code>
+            </div>
+          </div>
+          <div class="state-box">
+            <h3>Search/filter state</h3>
+            <div class="code-list">
+              <code>state.mode</code>
+              <code>state.filterDistrict</code>
+              <code>state.filterRooms</code>
+              <code>state.filterPriceMin</code>
+              <code>state.filterPriceMax</code>
+              <code>state.filterLifestyle</code>
+              <code>state.sortBy</code>
+              <code>state.page</code>
+            </div>
+          </div>
+          <div class="state-box">
+            <h3>AI болон interests</h3>
+            <div class="code-list">
+              <code>state.aiQuery</code>
+              <code>state.aiExtracted</code>
+              <code>state.homeAIChat</code>
+              <code>state.userInterests</code>
+              <code>state.interestsWizardStep</code>
+              <code>computeMatchScore()</code>
+            </div>
+          </div>
+          <div class="state-box">
+            <h3>Map state</h3>
+            <div class="code-list">
+              <code>state.mapMode</code>
+              <code>state.mapZoom</code>
+              <code>state.mapPanX/Y</code>
+              <code>state.highlightedId</code>
+              <code>state.drawingPolygon</code>
+              <code>state.drawnPolygon</code>
+              <code>state.myPlaces</code>
+            </div>
+          </div>
+          <div class="state-box">
+            <h3>Business objects</h3>
+            <div class="code-list">
+              <code>LISTINGS</code>
+              <code>AGENTS</code>
+              <code>BANKS</code>
+              <code>BUS_STOPS</code>
+              <code>SAVED_SEARCHES</code>
+              <code>VIEWINGS</code>
+              <code>RM_TENANTS</code>
+            </div>
+          </div>
+          <div class="state-box">
+            <h3>Persistence keys</h3>
+            <div class="code-list">
+              <code>orloo.auth.v1</code>
+              <code>orloo.myPlaces.v1</code>
+              <code>orloo.interests.v1</code>
+              <code>orloo.interests.dismissed.v1</code>
+              <code>neo-theme</code>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="owner">
+      <div class="section-head">
+        <div>
+          <h2>7. Зар оруулах ба түрээсийн менежмент</h2>
+          <p>Худалдан авагчийн flow-оос гадна owner-side workflow нь зар нэмэх, түрээслэгч, гэрээ, орлого хянах тусдаа шугамтай.</p>
+        </div>
+        <span class="section-tag">owner flow</span>
+      </div>
+      <div class="section-body">
+        <div class="flow-grid" style="grid-template-columns: repeat(6, minmax(170px, 1fr));">
+          <div class="stage">
+            <div class="stage-index">O1</div>
+            <div class="card">
+              <h3>Protected entry</h3>
+              <p>Зар оруулах болон rental management нь нэвтрэлт шаарддаг.</p>
+              <div class="chips"><span class="chip guard">auth guard</span></div>
+            </div>
+          </div>
+          <div class="stage">
+            <div class="stage-index">O2</div>
+            <div class="card">
+              <h3>Basic info</h3>
+              <p>Төрөл, дүүрэг, хотхон, өрөө, талбай, давхар, он.</p>
+              <div class="chips"><span class="chip">listPropStep 1</span></div>
+            </div>
+          </div>
+          <div class="stage">
+            <div class="stage-index">O3</div>
+            <div class="card">
+              <h3>Map + photos</h3>
+              <p>Байршлыг map дээр тавьж, зураг seed/preview сонгоно.</p>
+              <div class="chips"><span class="chip action">setListPropLocation</span></div>
+            </div>
+          </div>
+          <div class="stage">
+            <div class="stage-index">O4</div>
+            <div class="card">
+              <h3>Price rules</h3>
+              <p>Sale/rent mode-оос хамаарч price, deposit, mortgage, contract fields гарна.</p>
+              <div class="chips"><span class="chip data">listPropDraft</span></div>
+            </div>
+          </div>
+          <div class="stage">
+            <div class="stage-index">O5</div>
+            <div class="card">
+              <h3>Publish</h3>
+              <p>LISTINGS.push хийгдээд property screen рүү шинэ зар нээгдэнэ.</p>
+              <div class="chips"><span class="chip done">publishListProp()</span></div>
+            </div>
+          </div>
+          <div class="stage">
+            <div class="stage-index">O6</div>
+            <div class="card">
+              <h3>Manage rental</h3>
+              <p>Түрээслэгч, гэрээ, орлогын tab-ууд rental-mgmt дотор ажиллана.</p>
+              <div class="chips"><span class="chip action">RM tabs</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="print-note">Файл: pages/process.html · Standalone HTML process diagram · 2026-06-04</div>
+  </main>
+</body>
+</html>
