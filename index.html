@@ -4678,11 +4678,41 @@
   </div>
 </div>
 
-<script src="src/js/data.js?v=20260604f"></script>
-<script src="src/js/screens.js?v=20260604f"></script>
-<script src="src/js/features.js?v=20260604a"></script>
-<script src="src/js/app.js?v=20260604d"></script>
-<script src="src/js/interests.js?v=20260604e"></script>
+<!-- ========== NEOMAP — 25-component layered load (data → core → features → components → map/search → screens → actions → interests → cmd+boot) ========== -->
+<!-- data layer -->
+<script src="src/data/constants.js?v=20260605a"></script>
+<script src="src/data/listings.js?v=20260605a"></script>
+<script src="src/data/saved.js?v=20260605a"></script>
+<script src="src/data/formatters.js?v=20260605a"></script>
+<script src="src/data/listing-detail.js?v=20260605a"></script>
+<!-- core: state + storage + router/modal/toast/header -->
+<script src="src/core/state-storage.js?v=20260605a"></script>
+<script src="src/core/ui.js?v=20260605a"></script>
+<!-- features: leaflet + places + lightbox-reviews + compare-tour-stats -->
+<script src="src/features/leaflet.js?v=20260605a"></script>
+<script src="src/features/places.js?v=20260605a"></script>
+<script src="src/features/lightbox-reviews.js?v=20260605a"></script>
+<script src="src/features/compare-tour.js?v=20260605a"></script>
+<!-- components: cards + filter UI -->
+<script src="src/components/cards.js?v=20260605a"></script>
+<script src="src/components/filters-ui.js?v=20260605a"></script>
+<!-- map + search core (pseudo-map must precede filters-ai so OLD activeFilterChips loses to NEW filters-ui version) -->
+<script src="src/map/pseudo-map.js?v=20260605a"></script>
+<script src="src/search/filters-ai.js?v=20260605a"></script>
+<!-- screens -->
+<script src="src/screens/home.js?v=20260605a"></script>
+<script src="src/screens/property.js?v=20260605a"></script>
+<script src="src/screens/misc.js?v=20260605a"></script>
+<script src="src/screens/list-property.js?v=20260605a"></script>
+<!-- actions -->
+<script src="src/actions/listing.js?v=20260605a"></script>
+<script src="src/actions/filters.js?v=20260605a"></script>
+<script src="src/actions/modals.js?v=20260605a"></script>
+<!-- interests -->
+<script src="src/interests/data-matching.js?v=20260605a"></script>
+<script src="src/interests/ui.js?v=20260605a"></script>
+<!-- cmd palette + BOOT (must be last — calls goTo/buildDemoPill/startTour) -->
+<script src="src/cmd/palette.js?v=20260605a"></script>
 
 <!-- ========== TWEAKS PANEL ========== -->
 <div class="tweaks-panel" id="tweaks-panel" role="dialog" aria-label="Tweaks">
