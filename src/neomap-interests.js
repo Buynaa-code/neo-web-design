@@ -98,6 +98,80 @@ const INTEREST_VIBES = [
   { key: 'new-area', icon: 'construction', label: 'Шинэ хороолол', sub: 'Орчин үеийн дэд бүтэц' },
 ];
 
+/* ============== ҮХ-ИЙН ЗОРИУЛАЛТ — Excel: МИНИЙ ХҮСЭЛ Алхам 02–03 ============== */
+const INTEREST_PURPOSES = [
+  { key: 'any',          icon: 'compass',          label: 'Хамаагүй',                hint: 'Бүх төрлийг харах',
+    subTypes: [] },
+  { key: 'apartment',    icon: 'building-2',       label: 'Орон сууц',               hint: 'Олон давхар, апартмент',
+    subTypes: [
+      { key: 'simple',    label: 'Энгийн' },
+      { key: 'duplex',    label: 'Дуплекс' },
+      { key: 'penthouse', label: 'Пентхаус' },
+      { key: 'other',     label: 'Бусад' },
+    ] },
+  { key: 'house',        icon: 'home',             label: 'Амины сууц',              hint: 'Single / Twin / Town house',
+    subTypes: [
+      { key: 'single', label: 'Single house' },
+      { key: 'twin',   label: 'Twin house' },
+      { key: 'town',   label: 'Town house' },
+      { key: 'multi',  label: 'Multihouse' },
+      { key: 'other',  label: 'Бусад' },
+    ] },
+  { key: 'office',       icon: 'briefcase',        label: 'Оффис',                   hint: 'Ажлын байр',
+    subTypes: [
+      { key: 'partial', label: 'Давхрын хэсэг, өрөө' },
+      { key: 'floor',   label: 'Давхар бүхлээрээ' },
+      { key: 'whole',   label: 'Обьект бүхлээрээ' },
+    ] },
+  { key: 'commercial',   icon: 'shopping-bag',     label: 'Худалдаа, үйлчилгээ',     hint: 'Дэлгүүр, ресторан, салон',
+    subTypes: [
+      { key: 'partial', label: 'Давхрын хэсэг, өрөө' },
+      { key: 'floor',   label: 'Давхар бүхлээрээ' },
+      { key: 'whole',   label: 'Обьект бүхлээрээ' },
+    ] },
+  { key: 'industrial',   icon: 'factory',          label: 'Аж үйлдвэрийн обьект',    hint: 'Үйлдвэр, цех',
+    subTypes: [] },
+  { key: 'garage',       icon: 'square-parking',   label: 'Авто дулаан зогсоол',     hint: 'Орон сууцны зогсоолын блок',
+    subTypes: [
+      { key: 'inside',  label: 'Орон сууц/Оффисын доор' },
+      { key: 'block',   label: 'Тусдаа зогсоолын блок' },
+    ] },
+  { key: 'storage',      icon: 'package',          label: 'Агуулах',                 hint: 'Гараж/орон сууцны доторх',
+    subTypes: [] },
+  { key: 'fenced-house', icon: 'fence',            label: 'Хашаа байшин',            hint: 'Газартай',
+    subTypes: [] },
+  { key: 'cottage-land', icon: 'tent-tree',        label: 'Зуслан (газартай)',       hint: 'Зуслангийн бүсэд, газартай',
+    subTypes: [] },
+  { key: 'cottage-no',   icon: 'tent',             label: 'Зуслан (газаргүй)',       hint: 'Зөвхөн байшин',
+    subTypes: [] },
+  { key: 'land',         icon: 'map',              label: 'Газар',                   hint: 'Барилгатай эсвэл хоосон газар',
+    subTypes: [] },
+  { key: 'other',        icon: 'square-dashed',    label: 'Бусад',                   hint: 'Тусгай зориулалттай',
+    subTypes: [] },
+];
+
+/* ============== ҮЛ ХӨДЛӨХИЙН ТӨЛӨВ — Excel: МИНИЙ ХҮСЭЛ Алхам 09 ============== */
+const INTEREST_CONDITIONS = [
+  { key: 'commissioned',  icon: 'badge-check',  label: 'Ашиглалтад орсон',           groupKey: 'usage' },
+  { key: 'pre-comm',      icon: 'construction', label: 'Удахгүй ашиглалтад орох',    groupKey: 'usage' },
+  { key: 'certified',     icon: 'file-check',   label: 'Гэрчилгээтэй',               groupKey: 'cert' },
+  { key: 'pre-cert',      icon: 'file-clock',   label: 'Гэрчилгээ удахгүй',          groupKey: 'cert' },
+  { key: 'brand-new',     icon: 'sparkle',      label: 'Цоо шинэ',                   groupKey: 'history' },
+  { key: 'used',          icon: 'history',      label: 'Ашиглагдаж байсан',          groupKey: 'history' },
+  { key: 'no-collateral', icon: 'shield-check', label: 'Барьцаагүй',                 groupKey: 'legal' },
+  { key: 'vacant',        icon: 'door-open',    label: 'Сул, чөлөөтэй',              groupKey: 'occupy' },
+  { key: 'fresh-reno',    icon: 'paintbrush',   label: 'Сүүлд заслагдсан',           groupKey: 'reno' },
+  { key: 'no-reno',       icon: 'hammer',       label: 'Засваргүй (өөрөө хийнэ)',    groupKey: 'reno' },
+];
+
+/* ============== МЭДЭГДЭЛ — Excel: МИНИЙ ХҮСЭЛ Алхам 13 ============== */
+const INTEREST_NOTIF_CHANNELS = [
+  { key: 'app',   icon: 'smartphone',     label: 'Аппликейшнээр',  sub: 'Push notification' },
+  { key: 'email', icon: 'mail',           label: 'И-мэйл',          sub: 'Өдөрт нэг дайджест' },
+  { key: 'sms',   icon: 'message-square', label: 'SMS',             sub: 'Утсан дээр шууд' },
+  { key: 'call',  icon: 'phone-call',     label: 'Дуудлагаар',      sub: 'Зөвхөн чухал тохиолдолд' },
+];
+
 /* ============== MATCH SCORING ============== */
 /* Буцаах: { score: 0..100, reasons: [{ icon, text, kind:'good'|'soft' }] } */
 function computeMatchScore(listing, interests) {
@@ -372,15 +446,20 @@ function startInterestsWizard(mode) {
   state.interestsWizardStep = 1;
   state.interestsWizardDraft = {
     lifestyle: cur ? cur.lifestyle : null,
+    purpose: cur && cur.purpose ? cur.purpose : 'any',
+    subTypes: cur && cur.subTypes ? [...cur.subTypes] : [],
     mode: cur ? cur.mode : inferred ? inferred.mode : state.mode || 'sale',
     budgetMin: cur ? cur.budgetMin : null,
     budgetMax: cur ? cur.budgetMax : inferred ? Math.round(inferred.avgPrice * 1.2) : null,
+    budgetAny: cur && cur.budgetAny ? true : false,
     bedrooms: cur && cur.bedrooms ? [...cur.bedrooms] : inferredBedrooms,
     bathroomsMin: cur && cur.bathroomsMin != null ? cur.bathroomsMin : null,
     office: cur && cur.office != null ? cur.office : null,
     districts: cur && cur.districts ? [...cur.districts] : inferred ? inferred.districts : [],
     mustHaves: cur && cur.mustHaves ? [...cur.mustHaves] : [],
+    conditions: cur && cur.conditions ? [...cur.conditions] : [],
     vibe: cur ? cur.vibe : null,
+    notifChannels: cur && cur.notifChannels ? [...cur.notifChannels] : ['app'],
   };
   renderWizardModal();
 }
@@ -389,26 +468,33 @@ window.startInterestsWizard = startInterestsWizard;
 function renderWizardModal() {
   const step = state.interestsWizardStep;
   const draft = state.interestsWizardDraft;
-  const total = 6;
+  const total = 9;
   const progress = Math.round(((step - 1) / total) * 100);
   const stepBody = (() => {
     if (step === 1) return wizardStepLifestyle(draft);
-    if (step === 2) return wizardStepBudget(draft);
-    if (step === 3) return wizardStepRooms(draft);
-    if (step === 4) return wizardStepDistricts(draft);
-    if (step === 5) return wizardStepMustHaves(draft);
-    if (step === 6) return wizardStepVibe(draft);
+    if (step === 2) return wizardStepPurpose(draft);
+    if (step === 3) return wizardStepBudget(draft);
+    if (step === 4) return wizardStepRooms(draft);
+    if (step === 5) return wizardStepDistricts(draft);
+    if (step === 6) return wizardStepMustHaves(draft);
+    if (step === 7) return wizardStepCondition(draft);
+    if (step === 8) return wizardStepVibe(draft);
+    if (step === 9) return wizardStepNotifications(draft);
     return '';
   })();
   const canNext = (() => {
     if (step === 1) return !!draft.lifestyle;
-    if (step === 2) return draft.budgetMax != null && draft.budgetMax > 0;
-    if (step === 3) return draft.bedrooms && draft.bedrooms.length > 0;
-    if (step === 4) return draft.districts && draft.districts.length > 0;
-    if (step === 5) return true; // алгасаж болно
-    if (step === 6) return !!draft.vibe;
+    if (step === 2) return !!draft.purpose;
+    if (step === 3) return draft.budgetAny || (draft.budgetMax != null && draft.budgetMax > 0) || draft.budgetMin != null;
+    if (step === 4) return (draft.bedrooms && draft.bedrooms.length > 0) || draft.bathroomsMin === 0;
+    if (step === 5) return true; // дүүрэг алгасаж болно — бүх дүүрэг гэж тооцно
+    if (step === 6) return true; // must-haves алгасаж болно
+    if (step === 7) return true; // condition алгасаж болно
+    if (step === 8) return !!draft.vibe;
+    if (step === 9) return (draft.notifChannels || []).length > 0;
     return false;
   })();
+  const isSkippable = [5, 6, 7].includes(step);
 
   openModal(
     `
@@ -442,7 +528,7 @@ function renderWizardModal() {
         <button onclick="wizardBack()" ${step === 1 ? 'style="visibility:hidden"' : ''} class="btn btn-ghost" style="padding: 10px 16px;">
           <i data-lucide="arrow-left" class="w-4 h-4"></i> Буцах
         </button>
-        ${step === 5 ? `<button onclick="wizardNext(true)" class="btn btn-ghost" style="margin-left:auto; color: var(--text-3);">Алгасах</button>` : '<div style="flex:1"></div>'}
+        ${isSkippable ? `<button onclick="wizardNext(true)" class="btn btn-ghost" style="margin-left:auto; color: var(--text-3);">Алгасах</button>` : '<div style="flex:1"></div>'}
         <button onclick="wizardNext()" ${canNext ? '' : 'disabled style="opacity:.5; cursor:not-allowed;"'} class="btn btn-primary" style="padding: 10px 22px;">
           ${step === total ? '<i data-lucide="check" class="w-4 h-4"></i> Дуусгах' : 'Үргэлжлүүлэх <i data-lucide="arrow-right" class="w-4 h-4"></i>'}
         </button>
@@ -459,11 +545,14 @@ function stepTitle(step) {
   return (
     [
       'Та өөрийгөө хэн гэж бодож вэ?',
+      'Ямар үл хөдлөх хайж байна?',
       'Танай төсөв хэр вэ?',
       'Хэдэн өрөөтэй байр хайж байна?',
       'Аль дүүрэг танд илүү таалагдах вэ?',
       'Танд юу чухал вэ?',
+      'Ямар төлөвт байгаа хөрөнгө хайж байна?',
       'Ямар орчинд амьдрах дуртай?',
+      'Танд хэрхэн мэдэгдэх вэ?',
     ][step - 1] || ''
   );
 }
@@ -494,6 +583,7 @@ function wizardStepBudget(d) {
   const isRent = d.mode === 'rent';
   const ranges = isRent
     ? [
+        { label: 'Хамаагүй / Бүх үнэ', min: null, max: null, any: true },
         { label: '< 1сая', min: null, max: 1000000 },
         { label: '1-2сая', min: 1000000, max: 2000000 },
         { label: '2-3сая', min: 2000000, max: 3000000 },
@@ -501,6 +591,7 @@ function wizardStepBudget(d) {
         { label: '5сая+', min: 5000000, max: null },
       ]
     : [
+        { label: 'Хамаагүй / Бүх үнэ', min: null, max: null, any: true },
         { label: '< 200сая', min: null, max: 200000000 },
         { label: '200-400сая', min: 200000000, max: 400000000 },
         { label: '400-600сая', min: 400000000, max: 600000000 },
@@ -516,18 +607,151 @@ function wizardStepBudget(d) {
     <div class="grid grid-cols-1 gap-2">
       ${ranges
         .map((r) => {
-          const active = d.budgetMin === r.min && d.budgetMax === r.max;
+          const isAny = !!r.any;
+          const active = isAny
+            ? !!d.budgetAny
+            : !d.budgetAny && d.budgetMin === r.min && d.budgetMax === r.max;
           return `
-          <button onclick="wizardSetBudget(${r.min}, ${r.max})"
+          <button onclick="wizardSetBudget(${r.min}, ${r.max}, ${isAny})"
             style="text-align: left; padding: 14px 16px; border-radius: 12px; border: 1.5px solid ${active ? 'var(--gold-brand)' : 'var(--border)'}; background: ${active ? 'rgba(201,162,39,.06)' : 'var(--surface)'}; display: flex; align-items: center; gap: 12px;">
             <div style="width: 24px; height: 24px; border-radius: 50%; border: 2px solid ${active ? 'var(--gold-brand)' : 'var(--border-strong)'}; background: ${active ? 'var(--gold-brand)' : 'transparent'}; display:inline-flex;align-items:center;justify-content:center;">
               ${active ? '<i data-lucide="check" class="w-3 h-3" style="color:#07111F"></i>' : ''}
             </div>
-            <span style="font-weight: 600; color: var(--text); font-size: 14px;">${r.label}${isRent ? '' : ' ₮'}</span>
+            <span style="font-weight: 600; color: var(--text); font-size: 14px;">${r.label}${isRent || isAny ? '' : ' ₮'}</span>
           </button>
         `;
         })
         .join('')}
+    </div>
+  `;
+}
+
+/* ===== NEW STEP 2: Зориулалт + дэд төрөл ===== */
+function wizardStepPurpose(d) {
+  const selPurpose = d.purpose || 'any';
+  const purposeMeta = INTEREST_PURPOSES.find((p) => p.key === selPurpose);
+  const selSubs = d.subTypes || [];
+  const hasSubs = purposeMeta && Array.isArray(purposeMeta.subTypes) && purposeMeta.subTypes.length > 0;
+  return `
+    <p style="color: var(--text-2); font-size: 13px; margin-bottom: 14px;">Хайж буй үл хөдлөхийн зориулалтыг сонгоно уу. "Хамаагүй" гэвэл бүгдийг харна.</p>
+    <div class="grid grid-cols-2 gap-2 mb-3">
+      ${INTEREST_PURPOSES.map((p) => {
+        const active = p.key === selPurpose;
+        return `
+          <button onclick="wizardSetPurpose('${p.key}')"
+            style="text-align: left; padding: 12px 14px; border-radius: 12px; border: 1.5px solid ${active ? 'var(--gold-brand)' : 'var(--border)'}; background: ${active ? 'rgba(201,162,39,.08)' : 'var(--surface)'}; display: flex; align-items: center; gap: 10px;">
+            <div style="width: 34px; height: 34px; border-radius: 9px; background: ${active ? 'var(--gold-brand)' : 'var(--surface-2)'}; color: ${active ? '#07111F' : 'var(--text-2)'}; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;">
+              <i data-lucide="${p.icon}" class="w-4 h-4"></i>
+            </div>
+            <div style="min-width: 0;">
+              <div style="font-weight: 700; color: var(--text); font-size: 13px; line-height: 1.2;">${p.label}</div>
+              <div style="font-size: 11px; color: var(--text-3); margin-top: 2px; line-height: 1.3;">${p.hint}</div>
+            </div>
+          </button>
+        `;
+      }).join('')}
+    </div>
+    ${
+      hasSubs
+        ? `
+      <div style="margin-top: 12px; padding-top: 14px; border-top: 1px dashed var(--border);">
+        <div style="display:flex; align-items:center; gap:8px; margin-bottom: 10px;">
+          <i data-lucide="list-tree" class="w-4 h-4" style="color: var(--gold-brand);"></i>
+          <div style="font-weight: 700; color: var(--text); font-size: 13.5px;">Дэд төрөл</div>
+          <div style="font-size: 11.5px; color: var(--text-3); margin-left: auto;">олныг сонгож болно — заавал биш</div>
+        </div>
+        <div class="flex flex-wrap gap-1.5">
+          ${purposeMeta.subTypes
+            .map((s) => {
+              const on = selSubs.includes(s.key);
+              return `
+              <button onclick="wizardToggleSubType('${s.key}')"
+                style="padding: 8px 13px; border-radius: 999px; border: 1.5px solid ${on ? 'var(--gold-brand)' : 'var(--border)'}; background: ${on ? 'rgba(201,162,39,.1)' : 'var(--surface-2)'}; color: var(--text); font-size: 12.5px; font-weight: ${on ? 700 : 500};">
+                ${on ? '<i data-lucide="check" class="w-3 h-3 inline" style="margin-right:3px; color: var(--gold-brand)"></i>' : ''}${s.label}
+              </button>
+            `;
+            })
+            .join('')}
+        </div>
+      </div>
+    `
+        : ''
+    }
+  `;
+}
+
+/* ===== NEW STEP 7: Хөрөнгийн төлөв ===== */
+function wizardStepCondition(d) {
+  const sel = d.conditions || [];
+  const groups = [
+    { key: 'usage',   label: 'Ашиглалт',          icon: 'badge-check' },
+    { key: 'cert',    label: 'Гэрчилгээ',         icon: 'file-check' },
+    { key: 'history', label: 'Түүх',              icon: 'history' },
+    { key: 'legal',   label: 'Хууль зүйн төлөв',   icon: 'shield-check' },
+    { key: 'occupy',  label: 'Эзлэгдсэн эсэх',    icon: 'door-open' },
+    { key: 'reno',    label: 'Засал',             icon: 'paintbrush' },
+  ];
+  return `
+    <p style="color: var(--text-2); font-size: 13px; margin-bottom: 14px;">Та ямар төлөвт байгаа хөрөнгийг хүсэж байна вэ? Олныг сонгож болно — заавал биш.</p>
+    ${groups
+      .map((g) => {
+        const items = INTEREST_CONDITIONS.filter((c) => c.groupKey === g.key);
+        if (!items.length) return '';
+        return `
+        <div style="margin-bottom: 14px;">
+          <div style="display:flex; align-items:center; gap:7px; margin-bottom: 8px;">
+            <i data-lucide="${g.icon}" class="w-3.5 h-3.5" style="color: var(--gold-brand);"></i>
+            <div style="font-size: 11.5px; font-weight: 700; color: var(--text-2); letter-spacing: .04em; text-transform: uppercase;">${g.label}</div>
+          </div>
+          <div class="flex flex-wrap gap-1.5">
+            ${items
+              .map((c) => {
+                const on = sel.includes(c.key);
+                return `
+                <button onclick="wizardToggleCondition('${c.key}')"
+                  style="padding: 8px 13px; border-radius: 999px; border: 1.5px solid ${on ? 'var(--gold-brand)' : 'var(--border)'}; background: ${on ? 'rgba(201,162,39,.1)' : 'var(--surface-2)'}; color: var(--text); font-size: 12.5px; font-weight: ${on ? 700 : 500}; display:inline-flex; align-items:center; gap:6px;">
+                  <i data-lucide="${c.icon}" class="w-3.5 h-3.5" style="color: ${on ? 'var(--gold-brand)' : 'var(--text-3)'};"></i>
+                  ${c.label}
+                </button>
+              `;
+              })
+              .join('')}
+          </div>
+        </div>
+      `;
+      })
+      .join('')}
+  `;
+}
+
+/* ===== NEW STEP 9: Мэдэгдлийн суваг ===== */
+function wizardStepNotifications(d) {
+  const sel = d.notifChannels || [];
+  return `
+    <p style="color: var(--text-2); font-size: 13px; margin-bottom: 14px;">Шинэ тохирох зар орох тутамд хэрхэн мэдэгдэх вэ? Олныг сонгож болно.</p>
+    <div class="grid grid-cols-1 gap-2">
+      ${INTEREST_NOTIF_CHANNELS.map((c) => {
+        const active = sel.includes(c.key);
+        return `
+          <button onclick="wizardToggleNotif('${c.key}')"
+            style="padding: 14px 16px; border-radius: 14px; border: 1.5px solid ${active ? 'var(--gold-brand)' : 'var(--border)'}; background: ${active ? 'rgba(201,162,39,.06)' : 'var(--surface)'}; text-align: left; display: flex; align-items: center; gap: 12px;">
+            <div style="width: 44px; height: 44px; border-radius: 12px; background: ${active ? 'var(--gold-brand)' : 'var(--surface-2)'}; color: ${active ? '#07111F' : 'var(--text-2)'}; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;">
+              <i data-lucide="${c.icon}" class="w-5 h-5"></i>
+            </div>
+            <div style="flex: 1;">
+              <div style="font-weight: 700; color: var(--text); font-size: 14px; margin-bottom: 2px;">${c.label}</div>
+              <div style="font-size: 12px; color: var(--text-3);">${c.sub}</div>
+            </div>
+            <div style="width: 22px; height: 22px; border-radius: 6px; border: 1.5px solid ${active ? 'var(--gold-brand)' : 'var(--border-strong)'}; background: ${active ? 'var(--gold-brand)' : 'transparent'}; display: inline-flex; align-items: center; justify-content: center;">
+              ${active ? '<i data-lucide="check" class="w-3 h-3" style="color:#07111F"></i>' : ''}
+            </div>
+          </button>
+        `;
+      }).join('')}
+    </div>
+    <div style="margin-top: 14px; padding: 12px 14px; border-radius: 12px; background: var(--gold-soft); border: 1px solid rgba(201,162,39,.25); display: flex; gap: 10px; align-items: flex-start;">
+      <i data-lucide="info" class="w-4 h-4 shrink-0" style="color: var(--gold-brand); margin-top: 2px;"></i>
+      <div style="font-size: 11.5px; color: var(--text-2); line-height: 1.4;">SMS болон дуудлагын суваг нь Silver/Gold/Platinum гишүүнчлэлээр идэвхждэг. Та одоохондоо Basic бөгөөд app болон и-мэйлээр мэдэгдэл авах болно.</div>
     </div>
   `;
 }
@@ -713,12 +937,58 @@ function wizardSetMode(m) {
 }
 window.wizardSetMode = wizardSetMode;
 
-function wizardSetBudget(min, max) {
-  state.interestsWizardDraft.budgetMin = min;
-  state.interestsWizardDraft.budgetMax = max;
+function wizardSetBudget(min, max, isAny) {
+  if (isAny) {
+    state.interestsWizardDraft.budgetAny = true;
+    state.interestsWizardDraft.budgetMin = null;
+    state.interestsWizardDraft.budgetMax = null;
+  } else {
+    state.interestsWizardDraft.budgetAny = false;
+    state.interestsWizardDraft.budgetMin = min;
+    state.interestsWizardDraft.budgetMax = max;
+  }
   renderWizardModal();
 }
 window.wizardSetBudget = wizardSetBudget;
+
+function wizardSetPurpose(key) {
+  const prev = state.interestsWizardDraft.purpose;
+  state.interestsWizardDraft.purpose = key;
+  // Зориулалт солигдвол өмнөх дэд төрлийг арилгана
+  if (prev !== key) state.interestsWizardDraft.subTypes = [];
+  renderWizardModal();
+}
+window.wizardSetPurpose = wizardSetPurpose;
+
+function wizardToggleSubType(key) {
+  const arr = state.interestsWizardDraft.subTypes || [];
+  const idx = arr.indexOf(key);
+  if (idx === -1) arr.push(key);
+  else arr.splice(idx, 1);
+  state.interestsWizardDraft.subTypes = arr;
+  renderWizardModal();
+}
+window.wizardToggleSubType = wizardToggleSubType;
+
+function wizardToggleCondition(key) {
+  const arr = state.interestsWizardDraft.conditions || [];
+  const idx = arr.indexOf(key);
+  if (idx === -1) arr.push(key);
+  else arr.splice(idx, 1);
+  state.interestsWizardDraft.conditions = arr;
+  renderWizardModal();
+}
+window.wizardToggleCondition = wizardToggleCondition;
+
+function wizardToggleNotif(key) {
+  const arr = state.interestsWizardDraft.notifChannels || [];
+  const idx = arr.indexOf(key);
+  if (idx === -1) arr.push(key);
+  else arr.splice(idx, 1);
+  state.interestsWizardDraft.notifChannels = arr;
+  renderWizardModal();
+}
+window.wizardToggleNotif = wizardToggleNotif;
 
 function wizardToggleBedroom(n) {
   const arr = state.interestsWizardDraft.bedrooms || [];
@@ -782,7 +1052,7 @@ function wizardBack() {
 window.wizardBack = wizardBack;
 
 function wizardNext(skip = false) {
-  if (state.interestsWizardStep < 6) {
+  if (state.interestsWizardStep < 9) {
     state.interestsWizardStep++;
     renderWizardModal();
   } else {
@@ -803,15 +1073,20 @@ function finishInterestsWizard() {
   const mode = state.interestsWizardMode || 'edit';
   const profile = {
     lifestyle: d.lifestyle,
+    purpose: d.purpose || 'any',
+    subTypes: d.subTypes || [],
     mode: d.mode,
     budgetMin: d.budgetMin,
     budgetMax: d.budgetMax,
+    budgetAny: !!d.budgetAny,
     bedrooms: d.bedrooms || [],
     bathroomsMin: d.bathroomsMin || 0,
     office: !!d.office,
     districts: d.districts || [],
     mustHaves: d.mustHaves || [],
+    conditions: d.conditions || [],
     vibe: d.vibe,
+    notifChannels: d.notifChannels || ['app'],
     updatedAt: new Date().toISOString(),
   };
   const list = state.userInterestsList || [];

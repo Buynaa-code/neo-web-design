@@ -6,13 +6,13 @@ const DISTRICTS = ['Хан-Уул', 'Баянзүрх', 'Сүхбаатар', '�
 /* Орон сууц, амины сууц, оффис, үйлчилгээний барилгад ашиглах өрөөнүүд.
    Tag-уудыг өрөөний нэрнээс хамаарч динамикаар үзүүлнэ. */
 const ROOM_TAGS_BY_TYPE = {
-  generic:  ['Тагттай', 'Террастай', 'Цонхтой'],
-  bedroom:  ['Хувцасны өрөөтэй', 'Тагттай', 'Террастай', 'Цонхтой'],
-  master:   ['Ариун цэврийн өрөөтэй', 'Хувцасны өрөөтэй', 'Тагттай', 'Террастай', 'Ажлын хэсэгтэй', 'Цонхтой'],
+  generic:  [],
+  bedroom:  ['Хувцасны өрөөтэй', 'Тагттай', 'Террастай', 'Ариун цэврийн өрөөтэй'],
+  master:   ['Хувцасны өрөөтэй', 'Тагттай', 'Террастай', 'Ажлын хэсэгтэй'],
   bath:     ['Угаалтуур', 'Суултуур', 'Душ', 'Ванн', 'Жакуза', 'Сауна', 'Гоо сайхны хэсэг', 'Цонхтой'],
-  livingrm: ['Тагттай', 'Террастай', 'Цонхтой'],
-  kitchen:  ['Тагттай', 'Цонхтой'],
-  dining:   ['Тагттай', 'Цонхтой'],
+  livingrm: ['Тагттай', 'Террастай'],
+  kitchen:  ['Цонхтой'],
+  dining:   ['Тагттай', 'Террастай'],
 };
 
 const ROOM_TYPES = [
@@ -31,7 +31,7 @@ const ROOM_TYPES = [
   { key: 'closet',        label: 'Хувцасны өрөө',               tagGroup: 'generic',  group: 'sleep' },
   { key: 'office',        label: 'Ажлын өрөө',                  tagGroup: 'generic',  group: 'utility' },
   { key: 'laundry',       label: 'Угаалгын өрөө (Laundry)',     tagGroup: 'generic',  group: 'utility' },
-  { key: 'family',        label: 'Гэр бүлийн хэсэг',            tagGroup: 'livingrm', group: 'living' },
+  { key: 'family',        label: 'Гэр бүлийн хэсэг',            tagGroup: 'generic',  group: 'living' },
   { key: 'stairs',        label: 'Шат',                         tagGroup: 'generic',  group: 'transit' },
   { key: 'landing',       label: 'Шатны хонгил',                tagGroup: 'generic',  group: 'transit' },
   { key: 'corridor',      label: 'Коридор',                     tagGroup: 'generic',  group: 'transit' },
@@ -50,21 +50,21 @@ const ROOM_TYPES = [
   { key: 'sauna',         label: 'Сауна',                       tagGroup: 'generic',  group: 'leisure' },
   { key: 'pool',          label: 'Усан бассейн',                tagGroup: 'generic',  group: 'leisure' },
   { key: 'lounge',        label: 'Амралтын өрөө',               tagGroup: 'livingrm', group: 'leisure' },
-  { key: 'maid',          label: 'Үйлчлэгчийн өрөө',            tagGroup: 'bedroom',  group: 'service' },
+  { key: 'maid',          label: 'Үйлчлэгчийн өрөө',            tagGroup: 'generic',  group: 'service' },
   { key: 'waiting',       label: 'Хүлээлгийн өрөө',             tagGroup: 'generic',  group: 'service' },
   { key: 'smoking',       label: 'Тамхины өрөө',                tagGroup: 'generic',  group: 'leisure' },
 ];
 
 /* Цонхны 8 чиглэл — талбайн хажуудаа цонхны тоог оруулна */
 const WIND_DIRECTIONS = [
-  { key: 'N',  short: 'З',  label: 'Зүүн (N)' },
-  { key: 'NE', short: 'ЗУ', label: 'Зүүн-урагш (NE)' },
-  { key: 'E',  short: 'У',  label: 'Урд (E)' },
-  { key: 'SE', short: 'БУ', label: 'Баруун-урагш (SE)' },
-  { key: 'S',  short: 'Б',  label: 'Баруун (S)' },
-  { key: 'SW', short: 'БХ', label: 'Баруун-хойш (SW)' },
-  { key: 'W',  short: 'Х',  label: 'Хойд (W)' },
-  { key: 'NW', short: 'ЗХ', label: 'Зүүн-хойш (NW)' },
+  { key: 'N',  short: 'З',  label: 'Зүүн' },
+  { key: 'NE', short: 'ЗУ', label: 'Зүүн-урагш' },
+  { key: 'E',  short: 'У',  label: 'Урд' },
+  { key: 'SE', short: 'БУ', label: 'Баруун-урагш' },
+  { key: 'S',  short: 'Б',  label: 'Баруун' },
+  { key: 'SW', short: 'БХ', label: 'Баруун-хойш' },
+  { key: 'W',  short: 'Х',  label: 'Хойд' },
+  { key: 'NW', short: 'ЗХ', label: 'Зүүн-хойш' },
 ];
 
 const KHOTKHON = [
@@ -1108,9 +1108,11 @@ function legacyToDetail(l) {
 }
 
 /* Дэлгэрэнгүй авах — байхгүй бол legacy-аас үүсгэнэ */
-function getListingDetail(id) {
+function getListingDetail(input) {
+  const l = input && typeof input === 'object' ? input : getListing(input);
+  const id = l ? l.id : input;
+  if (l && l.detail) return l.detail;
   if (LISTING_DETAILS[id]) return LISTING_DETAILS[id];
-  const l = getListing(id);
   return l ? legacyToDetail(l) : null;
 }
 

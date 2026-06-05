@@ -1771,6 +1771,9 @@ window.listingToLatLng = listingToLatLng;
 
 let homeLeafletMap = null;
 let homeLeafletMarkers = [];
+let homeLeafletListingMarkers = [];
+let homeLeafletMapEl = null;
+let homeLeafletReclusterTimer = null;
 
 function rectsIntersect(a, b, gap = 0) {
   return !(a.right + gap <= b.left || a.left - gap >= b.right || a.bottom + gap <= b.top || a.top - gap >= b.bottom);
@@ -1778,6 +1781,11 @@ function rectsIntersect(a, b, gap = 0) {
 
 function declutterHomeLeafletMarkers(items, el) {
   if (!homeLeafletMap || !items.length) return;
+  // Маркер бүрийг эхлээд жинхэнэ lat/lng дээр нь буцаана — өмнөх declutter-аас үлдсэн
+  // шилжүүлэлт zoom/pan-ы дараа маркеруудыг газартаа хазайлгадаг.
+  items.forEach((item) => {
+    if (item.base) item.marker.setLatLng(item.base);
+  });
   const mapRect = el.getBoundingClientRect();
   const markerW = 126;
   const markerH = 44;
@@ -1834,12 +1842,18 @@ function declutterHomeLeafletMarkers(items, el) {
 }
 
 function destroyHomeLeafletMap() {
+  if (homeLeafletReclusterTimer) {
+    clearTimeout(homeLeafletReclusterTimer);
+    homeLeafletReclusterTimer = null;
+  }
   if (homeLeafletMap) {
     try {
       homeLeafletMap.remove();
     } catch (e) {}
     homeLeafletMap = null;
     homeLeafletMarkers = [];
+    homeLeafletListingMarkers = [];
+    homeLeafletMapEl = null;
   }
 }
 window.destroyHomeLeafletMap = destroyHomeLeafletMap;
@@ -1852,6 +1866,7 @@ function initHomeLeafletMap(listings) {
   const el = document.getElementById('leaflet-home-map');
   if (!el) return;
   destroyHomeLeafletMap();
+  homeLeafletMapEl = el;
 
   homeLeafletMap = L.map(el, {
     zoomControl: false,
@@ -1872,6 +1887,21 @@ function initHomeLeafletMap(listings) {
 
   const listingBounds = [];
   const listingMarkers = [];
+  homeLeafletListingMarkers = listingMarkers;
+
+  // Zoom/move үед маркеруудыг base lat/lng руу нь буцаагаад дахин declutter хийнэ.
+  // Үгүй бол өмнөх declutter-аас үлдсэн шилжүүлэлт zoom-ын дараа маркеруудыг
+  // мапны байршилтай харьцангуй хазайлгадаг.
+  const scheduleRecluster = () => {
+    if (homeLeafletReclusterTimer) clearTimeout(homeLeafletReclusterTimer);
+    homeLeafletReclusterTimer = setTimeout(() => {
+      homeLeafletReclusterTimer = null;
+      if (homeLeafletMap && homeLeafletMapEl && homeLeafletListingMarkers.length) {
+        declutterHomeLeafletMarkers(homeLeafletListingMarkers, homeLeafletMapEl);
+      }
+    }, 80);
+  };
+  homeLeafletMap.on('zoomend moveend', scheduleRecluster);
 
   (listings || []).forEach((l) => {
     const [lat, lng] = listingToLatLng(l);

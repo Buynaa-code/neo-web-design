@@ -139,6 +139,12 @@ function normalizeInterestsProfile(p) {
   }
   if (p.bathroomsMin == null) p.bathroomsMin = 0;
   if (p.office == null) p.office = false;
+  // Шинэ талбарууд — 9-алхамт wizard-ын өргөтгөсөн схем
+  if (!p.purpose) p.purpose = 'any';
+  if (!Array.isArray(p.subTypes)) p.subTypes = [];
+  if (p.budgetAny == null) p.budgetAny = false;
+  if (!Array.isArray(p.conditions)) p.conditions = [];
+  if (!Array.isArray(p.notifChannels) || !p.notifChannels.length) p.notifChannels = ['app'];
   return p;
 }
 

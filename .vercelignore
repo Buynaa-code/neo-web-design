@@ -1,0 +1,8 @@
+.git
+.vercel
+archive
+docs
+README.md
+.gitignore
+_smoke*.html
+_visual*.html
