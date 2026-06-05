@@ -1,8 +1,7 @@
 .git
 .vercel
+node_modules
 archive
 docs
-README.md
-.gitignore
-_smoke*.html
-_visual*.html
+*.log
+.DS_Store

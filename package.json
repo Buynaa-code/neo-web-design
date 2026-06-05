@@ -1,0 +1,13 @@
+{
+  "name": "neomap",
+  "version": "0.1.0",
+  "private": true,
+  "description": "NEOMAP — Үл хөдлөхийн ухаалаг хайлт",
+  "scripts": {
+    "dev": "python3 -m http.server 8000",
+    "start": "python3 -m http.server 8000"
+  },
+  "devDependencies": {
+    "shadcn": "^4.10.0"
+  }
+}

@@ -1872,8 +1872,8 @@ function bmFooter() {
         <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-8">
           <div class="col-span-2 md:col-span-3 lg:col-span-2">
             <div class="flex items-center mb-4">
-              <img src="public/images/logo-horizontal-light.png" alt="NEOMAP" class="neo-logo neo-logo-light h-10" />
-              <img src="public/images/logo-horizontal-dark.png" alt="NEOMAP" class="neo-logo neo-logo-dark h-10" />
+              <img src="public/images/logo/horizontal-light.png" alt="NEOMAP" class="neo-logo neo-logo-light h-10" />
+              <img src="public/images/logo/horizontal-dark.png" alt="NEOMAP" class="neo-logo neo-logo-dark h-10" />
             </div>
             <p class="text-sm" style="color: var(--text-2); max-width: 360px; line-height: 1.6;">
               NEOMAP бол Монголын үл хөдлөхийн хамгийн найдвартай, ухаалаг, хүртээмжтэй зуучлал, зөвлөгөө, үнэлгээний цогц платформ юм.
