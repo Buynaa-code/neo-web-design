@@ -58,6 +58,7 @@ export function Header() {
             alt="NEOMAP"
             width={120}
             height={40}
+            priority
             className="neo-logo neo-logo-light shrink-0"
           />
           <Image

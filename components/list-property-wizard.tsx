@@ -504,7 +504,7 @@ export function ListPropertyWizard() {
                 alt="NEOMAP"
                 width={120}
                 height={40}
-                style={{ width: "auto", height: "40px" }}
+                className="shrink-0"
               />
               <Badge className="rounded-full bg-accent text-accent-foreground hover:bg-accent">
                 <Sparkles className="size-3.5" />

@@ -12,32 +12,28 @@ export function Splash() {
   useEffect(() => {
     if (typeof document === "undefined") return;
     document.body.classList.add("neo-splash-lock");
-    const start = Date.now();
 
+    let finished = false;
+    let doneTimer: ReturnType<typeof setTimeout>;
     let safetyTimer: ReturnType<typeof setTimeout>;
     let removeTimer: ReturnType<typeof setTimeout>;
 
     const finish = () => {
-      const wait = Math.max(0, MIN_MS - (Date.now() - start));
-      setTimeout(() => {
-        setDone(true);
-        document.body.classList.remove("neo-splash-lock");
-        removeTimer = setTimeout(() => setRemoved(true), 700);
-      }, wait);
+      if (finished) return;
+      finished = true;
+      setDone(true);
+      document.body.classList.remove("neo-splash-lock");
+      removeTimer = setTimeout(() => setRemoved(true), 700);
     };
 
-    if (document.readyState === "complete") {
-      finish();
-    } else {
-      window.addEventListener("load", finish, { once: true });
-    }
+    doneTimer = setTimeout(finish, MIN_MS);
     safetyTimer = setTimeout(finish, MAX_MS);
 
     return () => {
+      clearTimeout(doneTimer);
       clearTimeout(safetyTimer);
       clearTimeout(removeTimer);
       document.body.classList.remove("neo-splash-lock");
-      window.removeEventListener("load", finish);
     };
   }, []);
 
