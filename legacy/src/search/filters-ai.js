@@ -140,7 +140,7 @@ function toggleLifestyle(key) {
 }
 
 /* ---------- AI SEARCH (mock NLP) ----------
-
+   Хэрэглэгчийн чөлөөт текстээс шүүлтүүр гаргаж state-д суулгана. */
 const AI_EXAMPLES = [
   { icon: 'graduation-cap', text: 'Хан-Уулд 3 өрөө, 450 саяс доош, сургууль ойр' },
   { icon: 'home', text: 'Сүхбаатарт 2 өрөө түрээс, 1.5 саяс доош' },

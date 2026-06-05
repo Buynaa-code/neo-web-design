@@ -1117,34 +1117,46 @@ function lpCompletion(d) {
   return Math.round((req.filter((x) => x.ok).length / req.length) * 74 + (opt.filter((x) => x.ok).length / opt.length) * 26);
 }
 function lpBadge(required) {
-  return required ? `<span class="ml-1 text-[10px] font-semibold" style="color: var(--danger);">заавал</span>` : `<span class="ml-1 text-[10px] font-semibold" style="color: var(--text-3);">дараа нөхөж болно</span>`;
+  return required ? '<span class="lp-required-badge">заавал</span>' : '<span class="lp-optional-badge">дараа нөхөж болно</span>';
 }
 function lpLabel(label, required) {
   return `<label class="text-xs mb-1.5 block" style="color: var(--text-3);">${label}${lpBadge(required)}</label>`;
 }
 function lpChip(path, item, active, icon) {
-  return `<button type="button" onclick="toggleListPropArray('${path}', '${lpJS(item)}')" class="bm-chip ${active ? 'active' : ''}" style="max-width:100%; white-space:normal; text-align:left; ${active ? 'border-color: var(--gold-brand); background: var(--gold-soft); color: var(--gold-brand);' : ''}">${icon ? `<i data-lucide="${icon}" class="w-3 h-3"></i>` : ''}${lpEsc(item)}</button>`;
+  return `<button type="button" onclick="toggleListPropArray('${path}', '${lpJS(item)}')" class="lp-chip ${active ? 'is-active' : ''}">${icon ? `<i data-lucide="${icon}" class="w-3 h-3"></i>` : ''}${lpEsc(item)}</button>`;
 }
 function lpBool(path, label, active, icon) {
-  return `<button type="button" onclick="toggleListPropBoolean('${path}')" class="bm-chip ${active ? 'active' : ''}" style="max-width:100%; white-space:normal; text-align:left; ${active ? 'border-color: var(--gold-brand); background: var(--gold-soft); color: var(--gold-brand);' : ''}">${icon ? `<i data-lucide="${icon}" class="w-3 h-3"></i>` : ''}${lpEsc(label)}</button>`;
+  return `<button type="button" onclick="toggleListPropBoolean('${path}')" class="lp-chip ${active ? 'is-active' : ''}">${icon ? `<i data-lucide="${icon}" class="w-3 h-3"></i>` : ''}${lpEsc(label)}</button>`;
 }
 function lpStepHeader(n) {
   const g = SMART_LIST_PROP_GROUPS.find((x) => x.step === n);
-  return `<div class="flex items-start justify-between gap-4 mb-4"><div><div class="text-[11px] font-semibold uppercase tracking-wider mb-1" style="color: var(--gold-brand);">${g.sub}</div><h2 class="text-xl font-semibold tracking-tight flex items-center gap-2"><i data-lucide="${g.icon}" class="w-5 h-5" style="color: var(--gold-brand);"></i>${g.title}</h2></div><div class="hidden sm:flex flex-wrap justify-end gap-1.5 max-w-sm">${g.covers.map((x) => `<span class="px-2 py-1 rounded-full text-[11px] font-medium" style="background: var(--surface-2); color: var(--text-2); border:1px solid var(--border);">${x}</span>`).join('')}</div></div>`;
+  return `<div class="lp-step-head"><div><div class="lp-step-kicker">${g.sub}</div><h2 class="lp-step-title"><i data-lucide="${g.icon}" class="w-5 h-5"></i>${g.title}</h2></div><div class="lp-step-cover-row">${g.covers.map((x) => `<span class="lp-step-cover-pill">${x}</span>`).join('')}</div></div>`;
 }
 function renderListPropSidebar(d, step, pct) {
   const missing = lpRequired(d).filter((x) => !x.ok);
   return `<aside class="space-y-3 lg:sticky lg:top-24 self-start">
-    <div class="card p-4"><div class="flex items-center justify-between mb-2"><div class="text-sm font-semibold">Бүрэн байдал</div><div class="num text-lg font-semibold" style="color: var(--gold-brand);">${pct}%</div></div><div class="h-2 rounded-full overflow-hidden" style="background: var(--surface-2);"><div class="h-full rounded-full" style="width:${pct}%; background: linear-gradient(90deg, var(--primary), var(--gold-brand));"></div></div><div class="text-[11px] mt-2" style="color: var(--text-3);">${missing.length ? `${missing.length} заавал бөглөх зүйл үлдсэн` : 'Нийтлэх хүсэлт илгээхэд бэлэн'}</div></div>
-    <div class="card p-2">${SMART_LIST_PROP_GROUPS.map((g) => {
+    <div class="card lp-progress-card">
+      <div class="lp-progress-top">
+        <div class="lp-progress-title">Бүрэн байдал</div>
+        <div class="lp-progress-value">${pct}%</div>
+      </div>
+      <div class="lp-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}">
+        <div class="lp-progress-indicator" style="width:${pct}%;"></div>
+      </div>
+      <div class="lp-progress-note">${missing.length ? `${missing.length} заавал бөглөх зүйл үлдсэн` : 'Нийтлэх хүсэлт илгээхэд бэлэн'}</div>
+    </div>
+    <div class="card lp-step-nav">${SMART_LIST_PROP_GROUPS.map((g) => {
       const active = step === g.step;
       const done = lpRequired(d).filter((x) => x.step === g.step).every((x) => x.ok);
-      return `<button type="button" onclick="goListPropStep(${g.step})" class="w-full text-left p-2.5 rounded-lg flex gap-2 items-start hover:bg-[var(--surface-2)]" style="${active ? 'background: var(--gold-soft);' : ''}"><span class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style="background:${active ? 'var(--gold-brand)' : done ? 'var(--success-soft)' : 'var(--surface-2)'}; color:${active ? '#0A1F44' : done ? 'var(--success)' : 'var(--text-3)'};"><i data-lucide="${done && !active ? 'check' : g.icon}" class="w-4 h-4"></i></span><span><span class="block text-sm font-semibold">${g.title}</span><span class="block text-[11px]" style="color: var(--text-3);">${g.sub}</span></span></button>`;
+      return `<button type="button" onclick="goListPropStep(${g.step})" class="lp-step-nav-item ${active ? 'is-active' : ''} ${done ? 'is-done' : ''}">
+        <span class="lp-step-nav-icon"><i data-lucide="${done && !active ? 'check' : g.icon}" class="w-4 h-4"></i></span>
+        <span><span class="lp-step-nav-title">${g.title}</span><span class="lp-step-nav-sub">${g.sub}</span></span>
+      </button>`;
     }).join('')}</div>
-    <div class="card p-4"><div class="text-xs font-semibold mb-2" style="color: var(--text-2);">13 алхмын хамрах хүрээ</div><div style="display:grid; grid-template-columns: repeat(13, minmax(0, 1fr)); gap:4px;">${Array.from({ length: 13 }, (_, i) => {
+    <div class="card lp-step-index-card"><div class="lp-step-index-title">13 алхмын хамрах хүрээ</div><div class="lp-step-index-grid">${Array.from({ length: 13 }, (_, i) => {
       const n = i + 1;
       const group = n <= 3 ? 1 : n <= 5 ? 2 : n <= 8 ? 3 : n <= 11 ? 4 : 5;
-      return `<span class="h-7 rounded-md flex items-center justify-center text-[10px] font-semibold" style="background:${group <= step ? 'var(--gold-soft)' : 'var(--surface-2)'}; color:${group <= step ? 'var(--gold-brand)' : 'var(--text-3)'}; border:1px solid ${group === step ? 'var(--gold-brand)' : 'var(--border)'};">${String(n).padStart(2, '0')}</span>`;
+      return `<span class="lp-step-index-cell ${group === step ? 'is-current' : group < step ? 'is-past' : ''}">${String(n).padStart(2, '0')}</span>`;
     }).join('')}</div></div>
   </aside>`;
 }
@@ -1498,12 +1510,91 @@ function renderListPropPricing(d) {
   const price = lpPrice(d);
   const unit = area && price ? Math.round(price / area) : 0;
   const deposit = parseFloat(d.pricing.deposit) || 0;
-  return `<section class="card p-5"><div class="font-semibold mb-3 flex items-center gap-2"><i data-lucide="banknote" class="w-4 h-4" style="color: var(--gold-brand);"></i>10. Үнэ, төлбөрийн нөхцөл ${lpBadge(true)}</div><div class="grid md:grid-cols-2 gap-3"><div>${lpLabel(sale ? 'Нийт үнэ (₮)' : 'Нийт үнэ/сар (₮)', true)}<input class="input num" type="number" min="0" placeholder="${sale ? '450000000' : '4000000'}" value="${lpEsc(sale ? d.pricing.totalPrice : d.pricing.monthlyPrice)}" oninput="setListPropField('${sale ? 'pricing.totalPrice' : 'pricing.monthlyPrice'}', this.value)" /></div><div>${lpLabel(sale ? 'Нэгжийн үнэ (₮/м²)' : 'Нэгжийн үнэ/сар (₮/м²/сар)', false)}<input class="input num" value="${unit ? unit.toLocaleString('en-US') : ''}" placeholder="Нийт үнийг нийт м²-т хувааж гаргана" disabled /></div>${sale ? `<label class="flex items-center gap-2 p-3 rounded-lg cursor-pointer" style="border:1px solid var(--border);"><input type="checkbox" class="accent-[var(--gold-brand)]" ${d.pricing.vatIncluded ? 'checked' : ''} onchange="setListPropField('pricing.vatIncluded', this.checked)" /><span class="text-sm">Дээрх үнэд НӨАТ багтсан уу? <strong>${d.pricing.vatIncluded ? 'Багтсан' : 'Багтаагүй'}</strong></span></label><label class="flex items-center gap-2 p-3 rounded-lg cursor-pointer" style="border:1px solid var(--border);"><input type="checkbox" class="accent-[var(--gold-brand)]" ${d.pricing.ebarimt ? 'checked' : ''} onchange="setListPropField('pricing.ebarimt', this.checked)" /><span class="text-sm">Гэрээлэгч-ид НӨАТ-тэй ebarimt олгох эсэх? <strong>${d.pricing.ebarimt ? 'Олгоно' : 'Олгохгүй'}</strong></span></label>` : `<div>${lpLabel('Давтамж', false)}<select class="input" onchange="setListPropField('pricing.rentFrequency', this.value)">${SMART_LIST_PROP_RENT_FREQUENCIES.map((x) => `<option value="${x}" ${d.pricing.rentFrequency === x ? 'selected' : ''}>${x}</option>`).join('')}</select></div><div>${lpLabel('Барьцаа (₮)', false)}<input class="input num" type="number" min="0" placeholder="4000000" value="${lpEsc(d.pricing.deposit)}" oninput="setListPropField('pricing.deposit', this.value)" /></div><label class="flex items-center gap-2 p-3 rounded-lg cursor-pointer" style="border:1px solid var(--border);"><input type="checkbox" class="accent-[var(--gold-brand)]" ${d.pricing.vatIncluded ? 'checked' : ''} onchange="setListPropField('pricing.vatIncluded', this.checked)" /><span class="text-sm">Дээрх үнэд НӨАТ багтсан уу? <strong>${d.pricing.vatIncluded ? 'Багтсан' : 'Багтаагүй'}</strong></span></label><label class="flex items-center gap-2 p-3 rounded-lg cursor-pointer" style="border:1px solid var(--border);"><input type="checkbox" class="accent-[var(--gold-brand)]" ${d.pricing.ebarimt ? 'checked' : ''} onchange="setListPropField('pricing.ebarimt', this.checked)" /><span class="text-sm">Гэрээлэгч-ид НӨАТ-тэй ebarimt олгох эсэх? <strong>${d.pricing.ebarimt ? 'Олгоно' : 'Олгохгүй'}</strong></span></label>`}</div>${sale ? `<div class="mt-4">${lpLabel('ТӨЛБӨРИЙН НӨХЦӨЛ', false)}<div class="flex flex-wrap gap-2">${SMART_LIST_PROP_SALE_PAYMENT_FORMS.map((x) => lpChip('pricing.paymentForms', x, (d.pricing.paymentForms || []).includes(x))).join('')}</div></div>` : `<div class="mt-4 overflow-x-auto rounded-lg" style="border:1px solid var(--border);"><div style="min-width:760px;"><div class="grid grid-cols-5 text-[11px] font-semibold" style="background: var(--surface-2); color: var(--text-3);"><div class="p-2">Давтамж</div><div class="p-2">Хөнгөлөлт %</div><div class="p-2">Үнийн дүн [төгрөг/сар]</div><div class="p-2">Үнийн дүн [төгрөг]</div><div class="p-2">Анхны төлбөр [төгрөг]</div></div>${[1, 2, 3, 4, 6, 12].map((m) => { const disc = parseFloat(d.pricing.rentDiscounts[m]) || 0; const monthly = price ? Math.round(price * (1 - disc / 100)) : 0; const total = monthly * m; const first = total + deposit; return `<div class="grid grid-cols-5 items-center border-t" style="border-color: var(--border);"><div class="p-2 text-sm">${m} сар тутам</div><div class="p-2"><input class="input num !py-1.5" type="number" min="0" max="100" value="${disc}" oninput="setListPropDiscount(${m}, this.value)" /></div><div class="p-2 text-sm num">${monthly ? monthly.toLocaleString('en-US') + '₮' : '-'}</div><div class="p-2 text-sm num">${total ? total.toLocaleString('en-US') + '₮' : '-'}</div><div class="p-2 text-sm num">${first ? first.toLocaleString('en-US') + '₮' : '-'}</div></div>`; }).join('')}</div></div>`}</section>`;
+  const vatChecks = `
+    <label class="flex items-center gap-2 p-3 cursor-pointer" style="border:1px solid var(--border);">
+      <input type="checkbox" ${d.pricing.vatIncluded ? 'checked' : ''} onchange="setListPropField('pricing.vatIncluded', this.checked)" />
+      <span class="text-sm">Дээрх үнэд НӨАТ багтсан уу? <strong>${d.pricing.vatIncluded ? 'Багтсан' : 'Багтаагүй'}</strong></span>
+    </label>
+    <label class="flex items-center gap-2 p-3 cursor-pointer" style="border:1px solid var(--border);">
+      <input type="checkbox" ${d.pricing.ebarimt ? 'checked' : ''} onchange="setListPropField('pricing.ebarimt', this.checked)" />
+      <span class="text-sm">Гэрээлэгч-ид НӨАТ-тэй ebarimt олгох эсэх? <strong>${d.pricing.ebarimt ? 'Олгоно' : 'Олгохгүй'}</strong></span>
+    </label>`;
+  const rentRows = [1, 2, 3, 4, 6, 12]
+    .map((m) => {
+      const disc = parseFloat(d.pricing.rentDiscounts[m]) || 0;
+      const monthly = price ? Math.round(price * (1 - disc / 100)) : 0;
+      const total = monthly * m;
+      const first = total + deposit;
+      return `<div class="lp-rent-table-row">
+        <div class="lp-rent-table-cell">${m} сар тутам</div>
+        <div class="lp-rent-table-cell"><input class="input num !py-1.5" type="number" min="0" max="100" value="${disc}" oninput="setListPropDiscount(${m}, this.value)" /></div>
+        <div class="lp-rent-table-cell num">${monthly ? monthly.toLocaleString('en-US') + '₮' : '-'}</div>
+        <div class="lp-rent-table-cell num">${total ? total.toLocaleString('en-US') + '₮' : '-'}</div>
+        <div class="lp-rent-table-cell num">${first ? first.toLocaleString('en-US') + '₮' : '-'}</div>
+      </div>`;
+    })
+    .join('');
+  return `<section class="card p-5">
+    <div class="font-semibold mb-3 flex items-center gap-2"><i data-lucide="banknote" class="w-4 h-4" style="color: var(--gold-brand);"></i>10. Үнэ, төлбөрийн нөхцөл ${lpBadge(true)}</div>
+    <div class="grid md:grid-cols-2 gap-3">
+      <div>${lpLabel(sale ? 'Нийт үнэ (₮)' : 'Нийт үнэ/сар (₮)', true)}<input class="input num" type="number" min="0" placeholder="${sale ? '450000000' : '4000000'}" value="${lpEsc(sale ? d.pricing.totalPrice : d.pricing.monthlyPrice)}" oninput="setListPropField('${sale ? 'pricing.totalPrice' : 'pricing.monthlyPrice'}', this.value)" /></div>
+      <div>${lpLabel(sale ? 'Нэгжийн үнэ (₮/м²)' : 'Нэгжийн үнэ/сар (₮/м²/сар)', false)}<input class="input num" value="${unit ? unit.toLocaleString('en-US') : ''}" placeholder="Нийт үнийг нийт м²-т хувааж гаргана" disabled /></div>
+      ${
+        sale
+          ? vatChecks
+          : `<div>${lpLabel('Давтамж', false)}<select class="input" onchange="setListPropField('pricing.rentFrequency', this.value)">${SMART_LIST_PROP_RENT_FREQUENCIES.map((x) => `<option value="${x}" ${d.pricing.rentFrequency === x ? 'selected' : ''}>${x}</option>`).join('')}</select></div>
+             <div>${lpLabel('Барьцаа (₮)', false)}<input class="input num" type="number" min="0" placeholder="4000000" value="${lpEsc(d.pricing.deposit)}" oninput="setListPropField('pricing.deposit', this.value)" /></div>${vatChecks}`
+      }
+    </div>
+    ${
+      sale
+        ? `<div class="mt-4">${lpLabel('ТӨЛБӨРИЙН НӨХЦӨЛ', false)}<div class="flex flex-wrap gap-2">${SMART_LIST_PROP_SALE_PAYMENT_FORMS.map((x) => lpChip('pricing.paymentForms', x, (d.pricing.paymentForms || []).includes(x))).join('')}</div></div>`
+        : `<div class="lp-rent-table">
+          <div class="lp-rent-table-inner">
+            <div class="lp-rent-table-head">
+              <div class="lp-rent-table-cell">Давтамж</div>
+              <div class="lp-rent-table-cell">Хөнгөлөлт %</div>
+              <div class="lp-rent-table-cell">Үнийн дүн [төгрөг/сар]</div>
+              <div class="lp-rent-table-cell">Үнийн дүн [төгрөг]</div>
+              <div class="lp-rent-table-cell">Анхны төлбөр [төгрөг]</div>
+            </div>
+            ${rentRows}
+          </div>
+        </div>`
+    }
+  </section>`;
 }
 function renderListPropMedia(d) {
   const photos = lpPhotos(d);
   const cats = ['Нүүрний зураг', 'План зураг', 'Дотор зураг', 'Гадна орчны зураг', 'Мастер төлөвлөгөө, хотхоны зураг', 'Дотроос гадагшаа харагдацын зураг', 'Хотхоны бусад үзүүлэлтийн зураг', 'Бичлэг'];
-  return `<section class="card p-5"><div class="font-semibold mb-3 flex items-center gap-2"><i data-lucide="images" class="w-4 h-4" style="color: var(--gold-brand);"></i>11. Зураг, бичлэг ${lpBadge(true)}</div><div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-2 mb-4">${cats.map((c) => `<button type="button" onclick="addListPropPhoto('${lpJS(c)}')" class="p-3 rounded-lg text-left hover:bg-[var(--surface-2)]" style="border:1px dashed var(--border-strong);"><i data-lucide="${c === 'Нүүрний зураг' ? 'image-up' : c === 'План зураг' ? 'scan' : c === 'Бичлэг' ? 'video' : 'plus'}" class="w-4 h-4 mb-2" style="color: var(--gold-brand);"></i><div class="text-xs font-semibold">${c}</div><div class="text-[10px] mt-0.5" style="color: var(--text-3);">${photos.filter((p) => p.category === c).length} файл</div></button>`).join('')}</div><div class="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-2">${photos.map((p, i) => `<div class="aspect-square rounded-lg bg-cover bg-center relative overflow-hidden" style="background-image:url('https://picsum.photos/seed/${lpEsc(p.seed)}/360/360'); border:2px solid ${Number(d.media.coverIndex) === i ? 'var(--gold-brand)' : 'var(--border)'};"><button type="button" onclick="setListPropCover(${i})" class="absolute left-1 top-1 px-1.5 py-0.5 rounded text-[9px] font-semibold" style="background:${Number(d.media.coverIndex) === i ? 'var(--gold-brand)' : 'rgba(7,17,31,.75)'}; color:${Number(d.media.coverIndex) === i ? '#0A1F44' : '#fff'};" title="Нүүрний зургаа сонгох">${Number(d.media.coverIndex) === i ? 'Нүүр' : 'Сонгох'}</button><button type="button" onclick="removeListPropPhoto(${i})" class="absolute top-1 right-1 w-6 h-6 rounded-full flex items-center justify-center" style="background: rgba(7,17,31,.82); color: #fff;"><i data-lucide="x" class="w-3.5 h-3.5"></i></button><div class="absolute inset-x-0 bottom-0 px-1.5 py-1 text-[9px] font-semibold truncate" style="background: rgba(7,17,31,.72); color:#fff;">${lpEsc(p.category || 'Зураг')}</div></div>`).join('')}${photos.length < 15 ? `<button type="button" onclick="addListPropPhoto('Дотор зураг')" class="aspect-square rounded-lg border-2 border-dashed flex items-center justify-center" style="border-color: var(--border-strong); color: var(--text-3);"><i data-lucide="plus" class="w-5 h-5"></i></button>` : ''}</div><div class="mt-4">${lpLabel('Зураг, бичлэг агуулсан линк', false)}<input class="input" placeholder="https://..." value="${lpEsc(d.media.videoLink)}" oninput="setListPropField('media.videoLink', this.value)" /></div></section>`;
+  return `<section class="card p-5">
+    <div class="font-semibold mb-3 flex items-center gap-2"><i data-lucide="images" class="w-4 h-4" style="color: var(--gold-brand);"></i>11. Зураг, бичлэг ${lpBadge(true)}</div>
+    <div class="lp-upload-grid">
+      ${cats
+        .map(
+          (c) => `<button type="button" onclick="addListPropPhoto('${lpJS(c)}')" class="lp-upload-card">
+            <i data-lucide="${c === 'Нүүрний зураг' ? 'image-up' : c === 'План зураг' ? 'scan' : c === 'Бичлэг' ? 'video' : 'plus'}" class="w-4 h-4"></i>
+            <div class="lp-upload-title">${c}</div>
+            <div class="lp-upload-count">${photos.filter((p) => p.category === c).length} файл</div>
+          </button>`,
+        )
+        .join('')}
+    </div>
+    <div class="lp-photo-grid">
+      ${photos
+        .map((p, i) => {
+          const isCover = Number(d.media.coverIndex) === i;
+          return `<div class="lp-photo-tile ${isCover ? 'is-cover' : ''}" style="background-image:url('https://picsum.photos/seed/${lpEsc(p.seed)}/360/360');">
+            <button type="button" onclick="setListPropCover(${i})" class="lp-cover-badge" title="Нүүрний зургаа сонгох">${isCover ? 'Нүүр' : 'Сонгох'}</button>
+            <button type="button" onclick="removeListPropPhoto(${i})" class="lp-photo-remove" title="Устгах"><i data-lucide="x" class="w-3.5 h-3.5"></i></button>
+            <div class="lp-photo-category">${lpEsc(p.category || 'Зураг')}</div>
+          </div>`;
+        })
+        .join('')}
+      ${photos.length < 15 ? `<button type="button" onclick="addListPropPhoto('Дотор зураг')" class="lp-photo-add"><i data-lucide="plus" class="w-5 h-5"></i></button>` : ''}
+    </div>
+    <div class="mt-4">${lpLabel('Зураг, бичлэг агуулсан линк', false)}<input class="input" placeholder="https://..." value="${lpEsc(d.media.videoLink)}" oninput="setListPropField('media.videoLink', this.value)" /></div>
+  </section>`;
 }
 function renderListPropStep4(d) {
   const certOptions = ['Бэлэн гэрчилгээтэй', 'Дуусаагүй барилгын гэрчилгээтэй', 'Гэрчилгээгүй - Гэрчилгээ гарахад бэлэн', 'Гэрчилгээгүй - Баригдаж байгаа, захиалгын гэрээтэй', 'Бусад'];
@@ -1512,7 +1603,7 @@ function renderListPropStep4(d) {
   return `${lpStepHeader(4)}<div class="space-y-4"><section class="card p-5"><div class="font-semibold mb-3 flex items-center gap-2"><i data-lucide="clipboard-check" class="w-4 h-4" style="color: var(--gold-brand);"></i>09. Үл хөдлөх эд хөрөнгийн төлөв ${lpBadge(false)}</div><div class="grid md:grid-cols-2 gap-3"><div>${lpLabel('Ашиглалтад орсон эсэх', false)}<select class="input" onchange="setListPropField('state.usage', this.value)">${['Ашиглалтад орсон', 'Ашиглалтад ороогүй'].map((x) => `<option value="${lpEsc(x)}" ${d.state.usage === x ? 'selected' : ''}>${x}</option>`).join('')}</select></div><div>${lpLabel('Ашиглалтад орсон он', false)}<input class="input num" type="number" min="1950" max="2035" placeholder="2020" value="${lpEsc(d.state.commissionYear)}" oninput="setListPropField('state.commissionYear', this.value)" /></div><div>${lpLabel('Ашиглалтад орох хугацаа', false)}<input class="input" placeholder="2026.IV" value="${lpEsc(d.state.commissionDue || '')}" oninput="setListPropField('state.commissionDue', this.value)" /></div><div>${lpLabel('Улсын бүртгэлийн гэрчилгээтэй эсэх', false)}<select class="input" onchange="setListPropField('state.certStatus', this.value)">${certOptions.map((x) => `<option value="${lpEsc(x)}" ${d.state.certStatus === x ? 'selected' : ''}>${x}</option>`).join('')}</select></div><div>${lpLabel('ҮХЭХ улсын бүртгэлийн дугаар', false)}<input class="input mono" placeholder="Ү220#######" value="${lpEsc(d.state.certNumber)}" oninput="setListPropField('state.certNumber', this.value)" /></div><div>${lpLabel('Ашиглагдаж байсан байдал', false)}<select class="input" onchange="setListPropField('state.condition', this.value)">${['Цоо шинэ, ашиглаж байгаагүй', 'Ашиглагдаж байсан'].map((x) => `<option value="${lpEsc(x)}" ${d.state.condition === x ? 'selected' : ''}>${x}</option>`).join('')}</select></div><div>${lpLabel('Одоогийн байдал (гэрээ байгуулах үеийн)', false)}<select class="input" onchange="setListPropField('state.current', this.value)">${['Түрээсийн эсхүл хөлслүүлэх гэрээтэй байгаа', 'Амьдарч, ашиглаж байгаа', 'Сул, чөлөөтэй байгаа', 'Бусад'].map((x) => `<option value="${lpEsc(x)}" ${d.state.current === x ? 'selected' : ''}>${x}</option>`).join('')}</select></div><div>${lpLabel('Дотор засал', false)}<select class="input" onchange="setListPropField('state.interior', this.value)">${interiorOptions.map((x) => `<option value="${lpEsc(x)}" ${d.state.interior === x ? 'selected' : ''}>${x || 'Сонгох'}</option>`).join('')}</select></div><div>${lpLabel('Барьцаанд байгаа эсэх', false)}<select class="input" onchange="setListPropField('state.collateral', this.value)">${collateralOptions.map((x) => `<option value="${lpEsc(x)}" ${d.state.collateral === x ? 'selected' : ''}>${x}</option>`).join('')}</select></div><div class="md:col-span-2">${lpLabel('Барьцаа, төлөвийн тайлбар', false)}<textarea class="input" rows="2" placeholder="Хэрэв аливаа хэлбэрийн барьцаанд байгаа бол тайлбар..." oninput="setListPropField('state.collateralNote', this.value)">${lpEsc(d.state.collateralNote || '')}</textarea></div></div><div class="flex flex-wrap gap-2 mt-4">${lpBool('state.certificateAttached', 'Гэрчилгээ хавсаргах', d.state.certificateAttached, 'paperclip')}${lpBool('state.contractAttached', 'Захиалгын гэрээ / улсын комиссын акт хавсаргах', d.state.contractAttached, 'paperclip')}</div></section>${renderListPropPricing(d)}${renderListPropMedia(d)}</div>`;
 }
 function lpReview(label, value, icon) {
-  return `<div class="p-3 rounded-lg" style="border:1px solid var(--border); background: var(--surface);"><div class="text-[11px] mb-1 flex items-center gap-1.5" style="color: var(--text-3);">${icon ? `<i data-lucide="${icon}" class="w-3.5 h-3.5" style="color: var(--gold-brand);"></i>` : ''}${label}</div><div class="text-sm font-semibold truncate">${lpEsc(value || '-')}</div></div>`;
+  return `<div class="lp-review-card"><div class="lp-review-label">${icon ? `<i data-lucide="${icon}" class="w-3.5 h-3.5"></i>` : ''}${label}</div><div class="lp-review-value">${lpEsc(value || '-')}</div></div>`;
 }
 function renderListPropStep5(d) {
   const price = lpPrice(d);
@@ -1528,7 +1619,36 @@ function renderListProperty() {
   const pct = lpCompletion(d);
   const goal = lpGoal(d.goal);
   const type = lpType(d.propertyType);
-  return `<div class="max-w-6xl mx-auto px-4 lg:px-6 py-5"><div class="flex flex-col md:flex-row md:items-end md:justify-between gap-3 mb-5"><div><div class="inline-flex items-center gap-2 px-2.5 py-1 rounded-full text-[11px] font-semibold mb-2" style="background: var(--gold-soft); color: var(--gold-brand); border:1px solid rgba(201,162,39,.28);"><i data-lucide="wand-sparkles" class="w-3.5 h-3.5"></i> Зар оруулах wizard</div><h1 class="text-2xl md:text-3xl font-semibold tracking-tight">Зар оруулах</h1><p class="text-sm mt-1" style="color: var(--text-3);">13 алхмын мэдээллийг 5 хэсэгт бөглөж нийтлэх хүсэлт илгээнэ.</p></div><div class="flex flex-wrap gap-2"><span class="px-3 py-2 rounded-full text-xs font-semibold" style="background: var(--surface); border:1px solid var(--border); color: var(--text-2);"><i data-lucide="${goal.icon}" class="w-3.5 h-3.5 inline mr-1" style="color: var(--gold-brand);"></i>${goal.label}</span><span class="px-3 py-2 rounded-full text-xs font-semibold" style="background: var(--surface); border:1px solid var(--border); color: var(--text-2);"><i data-lucide="${type.icon}" class="w-3.5 h-3.5 inline mr-1" style="color: var(--gold-brand);"></i>${type.label}</span></div></div><div class="grid lg:grid-cols-[300px_1fr] gap-5">${renderListPropSidebar(d, step, pct)}<main>${step === 1 ? renderListPropStep1(d) : ''}${step === 2 ? renderListPropStep2(d) : ''}${step === 3 ? renderListPropStep3(d) : ''}${step === 4 ? renderListPropStep4(d) : ''}${step === 5 ? renderListPropStep5(d) : ''}<div class="flex flex-wrap gap-2 justify-between mt-5"><button type="button" onclick="${step === 1 ? 'cancelListProperty()' : 'prevListPropStep()'}" class="btn btn-secondary"><i data-lucide="${step === 1 ? 'x' : 'arrow-left'}" class="w-4 h-4"></i> ${step === 1 ? 'Цуцлах' : '<< буцах'}</button><button type="button" onclick="saveListPropertyDraft()" class="btn btn-secondary"><i data-lucide="save" class="w-4 h-4"></i> Түр хадгалах</button>${step < 5 ? `<button type="button" onclick="nextListPropStep()" class="btn btn-cta">Дараагийнх <i data-lucide="arrow-right" class="w-4 h-4"></i></button>` : `<button type="button" onclick="submitListProperty()" class="btn btn-cta"><i data-lucide="send" class="w-4 h-4"></i> ЗАР НИЙТЛЭХ ХҮСЭЛТ ИЛГЭЭХ</button>`}</div></main></div></div>`;
+  return `<div class="lp-shadcn lp-page-shell">
+    <div class="lp-page-header">
+      <div>
+        <div class="lp-page-kicker"><i data-lucide="wand-sparkles" class="w-3.5 h-3.5"></i> Зар оруулах wizard</div>
+        <h1 class="lp-page-title">Зар оруулах</h1>
+        <p class="lp-page-description">13 алхмын мэдээллийг 5 хэсэгт бөглөж нийтлэх хүсэлт илгээнэ.</p>
+      </div>
+      <div class="lp-summary-badges">
+        <span class="lp-summary-badge"><i data-lucide="${goal.icon}" class="w-3.5 h-3.5"></i>${goal.label}</span>
+        <span class="lp-summary-badge"><i data-lucide="${type.icon}" class="w-3.5 h-3.5"></i>${type.label}</span>
+      </div>
+    </div>
+    <div class="lp-main-grid">
+      ${renderListPropSidebar(d, step, pct)}
+      <main class="lp-main-content">
+        ${step === 1 ? renderListPropStep1(d) : ''}
+        ${step === 2 ? renderListPropStep2(d) : ''}
+        ${step === 3 ? renderListPropStep3(d) : ''}
+        ${step === 4 ? renderListPropStep4(d) : ''}
+        ${step === 5 ? renderListPropStep5(d) : ''}
+        <div class="lp-actions-bar">
+          <div class="lp-actions-secondary">
+            <button type="button" onclick="${step === 1 ? 'cancelListProperty()' : 'prevListPropStep()'}" class="btn btn-secondary"><i data-lucide="${step === 1 ? 'x' : 'arrow-left'}" class="w-4 h-4"></i> ${step === 1 ? 'Цуцлах' : 'Буцах'}</button>
+            <button type="button" onclick="saveListPropertyDraft()" class="btn btn-secondary"><i data-lucide="save" class="w-4 h-4"></i> Түр хадгалах</button>
+          </div>
+          ${step < 5 ? `<button type="button" onclick="nextListPropStep()" class="btn btn-cta">Дараагийнх <i data-lucide="arrow-right" class="w-4 h-4"></i></button>` : `<button type="button" onclick="submitListProperty()" class="btn btn-cta"><i data-lucide="send" class="w-4 h-4"></i> Зар нийтлэх хүсэлт илгээх</button>`}
+        </div>
+      </main>
+    </div>
+  </div>`;
 }
 function rerenderListProp() {
   if (currentScreen === 'list-property') {

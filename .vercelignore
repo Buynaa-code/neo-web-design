@@ -1,6 +1,7 @@
 .git
 .vercel
 node_modules
+legacy
 archive
 docs
 *.log
