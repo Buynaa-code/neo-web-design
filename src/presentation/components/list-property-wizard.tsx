@@ -120,6 +120,8 @@ import {
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import { submitListingDraft } from "@/infrastructure/api/listings";
+import { useStore } from "@/infrastructure/store";
 
 const SMART_LIST_PROP_DRAFT_KEY = "neomap.smartListPropertyDraft.v1";
 const SMART_LIST_PROP_SUBMISSIONS_KEY = "neomap.smartListPropertySubmissions.v1";
@@ -1627,6 +1629,9 @@ export function ListPropertyWizard() {
   const [draft, setDraft] = useState<SmartDraft>(() => loadInitialDraft());
   const [submitted, setSubmitted] = useState<SubmissionPayload | null>(null);
   const [savedAt, setSavedAt] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const pushToast = useStore((s) => s.pushToast);
 
   useEffect(() => {
     try {
@@ -1710,11 +1715,23 @@ export function ListPropertyWizard() {
     }
   };
 
-  const submit = () => {
-    if (missing.length) return;
+  const submit = async () => {
+    if (missing.length || submitting) return;
     const payload = buildSubmission(draft);
     storeSubmission(payload);
     setSubmitted(payload);
+    setSubmitError(null);
+    setSubmitting(true);
+    try {
+      await submitListingDraft(payload);
+      pushToast("Зар амжилттай илгээгдлээ", "success");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Илгээх үед алдаа гарлаа";
+      setSubmitError(message);
+      pushToast("Зар илгээхэд алдаа гарлаа — дахин оролдоно уу", "danger");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const goNext = () => setStep((current) => Math.min(5, current + 1));
@@ -1884,11 +1901,11 @@ export function ListPropertyWizard() {
                 ) : (
                   <Button
                     onClick={submit}
-                    disabled={missing.length > 0}
+                    disabled={missing.length > 0 || submitting}
                     className="bg-primary text-primary-foreground"
                   >
                     <Send className="size-4" />
-                    Зар нийтлэх хүсэлт илгээх
+                    {submitting ? "Илгээж байна…" : "Зар нийтлэх хүсэлт илгээх"}
                   </Button>
                 )}
               </div>
@@ -1900,6 +1917,14 @@ export function ListPropertyWizard() {
                   <span className="text-sm font-medium">
                     Зар нийтлэх хүсэлт бэлэн боллоо. #{submitted.id} draft хадгалагдсан ба дэлгэрэнгүй мэдээллийн бүх задаргаа багтсан.
                   </span>
+                </CardContent>
+              </Card>
+            ) : null}
+            {submitError ? (
+              <Card className="rounded-md border-destructive bg-destructive/10 text-destructive">
+                <CardContent className="flex items-start gap-3 py-4">
+                  <CircleAlert className="mt-0.5 size-5 shrink-0" />
+                  <span className="text-sm font-medium">{submitError}</span>
                 </CardContent>
               </Card>
             ) : null}
