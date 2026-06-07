@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
-import { getListing, LISTINGS } from "@/data/listings";
+import { getListing, LISTINGS } from "@/infrastructure/data/listings";
 import { PropertyDetail } from "@/components/property/PropertyDetail";
 
 type PropertyPageProps = {

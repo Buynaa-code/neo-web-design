@@ -15,6 +15,13 @@
     "incremental": true,
     "plugins": [{ "name": "next" }],
     "paths": {
+      "@/domain/*": ["./src/domain/*"],
+      "@/application/*": ["./src/application/*"],
+      "@/infrastructure/*": ["./src/infrastructure/*"],
+      "@/presentation/*": ["./src/presentation/*"],
+      "@/components/*": ["./src/presentation/components/*"],
+      "@/lib/*": ["./src/presentation/lib/*"],
+      "@/data/*": ["./src/infrastructure/data/*"],
       "@/*": ["./*"]
     }
   },
