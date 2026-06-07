@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useStore } from "@/lib/store";
+import { useStoreHydrated } from "@/lib/useStoreHydrated";
 
 function normalizePhone(raw: string): { ok: boolean; normalized?: string; error?: string } {
   if (!raw.trim()) return { ok: false, error: "Утасны дугаараа оруулна уу" };
@@ -12,9 +13,7 @@ function normalizePhone(raw: string): { ok: boolean; normalized?: string; error?
   return { ok: true, normalized: digits.startsWith("976") ? "+" + digits : "+976" + digits };
 }
 
-function getSafeNext(defaultPath = "/profile") {
-  if (typeof window === "undefined") return defaultPath;
-  const next = new URLSearchParams(window.location.search).get("next");
+function safeNextPath(next: string | null, defaultPath = "/profile") {
   if (!next || !next.startsWith("/") || next.startsWith("//") || next.startsWith("/auth")) {
     return defaultPath;
   }
@@ -49,14 +48,33 @@ function OtpModal({ phone, onVerified }: { phone: string; onVerified: () => void
   };
 
   const onOtpChange = (i: number, value: string) => {
-    const digit = value.replace(/[^\d]/g, "").slice(-1);
+    const digits = value.replace(/[^\d]/g, "");
+    setOtpError(null);
+    if (!digits) {
+      setOtp((prev) => {
+        const next = prev.slice();
+        next[i] = "";
+        return next;
+      });
+      return;
+    }
     setOtp((prev) => {
       const next = prev.slice();
-      next[i] = digit;
+      for (let k = 0; k < digits.length && i + k < 6; k++) {
+        next[i + k] = digits[k];
+      }
       return next;
     });
-    setOtpError(null);
-    if (digit && i < 5) inputsRef.current[i + 1]?.focus();
+    const lastFilled = Math.min(i + digits.length - 1, 5);
+    const nextFocus = Math.min(lastFilled + 1, 5);
+    inputsRef.current[nextFocus]?.focus();
+  };
+
+  const onOtpPaste = (i: number, e: React.ClipboardEvent<HTMLInputElement>) => {
+    const text = e.clipboardData.getData("text");
+    if (!/\d/.test(text)) return;
+    e.preventDefault();
+    onOtpChange(i, text);
   };
 
   const onOtpKey = (i: number, e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -95,10 +113,11 @@ function OtpModal({ phone, onVerified }: { phone: string; onVerified: () => void
               }}
               className="otp-box"
               inputMode="numeric"
-              maxLength={1}
+              maxLength={6}
               value={v}
               onChange={(e) => onOtpChange(i, e.target.value)}
               onKeyDown={(e) => onOtpKey(i, e)}
+              onPaste={(e) => onOtpPaste(i, e)}
             />
           ))}
         </div>
@@ -137,19 +156,26 @@ function OtpModal({ phone, onVerified }: { phone: string; onVerified: () => void
 
 export function AuthScreen() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const phoneDraft = useStore((s) => s.authPhoneDraft);
   const setAuthPhoneDraft = useStore((s) => s.setAuthPhoneDraft);
   const signIn = useStore((s) => s.signIn);
   const isLoggedIn = useStore((s) => s.isLoggedIn);
   const pushToast = useStore((s) => s.pushToast);
   const openModal = useStore((s) => s.openModal);
+  const hydrated = useStoreHydrated();
+
+  const nextPath = useMemo(
+    () => safeNextPath(searchParams.get("next")),
+    [searchParams]
+  );
 
   const [phone, setPhone] = useState(phoneDraft || "");
   const [phoneError, setPhoneError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (isLoggedIn) router.replace(getSafeNext());
-  }, [isLoggedIn, router]);
+    if (hydrated && isLoggedIn) router.replace(nextPath);
+  }, [hydrated, isLoggedIn, nextPath, router]);
 
   const requestOtp = () => {
     const r = normalizePhone(phone);
@@ -166,11 +192,20 @@ export function AuthScreen() {
         onVerified={() => {
           signIn({ name: "Энхтуяа", phone: normalized, initials: "ЭТ" });
           pushToast("Тавтай морил, Энхтуяа", "success");
-          router.push(getSafeNext());
         }}
       />
     );
   };
+
+  if (!hydrated || isLoggedIn) {
+    return (
+      <div className="max-w-md mx-auto px-4 py-12">
+        <div className="card p-6 text-center text-sm text-[var(--text-3)]">
+          Уншиж байна…
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-md mx-auto px-4 py-12">

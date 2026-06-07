@@ -1,38 +1,10 @@
 "use client";
 
-import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useRef } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Lock } from "lucide-react";
 import { useStore } from "@/lib/store";
-
-type PersistApi = {
-  hasHydrated?: () => boolean;
-  onFinishHydration?: (callback: () => void) => () => void;
-};
-
-function useStoreHydrated() {
-  const [hydrated, setHydrated] = useState(false);
-
-  useEffect(() => {
-    const store = useStore as typeof useStore & { persist?: PersistApi };
-    if (store.persist?.hasHydrated?.()) {
-      setHydrated(true);
-      return;
-    }
-
-    const timeout = window.setTimeout(() => setHydrated(true), 0);
-    const unsubscribe = store.persist?.onFinishHydration?.(() => {
-      setHydrated(true);
-    });
-
-    return () => {
-      window.clearTimeout(timeout);
-      unsubscribe?.();
-    };
-  }, []);
-
-  return hydrated;
-}
+import { useStoreHydrated } from "@/lib/useStoreHydrated";
 
 export function ProtectedRoute({ children }: { children: ReactNode }) {
   const pathname = usePathname();

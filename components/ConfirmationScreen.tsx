@@ -1,15 +1,24 @@
 "use client";
 
+import { useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Check } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { getListing } from "@/data/listings";
 
 export function ConfirmationScreen() {
+  const router = useRouter();
   const listingId = useStore((s) => s.scheduleListingId ?? s.currentListingId);
   const date = useStore((s) => s.scheduleDate);
   const time = useStore((s) => s.scheduleTime);
   const listing = listingId ? getListing(listingId) : undefined;
+
+  useEffect(() => {
+    if (!listingId || !date || !time) router.replace("/");
+  }, [listingId, date, time, router]);
+
+  if (!listingId || !date || !time) return null;
 
   return (
     <div className="max-w-2xl mx-auto px-4 lg:px-6 py-12 text-center">
