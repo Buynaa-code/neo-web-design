@@ -1,7 +1,17 @@
 "use client";
 
-import { ThemeProvider as NextThemesProvider } from "next-themes";
-import type { ReactNode } from "react";
+import { ThemeProvider as NextThemesProvider, useTheme } from "next-themes";
+import { useEffect, type ReactNode } from "react";
+
+function BodyThemeSync() {
+  const { resolvedTheme } = useTheme();
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const t = resolvedTheme === "dark" ? "dark" : "light";
+    document.body.dataset.theme = t;
+  }, [resolvedTheme]);
+  return null;
+}
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   return (
@@ -12,6 +22,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       storageKey="neomap-theme"
       disableTransitionOnChange
     >
+      <BodyThemeSync />
       {children}
     </NextThemesProvider>
   );

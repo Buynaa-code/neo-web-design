@@ -545,7 +545,9 @@ function verifyOtp() {
   showToast(`Тавтай морил, ${user.name}`, 'success');
   // Header-ийн товчийг шинэчилнэ
   if (typeof renderHeaderAuth === 'function') renderHeaderAuth();
-  goTo('home');
+  const nextScreen = state.postAuthRedirect || 'home';
+  state.postAuthRedirect = null;
+  goTo(nextScreen);
 }
 window.verifyOtp = verifyOtp;
 
@@ -648,4 +650,3 @@ function submitSchedule() {
   setTimeout(() => goTo('confirmation'), 400);
   state.scheduleStep = 1;
 }
-

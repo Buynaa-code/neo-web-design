@@ -1,12 +1,16 @@
 import type { Metadata, Viewport } from "next";
 import { Inter, Manrope, Noto_Sans } from "next/font/google";
-import type { ReactNode } from "react";
+import { Suspense, type ReactNode } from "react";
 import "./globals.css";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { Header, BottomTab } from "@/components/Header";
 import { Splash } from "@/components/Splash";
 import { Modal } from "@/components/Modal";
 import { Toast } from "@/components/Toast";
+import { CmdPalette } from "@/components/CmdPalette";
+import { PlacePicker } from "@/components/PlacePicker";
+import { Lightbox } from "@/components/property/Lightbox";
+import { FooterShell } from "@/components/FooterShell";
 import { BrandLogoSymbol } from "@/components/BrandLogo";
 import { cn } from "@/lib/utils";
 
@@ -89,11 +93,19 @@ export default function RootLayout({
         <ThemeProvider>
           <Splash />
           <BrandLogoSymbol />
-          <Header />
+          <Suspense fallback={null}>
+            <Header />
+          </Suspense>
           <main id="app-root">{children}</main>
-          <BottomTab />
+          <FooterShell />
+          <Suspense fallback={null}>
+            <BottomTab />
+          </Suspense>
           <Modal />
           <Toast />
+          <CmdPalette />
+          <PlacePicker />
+          <Lightbox />
         </ThemeProvider>
       </body>
     </html>

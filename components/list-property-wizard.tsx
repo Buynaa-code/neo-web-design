@@ -1,44 +1,102 @@
 "use client";
 
 import Image from "next/image";
-import { type ReactNode, useMemo, useState } from "react";
 import {
+  type MouseEvent,
+  type ReactNode,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+import {
+  Accessibility,
+  Armchair,
+  ArrowDown,
+  ArrowLeft,
+  ArrowRight,
+  ArrowUp,
   BadgeCheck,
   Banknote,
+  Bolt,
+  BriefcaseBusiness,
   Building2,
-  Camera,
-  Car,
+  Calculator,
   Check,
   ChevronLeft,
   ChevronRight,
-  ClipboardCheck,
+  CircleAlert,
+  CircleCheck,
+  CircleEllipsis,
+  Compass,
+  Crosshair,
+  DoorOpen,
+  Droplets,
   Factory,
+  Flame,
+  GitBranch,
   Home,
   ImageUp,
+  Images,
   KeyRound,
+  Layers2,
   Layers3,
+  Link,
+  Lock,
   Map,
   MapPin,
+  MapPinned,
+  Maximize2,
   Megaphone,
+  Minus,
+  MonitorCog,
+  MousePointerClick,
+  MoveDownLeft,
+  MoveDownRight,
+  MoveUpLeft,
+  MoveUpRight,
+  Navigation,
   PackageCheck,
+  Paperclip,
   ParkingCircle,
+  Pencil,
+  PlugZap,
   Plus,
   Rocket,
+  RotateCcw,
+  Route,
+  Ruler,
   Save,
+  Scan,
   SearchCheck,
   Send,
   ShieldCheck,
+  ShoppingBag,
+  Signpost,
+  SlidersHorizontal,
   Sparkles,
   Store,
   Target,
+  ThermometerSun,
   Trash2,
+  TreePine,
   Trees,
   Upload,
+  Users,
+  Video,
+  WandSparkles,
   Warehouse,
+  Waves,
+  Wifi,
   X,
   type LucideIcon,
 } from "lucide-react";
 
+import {
+  DISTRICTS,
+  KHOTKHON,
+  ROOM_TAGS_BY_TYPE,
+  ROOM_TYPES,
+} from "@/data/constants";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -63,6 +121,9 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 
+const SMART_LIST_PROP_DRAFT_KEY = "neomap.smartListPropertyDraft.v1";
+const SMART_LIST_PROP_SUBMISSIONS_KEY = "neomap.smartListPropertySubmissions.v1";
+
 type GoalKey = "sell" | "rent";
 type PropertyKey =
   | "apartment"
@@ -74,50 +135,170 @@ type PropertyKey =
   | "warehouse"
   | "fence_house"
   | "summer_land"
-  | "land";
+  | "summer_no_land"
+  | "land"
+  | "other";
+type WindowKey =
+  | "northwest"
+  | "north"
+  | "northeast"
+  | "west"
+  | "east"
+  | "southwest"
+  | "south"
+  | "southeast";
+type RentMonth = 1 | 2 | 3 | 4 | 6 | 12;
+type WindowCounts = Record<WindowKey, number>;
+type SelectOption = string | { label: string; value: string };
 
-type Draft = {
+type RoomDetailDraft = {
+  id: string;
+  typeKey: string;
+  label: string;
+  floor: string;
+  area: string;
+  windows: WindowCounts;
+  tags: string[];
+  note: string;
+};
+
+type PhotoDraft = {
+  id: string;
+  seed: string;
+  category: string;
+};
+
+type SmartDraft = {
   goal: GoalKey;
   propertyType: PropertyKey;
   subtype: string;
-  district: string;
-  khoroo: string;
-  khotkhon: string;
-  street: string;
-  buildingNumber: string;
-  floorAbove: string;
-  selectedFloor: string;
-  unit: string;
-  area: string;
-  rooms: string;
-  bedrooms: string;
-  bathrooms: string;
-  condition: string;
-  commissionYear: string;
-  monthlyPrice: string;
-  totalPrice: string;
-  deposit: string;
-  rentFrequency: string;
   desc: string;
-  amenities: string[];
-  included: string[];
-  services: string[];
-  photos: { id: number; category: string }[];
-  relation: string;
-  truth: boolean;
-  authority: boolean;
-  terms: boolean;
+  address: {
+    country: string;
+    city: string;
+    district: string;
+    khoroo: string;
+    zip: string;
+    street: string;
+    streetNumber: string;
+    khotkhon: string;
+    buildingNumber: string;
+    buildingName: string;
+    googleMapLink: string;
+    note: string;
+    floorBasement: number;
+    floorAbove: number;
+    floorTotal: number;
+    selectedFloor: string;
+    unit: string;
+  };
+  specs: {
+    areaCert: string;
+    areaInterior: string;
+    areaBalcony: string;
+    areaGarage: string;
+    areaStorage: string;
+    rooms: string;
+    bedrooms: string;
+    bathrooms: string;
+    windows: WindowCounts;
+    officeNeeds: string[];
+  };
+  infra: Record<InfraKey, string> & { note: string };
+  community: Record<CommunityKey, string[]>;
+  included: Record<IncludedKey, string[]>;
+  state: {
+    usage: string;
+    certStatus: string;
+    certNumber: string;
+    condition: string;
+    current: string;
+    interior: string;
+    collateral: string;
+    certificateAttached: boolean;
+    contractAttached: boolean;
+    commissionYear: string;
+    commissionDue: string;
+    collateralNote: string;
+  };
+  pricing: {
+    totalPrice: string;
+    monthlyPrice: string;
+    vatIncluded: boolean;
+    ebarimt: boolean;
+    paymentForms: string[];
+    rentFrequency: string;
+    deposit: string;
+    rentDiscounts: Record<RentMonth, number>;
+  };
+  media: {
+    photos: PhotoDraft[];
+    videoLink: string;
+    coverIndex: number;
+  };
+  declarations: {
+    truth: boolean;
+    authority: boolean;
+    terms: boolean;
+  };
+  services: {
+    verified: boolean;
+    brokerage: boolean;
+    sponsored: boolean;
+    relation: string;
+  };
+  roomDetails: RoomDetailDraft[];
+  lat: number;
+  lng: number;
+  locationTouched: boolean;
 };
 
-const districts = [
-  "Сүхбаатар",
-  "Хан-Уул",
-  "Баянзүрх",
-  "Баянгол",
-  "Чингэлтэй",
-  "Сонгинохайрхан",
-  "Налайх",
-];
+type Requirement = { label: string; ok: boolean; step: number };
+type OptionalItem = { label: string; ok: boolean };
+type SubmissionPayload = {
+  id: number;
+  createdAt: string;
+  listing: {
+    id: number;
+    mode: "sale" | "rent";
+    title: string;
+    propertyType: string;
+    subtype: string;
+    district: string;
+    khoroo: string;
+    addressLine: string;
+    area: number;
+    rooms: number;
+    bedrooms: number;
+    bathrooms: number;
+    floor: string;
+    price: number;
+    unitPrice: number;
+    features: string[];
+    lat: number;
+    lng: number;
+    coverSeed: string;
+  };
+  detail: SmartDraft;
+};
+
+type DraftActions = {
+  setPath: (path: string, value: unknown) => void;
+  toggleArray: (path: string, value: string) => void;
+  toggleBoolean: (path: string) => void;
+  mutate: (recipe: (draft: SmartDraft) => void) => void;
+};
+
+type InfraKey =
+  | "heating"
+  | "electric"
+  | "waterCold"
+  | "waterHot"
+  | "sewage"
+  | "road"
+  | "internet";
+type CommunityKey = "services" | "security" | "amenities";
+type IncludedKey = "furniture" | "equipment" | "extra";
 
 const groups: Array<{
   step: number;
@@ -166,14 +347,16 @@ const groups: Array<{
 const goals = [
   {
     key: "sell" as const,
+    mode: "sale" as const,
     label: "ХУДАЛДУУЛЪЯ",
     hint: "Бүх төрлийн үл хөдлөх эд хөрөнгөө худалдах",
     icon: Banknote,
   },
   {
     key: "rent" as const,
+    mode: "rent" as const,
     label: "ТҮРЭЭСЛҮҮЛЬЕ / ХӨЛСЛҮҮЛЬЕ",
-    hint: "Орон сууцны болон арилжааны зориулалттай хөрөнгө түрээслүүлэх",
+    hint: "Орон сууцны болон арилжааны зориулалттай хөрөнгө түрээслүүлэх, хөлслүүлэх",
     icon: KeyRound,
   },
 ];
@@ -184,6 +367,7 @@ const propertyTypes: Array<{
   hint: string;
   icon: LucideIcon;
   residential?: boolean;
+  commercial?: boolean;
 }> = [
   {
     key: "apartment",
@@ -195,143 +379,969 @@ const propertyTypes: Array<{
   {
     key: "house",
     label: "Амины орон сууц",
-    hint: "Тусдаа орцтой сууц",
+    hint: "Тусдаа орцтой, дээрээ/доороо өөр айлгүй сууц",
     icon: Home,
     residential: true,
   },
   {
     key: "office",
     label: "Оффис",
-    hint: "Байгууллага, бизнесийн ажлын байр",
-    icon: Store,
+    hint: "Байгууллага, бизнесийн өдөр тутмын ажлын байр",
+    icon: BriefcaseBusiness,
+    commercial: true,
   },
   {
     key: "retail",
     label: "Худалдаа, үйлчилгээ",
-    hint: "Дэлгүүр, салон, ресторан, кафе",
-    icon: Megaphone,
+    hint: "Дэлгүүр, үйлчилгээний төв, салон, ресторан, кафе г.м.",
+    icon: ShoppingBag,
+    commercial: true,
   },
   {
     key: "industrial",
     label: "Аж үйлдвэрийн обьект",
-    hint: "Үйлдвэрлэл, боловсруулах зориулалттай",
+    hint: "Үйлдвэрлэл, боловсруулах, засварлах зориулалттай обьект",
     icon: Factory,
+    commercial: true,
   },
   {
     key: "parking",
     label: "Авто дулаан зогсоол",
-    hint: "Барилгын доторх дулаан зогсоол",
+    hint: "Орон сууц, оффис, үйлчилгээний барилгын доторх дулаан зогсоол",
     icon: ParkingCircle,
   },
   {
     key: "warehouse",
     label: "Агуулах",
-    hint: "Агуулахын өрөө, талбай",
+    hint: "Орон сууц, гараж, оффисын доторх агуулахын өрөө, талбай",
     icon: Warehouse,
+    commercial: true,
   },
   {
     key: "fence_house",
-    label: "Хашаа байшин",
-    hint: "Газартай нэг айлын байшин",
+    label: "Хашаа байшин (газартай)",
+    hint: "Газартай, дээр нь нэг айлын зориулалттай байшинтай",
     icon: Home,
   },
   {
     key: "summer_land",
-    label: "Зуслангийн байшин",
-    hint: "Зуслангийн бүсэд байрлах байшин",
+    label: "Зуслангийн байшин (газартай)",
+    hint: "Зуслангийн бүсэд байрлах газартай байшин",
     icon: Trees,
+    residential: true,
+  },
+  {
+    key: "summer_no_land",
+    label: "Зуслангийн байшин (газаргүй)",
+    hint: "Газрын эрх нь тусдаа, зөвхөн байшин нь обьект болох хөрөнгө",
+    icon: TreePine,
     residential: true,
   },
   {
     key: "land",
     label: "Газар",
-    hint: "Барилгатай эсвэл хоосон газар",
+    hint: "Барилга байгууламжтай эсвэл барилгагүй газар",
     icon: Map,
+  },
+  {
+    key: "other",
+    label: "Бусад",
+    hint: "Дээрх ангилалд шууд хамаарахгүй хөрөнгө",
+    icon: CircleEllipsis,
   },
 ];
 
 const subtypes: Record<PropertyKey, string[]> = {
   apartment: ["Энгийн", "Дуплекс", "Пентхаус", "Бусад: тайлбар оруулах"],
-  house: ["Single house", "Twin house", "Town house", "Multihouse"],
-  office: ["Давхар дахь хэсэг", "Давхар бүхлээрээ", "Обьект бүхлээрээ"],
-  retail: ["Давхар дахь хэсэг", "Давхар бүхлээрээ", "Обьект бүхлээрээ"],
-  industrial: ["Үйлдвэрлэл", "Засвар үйлчилгээ", "Бусад"],
-  parking: ["Орон сууцны доорх", "Оффисын доорх", "Тусдаа блок"],
-  warehouse: ["Барилгын доторх", "Тусдаа агуулах", "Бусад"],
+  house: ["Single house", "Twin house", "Town house", "Multihouse", "Бусад: тайлбар оруулах"],
+  office: [
+    "Давхар дахь тодорхой хэсэг, өрөө(нүүд)",
+    "Давхар бүхлээрээ",
+    "Обьект бүхлээрээ",
+    "Бусад: тайлбар оруулах",
+  ],
+  retail: [
+    "Давхар дахь тодорхой хэсэг, өрөө(нүүд)",
+    "Давхар бүхлээрээ",
+    "Обьект бүхлээрээ",
+    "Бусад: тайлбар оруулах",
+  ],
+  industrial: ["Зориулалтын талаар тайлбар оруулах"],
+  parking: [
+    "Оффис, Үйлчилгээ, Орон сууцны доорх / доторх",
+    "Тусдаа авто дулаан зогсоолын блок дахь",
+    "Бусад: тайлбар оруулах",
+  ],
+  warehouse: ["Оффис, Үйлчилгээ, Орон сууцны доорх / доторх", "Бусад: тайлбар оруулах"],
   fence_house: ["Хашаа байшин (газартай)"],
   summer_land: ["Зуслангийн байшин (газартай)"],
-  land: ["Орон сууц", "Үйлчилгээ", "Үйлдвэрлэл", "Зуслан"],
+  summer_no_land: ["Зуслангийн байшин (газаргүй)"],
+  land: ["Газрын зориулалт сонгох"],
+  other: ["Тайлбар оруулах"],
 };
 
-const amenities = [
-  "Харуул, хамгаалалт 24/7",
-  "Домофон, дохиолол",
-  "Лифт - зорчигчийн 24/7",
-  "Төлбөргүй ил зогсоол",
-  "Хүүхдийн тоглоомын талбай",
-  "Ногоон байгууламж",
-  "Фитнес, иога",
-  "Цахилгаан машины цэнэглэл",
+const windowDirections: Array<{
+  key: WindowKey;
+  label: string;
+  short: string;
+  detailKey: string;
+  icon: LucideIcon;
+  chipClass: string;
+}> = [
+  { key: "northwest", label: "Баруун-хойш", short: "БХ", detailKey: "БХ", icon: MoveUpLeft, chipClass: "left-[18px] top-[24px]" },
+  { key: "north", label: "Хойд", short: "Х", detailKey: "Х", icon: ArrowUp, chipClass: "left-1/2 top-2 -translate-x-1/2" },
+  { key: "northeast", label: "Зүүн-хойш", short: "ЗХ", detailKey: "ЗХ", icon: MoveUpRight, chipClass: "right-[18px] top-[24px]" },
+  { key: "west", label: "Баруун", short: "Б", detailKey: "Б", icon: ArrowLeft, chipClass: "left-1 top-1/2 -translate-y-1/2" },
+  { key: "east", label: "Зүүн", short: "З", detailKey: "З", icon: ArrowRight, chipClass: "right-1 top-1/2 -translate-y-1/2" },
+  { key: "southwest", label: "Баруун-урагш", short: "БУ", detailKey: "БУ", icon: MoveDownLeft, chipClass: "bottom-[24px] left-[18px]" },
+  { key: "south", label: "Урд", short: "У", detailKey: "У", icon: ArrowDown, chipClass: "bottom-2 left-1/2 -translate-x-1/2" },
+  { key: "southeast", label: "Зүүн-урагш", short: "ЗУ", detailKey: "ЗУ", icon: MoveDownRight, chipClass: "bottom-[24px] right-[18px]" },
 ];
 
-const included = [
-  "Гал тогооны тавилга",
-  "Үүдний тавилга",
-  "АЦӨ тоноглол",
-  "Хөргөгч, хөлдөөгч",
-  "Угаалгын машин",
+const officeNeeds = [
+  "Ресепшн",
+  "Хурлын өрөө",
+  "Удирдлагын өрөө",
+  "Open office",
+  "Гал тогооны хэсэг",
+  "Серверийн өрөө",
+  "Агуулах өрөө",
+  "Архив",
+  "Дуудлагын өрөө",
+  "Ариун цэврийн өрөө",
   "Агааржуулалт",
-  "Домофон",
-  "Хөшиг, тюль",
+  "Галын дохиолол",
+  "Access control",
+  "24/7 нэвтрэх",
+  "Зочны зогсоол",
+  "Ачааны лифт",
 ];
 
-const serviceOptions = [
-  "Verified болгох",
-  "Мэргэжлийн зуучлагчаар зуучлуулах",
-  "Sponsored болгох",
+const infraFields: Array<{
+  key: InfraKey;
+  label: string;
+  icon: LucideIcon;
+  required?: boolean;
+  choices: string[];
+}> = [
+  {
+    key: "heating",
+    label: "Дулаан",
+    icon: Flame,
+    required: true,
+    choices: ["Төвийн (улсын)", "Төвлөрсөн (хотхоны)", "Бие даасан", "Уурын зуух (нүүрсэн)", "Газан зуух", "Цахилгаан", "Цахилгаан радиатор", "Бусад"],
+  },
+  {
+    key: "electric",
+    label: "Цахилгаан",
+    icon: Bolt,
+    required: true,
+    choices: ["Төвийн 100%", "Төвийн болон сэргээгдэх хосолмол", "Сэргээгдэх 100%", "Ямар нэг нөөцлүүргүй", "Ямар нэг нөөцлүүртэй", "Дизель генератортой", "Бусад"],
+  },
+  {
+    key: "waterCold",
+    label: "Цэвэр ус",
+    icon: Droplets,
+    required: true,
+    choices: ["Төвийн шугам (улсын)", "Төвлөрсөн (хотхоны)", "Бие даасан", "Гүний худаг", "Ус зөөдөг", "Бусад"],
+  },
+  {
+    key: "waterHot",
+    label: "Хэрэглээний халуун ус",
+    icon: ThermometerSun,
+    choices: ["Төвийн шугам (улсын) - ялтсан бойлер", "Төвлөрсөн (хотхоны)", "Бие даасан", "Эзлэхүүний бойлер", "Түргэн халаагч бойлер", "Бусад"],
+  },
+  {
+    key: "sewage",
+    label: "Бохир",
+    icon: Waves,
+    required: true,
+    choices: ["Төвийн шугам (улсын)", "Төвлөрсөн (хотхоны)", "Бие даасан", "Септик", "Соруулдаг", "Бусад"],
+  },
+  {
+    key: "road",
+    label: "Ирж, очих зам",
+    icon: Route,
+    required: true,
+    choices: ["100% асфальт", "Шороон зам", "Холимог", "Бусад"],
+  },
+  {
+    key: "internet",
+    label: "Интернет, IPTV",
+    icon: Wifi,
+    choices: ["Univision", "DDISH, Гэр интернет", "Mobinet", "Бусад"],
+  },
+];
+
+const communityGroups: Array<{
+  key: CommunityKey;
+  title: string;
+  icon: LucideIcon;
+  items: string[];
+}> = [
+  {
+    key: "services",
+    title: "Үйлчилгээ",
+    icon: Store,
+    items: [
+      "Хүнсний дэлгүүр",
+      "Барааны дэлгүүр",
+      "Фитнес, иога, веллнесс",
+      "Спа",
+      "Бассейн",
+      "Сауна",
+      "Угаалга, хими цэвэрлэгээ",
+      "Дундын өмчлөлийн цэвэрлэгээ",
+      "Хувийн өмчийн цэвэрлэгээ",
+      "Клабхаус",
+      "Ресторан",
+      "Кофешоп",
+      "Цахилгаан машины цэнэглэл станц",
+      "Бусад",
+    ],
+  },
+  {
+    key: "security",
+    title: "Аюулгүй байдал",
+    icon: ShieldCheck,
+    items: [
+      "Харуул, хамгаалалт 24/7",
+      "Домофон, дохиолол",
+      "Хотхоны нэгдсэн хашаа",
+      "Явган орц, гарцны аксесстай хаалга",
+      "Машины автомат хаалт",
+      "Бусад",
+    ],
+  },
+  {
+    key: "amenities",
+    title: "Тав тух",
+    icon: Accessibility,
+    items: [
+      "Төлбөртэй ил зогсоол",
+      "Төлбөргүй ил зогсоол",
+      "Төлбөртэй дулаан зогсоол",
+      "Машингүй бүс",
+      "Хүүхдийн тоглоомын талбай",
+      "Ногоон байгууламж, нарлах салхилах талбай",
+      "Лифт - зорчигчийн 24/7",
+      "Лифт - ачааны 24/7",
+      "Нэгдсэн дулаан зогсоол",
+      "Тусгай хэрэгцээт хүнд зориулсан дэд бүтэц (disabled friendly)",
+      "Хүүхдэд ээлтэй орчин",
+      "Бусад",
+    ],
+  },
+];
+
+const includedGroups: Array<{
+  key: IncludedKey;
+  title: string;
+  icon: LucideIcon;
+  items: string[];
+}> = [
+  {
+    key: "furniture",
+    title: "Тавилга",
+    icon: Armchair,
+    items: [
+      "Гал тогооны тавилга",
+      "Үүдний тавилга",
+      "АЦӨ тавилга, тоноглол",
+      "Зочны өрөөний ханын тавилга",
+      "Хувцасны өрөөний тавилга",
+      "Ажлын өрөөний ханын тавилга",
+      "Gym-ний ханын тавилга",
+      "B1 давхрын үүдний өрөөний тавилга",
+    ],
+  },
+  {
+    key: "equipment",
+    title: "Тоног төхөөрөмж, цахилгаан бараа",
+    icon: MonitorCog,
+    items: [
+      "Хөргөгч, хөлдөөгч",
+      "Суурилагддаг зуух, плитка, шарах шүүгээ",
+      "Ус цэвэршүүлэгч",
+      "Биде",
+      "Угаалгын машин",
+      "Ялаа, шумуулны тор",
+      "Агааржуулалт, эйр кондишн систем",
+    ],
+  },
+  {
+    key: "extra",
+    title: "Нэмэлт тоноглол",
+    icon: SlidersHorizontal,
+    items: ["Домофон", "Автоматжуулалтын систем", "Гэрлийн бүрхүүл", "Хөшиг, тюль", "Бусад"],
+  },
+];
+
+const salePaymentForms = [
+  "Зөвхөн 100% бэлэн мөнгөөр, шууд төлөлтөөр",
+  "Зөвхөн 100% бэлэн мөнгөөр, банкны зээл оролцуулж болно",
+  "Зөвхөн 100% бэлэн мөнгөөр, хуваарьт төлөлтөөр",
+  "100% хүртэл бартераар борлуулах боломжтой",
+  "Үнийн дүнгийн тодорхой хувь хүртэл бартераар, бэлэн мөнгийг шууд төлөлтөөр",
+  "Үнийн дүнгийн тодорхой хувь хүртэл бартераар, бэлэн мөнгийг хуваарьт төлөлтөөр",
+  "Бусад: тайлбар оруулах",
+];
+
+const rentFrequencies = ["1 сар тутам", "2 сар тутам", "3 сар тутам", "4 сар тутам", "6 сар тутам", "12 сар тутам"];
+const rentMonths: RentMonth[] = [1, 2, 3, 4, 6, 12];
+const mediaCategories = [
+  "Нүүрний зураг",
+  "План зураг",
+  "Дотор зураг",
+  "Гадна орчны зураг",
+  "Мастер төлөвлөгөө, хотхоны зураг",
+  "Дотроос гадагшаа харагдацын зураг",
+  "Хотхоны бусад үзүүлэлтийн зураг",
+  "Бичлэг",
 ];
 
 const relations = [
   "Өмчлөгч",
   "Эрх эзэмшигч",
-  "Хуулийн этгээдийн ажилтан",
-  "Итгэмжлэгдсэн төлөөлөгч",
+  "Гэрээний эрх эзэмшигч",
+  "Өмчлөгч, эрх эзэмшигч хуулийн этгээдийн ажилтан",
+  "Хууль ёсны итгэмжлэгдсэн төлөөлөгч",
+  "Өмчлөгч, эрх эзэмшигчийн ойр дотнын хүн",
   "Зуучлагч",
   "Бусад",
 ];
 
-const defaultDraft: Draft = {
-  goal: "rent",
-  propertyType: "apartment",
-  subtype: "Энгийн",
-  district: "Сүхбаатар",
-  khoroo: "",
-  khotkhon: "",
-  street: "",
-  buildingNumber: "",
-  floorAbove: "16",
-  selectedFloor: "F08",
-  unit: "",
-  area: "",
-  rooms: "2",
-  bedrooms: "1",
-  bathrooms: "1",
-  condition: "Сул, чөлөөтэй байгаа",
-  commissionYear: "",
-  monthlyPrice: "",
-  totalPrice: "",
-  deposit: "",
-  rentFrequency: "1 сар тутам",
-  desc: "",
-  amenities: [],
-  included: [],
-  services: ["Verified болгох"],
-  photos: [],
-  relation: "Өмчлөгч",
-  truth: false,
-  authority: false,
-  terms: false,
+const certOptions = [
+  "Бэлэн гэрчилгээтэй",
+  "Дуусаагүй барилгын гэрчилгээтэй",
+  "Гэрчилгээгүй - Гэрчилгээ гарахад бэлэн",
+  "Гэрчилгээгүй - Баригдаж байгаа, захиалгын гэрээтэй",
+  "Бусад",
+];
+const interiorOptions = [
+  "",
+  "Сүүлийн 1 жилийн хугацаанд засал хийсэн",
+  "1-3 жилийн өмнө засал хийсэн",
+  "3-с дээш жилийн өмнө засал хийсэн / Анхны заслаараа байгаа",
+  "Засваргүй, Гэрээлэгч өөрөө засал хийнэ",
+  "Бусад: Дотор засвар хийгдэж байгаа, хийгдэнэ",
+];
+const collateralOptions = [
+  "Ямар нэг барьцаанд байхгүй",
+  "Банк, ББСБ, санхүүгийн байгууллагын зээлийн барьцаанд байгаа",
+  "Гуравдагч этгээдийн барьцаанд байгаа",
+  "Бусад",
+];
+
+const districtLocations: Record<string, { lat: number; lng: number }> = {
+  "Хан-Уул": { lat: 0.48, lng: 0.58 },
+  "Баянзүрх": { lat: 0.66, lng: 0.46 },
+  "Сүхбаатар": { lat: 0.52, lng: 0.42 },
+  "Чингэлтэй": { lat: 0.46, lng: 0.38 },
+  "Сонгинохайрхан": { lat: 0.28, lng: 0.48 },
+  "Налайх": { lat: 0.78, lng: 0.62 },
+  "Баянгол": { lat: 0.40, lng: 0.50 },
+  "Багануур": { lat: 0.84, lng: 0.34 },
+  "Багахангай": { lat: 0.72, lng: 0.72 },
 };
+
+function defaultListPropLocation(district: string) {
+  return districtLocations[district] ?? { lat: 0.52, lng: 0.45 };
+}
+
+function defaultWindows(): WindowCounts {
+  return windowDirections.reduce((acc, dir) => {
+    acc[dir.key] = 0;
+    return acc;
+  }, {} as WindowCounts);
+}
+
+function normalizeWindows(value?: unknown): WindowCounts {
+  const out = defaultWindows();
+  const assign = (key: unknown, count: unknown) => {
+    if (!key) return;
+    const raw = String(key).toLowerCase();
+    const dir = windowDirections.find(
+      (item) =>
+        item.key === raw ||
+        item.label === key ||
+        item.short === key ||
+        item.detailKey === key
+    );
+    if (dir) out[dir.key] = Math.max(0, parseInt(String(count), 10) || 0);
+  };
+  if (Array.isArray(value)) {
+    value.forEach((item) => {
+      const dir = windowDirections.find(
+        (candidate) =>
+          candidate.label === item ||
+          candidate.short === item ||
+          candidate.detailKey === item
+      );
+      if (dir) out[dir.key] += 1;
+    });
+  } else if (value && typeof value === "object") {
+    Object.entries(value as Record<string, unknown>).forEach(([key, count]) => assign(key, count));
+  }
+  return out;
+}
+
+function createDefaultDraft(): SmartDraft {
+  const district = DISTRICTS[0];
+  const loc = defaultListPropLocation(district);
+  return {
+    goal: "rent",
+    propertyType: "apartment",
+    subtype: subtypes.apartment[0],
+    desc: "",
+    address: {
+      country: "Монгол",
+      city: "Улаанбаатар",
+      district,
+      khoroo: "",
+      zip: "",
+      street: "",
+      streetNumber: "",
+      khotkhon: "",
+      buildingNumber: "",
+      buildingName: "",
+      googleMapLink: "",
+      note: "",
+      floorBasement: 0,
+      floorAbove: 0,
+      floorTotal: 0,
+      selectedFloor: "F01",
+      unit: "",
+    },
+    specs: {
+      areaCert: "",
+      areaInterior: "",
+      areaBalcony: "",
+      areaGarage: "",
+      areaStorage: "",
+      rooms: "",
+      bedrooms: "",
+      bathrooms: "",
+      windows: defaultWindows(),
+      officeNeeds: [],
+    },
+    infra: {
+      heating: "Төвийн (улсын)",
+      electric: "Төвийн 100%",
+      waterCold: "Төвийн шугам (улсын)",
+      waterHot: "Төвийн шугам (улсын) - ялтсан бойлер",
+      sewage: "Төвийн шугам (улсын)",
+      road: "100% асфальт",
+      internet: "Univision",
+      note: "",
+    },
+    community: { services: [], security: [], amenities: [] },
+    included: { furniture: [], equipment: [], extra: [] },
+    state: {
+      usage: "Ашиглалтад орсон",
+      certStatus: "Бэлэн гэрчилгээтэй",
+      certNumber: "",
+      condition: "Цоо шинэ, ашиглаж байгаагүй",
+      current: "Сул, чөлөөтэй байгаа",
+      interior: "",
+      collateral: "Ямар нэг барьцаанд байхгүй",
+      certificateAttached: false,
+      contractAttached: false,
+      commissionYear: "",
+      commissionDue: "",
+      collateralNote: "",
+    },
+    pricing: {
+      totalPrice: "",
+      monthlyPrice: "",
+      vatIncluded: false,
+      ebarimt: false,
+      paymentForms: [salePaymentForms[0]],
+      rentFrequency: "1 сар тутам",
+      deposit: "",
+      rentDiscounts: { 1: 0, 2: 0, 3: 0, 4: 0, 6: 5, 12: 10 },
+    },
+    media: { photos: [], videoLink: "", coverIndex: 0 },
+    declarations: { truth: false, authority: false, terms: false },
+    services: { verified: true, brokerage: false, sponsored: false, relation: "Өмчлөгч" },
+    roomDetails: [],
+    lat: loc.lat,
+    lng: loc.lng,
+    locationTouched: false,
+  };
+}
+
+function cloneDraft(draft: SmartDraft): SmartDraft {
+  return JSON.parse(JSON.stringify(draft)) as SmartDraft;
+}
+
+function toRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" ? (value as Record<string, unknown>) : {};
+}
+
+function normalizeRoom(value: unknown, fallbackIndex: number): RoomDetailDraft {
+  const raw = toRecord(value);
+  const typeKey = String(raw.typeKey || raw.type || "living");
+  const meta = ROOM_TYPES.find((item) => item.key === typeKey) ?? ROOM_TYPES[0];
+  return {
+    id: String(raw.id || `room-${Date.now()}-${fallbackIndex}`),
+    typeKey: meta.key,
+    label: String(raw.label || meta.label),
+    floor: String(raw.floor || "F01"),
+    area: String(raw.area || ""),
+    windows: normalizeWindows(raw.windows),
+    tags: Array.isArray(raw.tags) ? raw.tags.map(String) : [],
+    note: String(raw.note || ""),
+  };
+}
+
+function normalizeDraft(value?: unknown): SmartDraft {
+  const base = createDefaultDraft();
+  const raw = toRecord(value);
+  const address = toRecord(raw.address);
+  const specs = toRecord(raw.specs);
+  const pricing = toRecord(raw.pricing);
+  const media = toRecord(raw.media);
+  const services = toRecord(raw.services);
+  const serviceList = arrayOfStrings(raw.services);
+  const state = toRecord(raw.state);
+
+  const oldType = propertyTypes.find((item) => item.label === raw.propertyType);
+  const propertyType = (oldType?.key || raw.propertyType || base.propertyType) as PropertyKey;
+  const safeType = propertyTypes.some((item) => item.key === propertyType) ? propertyType : base.propertyType;
+  const goal = raw.goal === "sell" || raw.goal === "rent" ? raw.goal : base.goal;
+  const loc = defaultListPropLocation(String(address.district || raw.district || base.address.district));
+
+  const out: SmartDraft = {
+    ...base,
+    ...raw,
+    goal,
+    propertyType: safeType,
+    subtype: String(raw.subtype || subtypes[safeType][0]),
+    address: {
+      ...base.address,
+      ...address,
+      district: String(address.district || raw.district || base.address.district),
+      khoroo: String(address.khoroo || raw.khoroo || ""),
+      khotkhon: String(address.khotkhon || raw.khotkhon || ""),
+      street: String(address.street || raw.street || ""),
+      buildingNumber: String(address.buildingNumber || raw.buildingNumber || ""),
+      unit: String(address.unit || raw.unit || ""),
+      floorBasement: clampInt(address.floorBasement, 0, 20),
+      floorAbove: clampInt(address.floorAbove || raw.floorAbove, 0, 80),
+      selectedFloor: String(address.selectedFloor || raw.selectedFloor || base.address.selectedFloor),
+    },
+    specs: {
+      ...base.specs,
+      ...specs,
+      areaCert: String(specs.areaCert || raw.area || ""),
+      rooms: String(specs.rooms || raw.rooms || ""),
+      bedrooms: String(specs.bedrooms || raw.bedrooms || ""),
+      bathrooms: String(specs.bathrooms || raw.bathrooms || ""),
+      windows: normalizeWindows(specs.windows),
+      officeNeeds: Array.isArray(specs.officeNeeds) ? specs.officeNeeds.map(String) : [],
+    },
+    infra: {
+      ...base.infra,
+      ...toRecord(raw.infra),
+    } as SmartDraft["infra"],
+    community: {
+      services: arrayOfStrings(toRecord(raw.community).services),
+      security: arrayOfStrings(toRecord(raw.community).security),
+      amenities: arrayOfStrings(toRecord(raw.community).amenities ?? raw.amenities),
+    },
+    included: {
+      furniture: arrayOfStrings(toRecord(raw.included).furniture),
+      equipment: arrayOfStrings(toRecord(raw.included).equipment),
+      extra: arrayOfStrings(toRecord(raw.included).extra ?? raw.included),
+    },
+    state: {
+      ...base.state,
+      ...state,
+      condition: String(state.condition || raw.condition || base.state.condition),
+      current: String(state.current || raw.condition || base.state.current),
+      commissionYear: String(state.commissionYear || raw.commissionYear || ""),
+    },
+    pricing: {
+      ...base.pricing,
+      ...pricing,
+      monthlyPrice: String(pricing.monthlyPrice || raw.monthlyPrice || raw.price || ""),
+      totalPrice: String(pricing.totalPrice || raw.totalPrice || ""),
+      deposit: String(pricing.deposit || raw.deposit || ""),
+      paymentForms: normalizePaymentForms(pricing.paymentForms),
+      rentFrequency: normalizeRentFrequency(String(pricing.rentFrequency || raw.rentFrequency || base.pricing.rentFrequency)),
+      rentDiscounts: normalizeRentDiscounts(pricing.rentDiscounts),
+    },
+    media: {
+      ...base.media,
+      ...media,
+      photos: normalizePhotos(media.photos ?? raw.photos),
+      coverIndex: clampInt(media.coverIndex, 0, 999),
+      videoLink: String(media.videoLink || ""),
+    },
+    declarations: {
+      ...base.declarations,
+      ...toRecord(raw.declarations),
+      truth: Boolean(toRecord(raw.declarations).truth ?? raw.truth),
+      authority: Boolean(toRecord(raw.declarations).authority ?? raw.authority),
+      terms: Boolean(toRecord(raw.declarations).terms ?? raw.terms),
+    },
+    services: {
+      ...base.services,
+      ...services,
+      verified: services.verified == null ? true : Boolean(services.verified || serviceList.includes("Verified болгох")),
+      brokerage: services.brokerage == null ? serviceList.includes("Мэргэжлийн зуучлагчаар зуучлуулах") : Boolean(services.brokerage),
+      sponsored: services.sponsored == null ? serviceList.includes("Sponsored болгох") : Boolean(services.sponsored),
+      relation: String(services.relation || raw.relation || base.services.relation),
+    },
+    roomDetails: Array.isArray(raw.roomDetails)
+      ? raw.roomDetails.map((room, index) => normalizeRoom(room, index))
+      : [],
+    lat: typeof raw.lat === "number" ? raw.lat : loc.lat,
+    lng: typeof raw.lng === "number" ? raw.lng : loc.lng,
+    locationTouched: Boolean(raw.locationTouched),
+  };
+
+  if (!subtypes[out.propertyType].includes(out.subtype)) out.subtype = subtypes[out.propertyType][0];
+  out.specs.windows = normalizeWindows(out.specs.windows);
+  out.address.floorTotal = out.address.floorBasement + out.address.floorAbove;
+  normalizeSelectedFloor(out);
+  infraFields.forEach((field) => {
+    if (!field.choices.includes(out.infra[field.key])) {
+      out.infra[field.key] = field.choices[0];
+    }
+  });
+  if (!certOptions.includes(out.state.certStatus)) out.state.certStatus = base.state.certStatus;
+  if (!collateralOptions.includes(out.state.collateral)) out.state.collateral = base.state.collateral;
+  if (!rentFrequencies.includes(out.pricing.rentFrequency)) out.pricing.rentFrequency = base.pricing.rentFrequency;
+  if (out.media.coverIndex >= out.media.photos.length) out.media.coverIndex = 0;
+  out.lat = clampDecimal(out.lat, 0.02, 0.98, 3);
+  out.lng = clampDecimal(out.lng, 0.02, 0.98, 3);
+  return out;
+}
+
+function arrayOfStrings(value: unknown): string[] {
+  return Array.isArray(value) ? value.map(String).filter(Boolean) : [];
+}
+
+function normalizePaymentForms(value: unknown): string[] {
+  const paymentMap: Record<string, string> = {
+    "Бэлэн": salePaymentForms[0],
+    "Банкны зээл": salePaymentForms[1],
+    "Бартер": salePaymentForms[3],
+    "Хуваарьт төлөлт": salePaymentForms[2],
+  };
+  const items = arrayOfStrings(value).map((item) => paymentMap[item] || item);
+  return items.length ? items : [salePaymentForms[0]];
+}
+
+function normalizeRentFrequency(value: string) {
+  if (/^\d+\s*сар$/.test(value)) return `${value} тутам`;
+  return rentFrequencies.includes(value) ? value : "1 сар тутам";
+}
+
+function normalizeRentDiscounts(value: unknown): Record<RentMonth, number> {
+  const raw = toRecord(value);
+  return {
+    1: clampDecimal(raw[1] ?? raw["1"], 0, 100, 1),
+    2: clampDecimal(raw[2] ?? raw["2"], 0, 100, 1),
+    3: clampDecimal(raw[3] ?? raw["3"], 0, 100, 1),
+    4: clampDecimal(raw[4] ?? raw["4"], 0, 100, 1),
+    6: clampDecimal(raw[6] ?? raw["6"] ?? 5, 0, 100, 1),
+    12: clampDecimal(raw[12] ?? raw["12"] ?? 10, 0, 100, 1),
+  };
+}
+
+function normalizePhotos(value: unknown): PhotoDraft[] {
+  if (!Array.isArray(value)) return [];
+  const categoryMap: Record<string, string> = {
+    "Нүүр зураг": "Нүүрний зураг",
+    "План": "План зураг",
+    "Дотор": "Дотор зураг",
+    "Гадна": "Гадна орчны зураг",
+    "Мастер төлөвлөгөө": "Мастер төлөвлөгөө, хотхоны зураг",
+    "Харагдац": "Дотроос гадагшаа харагдацын зураг",
+    "Хотхон": "Хотхоны бусад үзүүлэлтийн зураг",
+  };
+  return value.map((item, index) => {
+    const raw = toRecord(item);
+    const seed = String(raw.seed || raw.id || item || `${Date.now()}-${index}`);
+    return {
+      id: String(raw.id || `photo-${seed}-${index}`),
+      seed,
+      category: categoryMap[String(raw.category)] || String(raw.category || (index ? "Дотор зураг" : "Нүүрний зураг")),
+    };
+  });
+}
+
+function loadInitialDraft() {
+  if (typeof window === "undefined") return createDefaultDraft();
+  try {
+    const raw = window.localStorage.getItem(SMART_LIST_PROP_DRAFT_KEY);
+    return normalizeDraft(raw ? JSON.parse(raw) : undefined);
+  } catch {
+    return createDefaultDraft();
+  }
+}
+
+function storeSubmission(payload: SubmissionPayload) {
+  if (typeof window === "undefined") return;
+  try {
+    const raw = window.localStorage.getItem(SMART_LIST_PROP_SUBMISSIONS_KEY);
+    const current = raw ? JSON.parse(raw) : [];
+    const list = Array.isArray(current) ? current : [];
+    window.localStorage.setItem(
+      SMART_LIST_PROP_SUBMISSIONS_KEY,
+      JSON.stringify([payload, ...list].slice(0, 20))
+    );
+  } catch {
+    // Local persistence is a UX enhancement; submission preview still works without it.
+  }
+}
+
+function getByPath(obj: unknown, path: string): unknown {
+  return path.split(".").reduce((current, key) => {
+    if (current && typeof current === "object") return (current as Record<string, unknown>)[key];
+    return undefined;
+  }, obj);
+}
+
+function setByPath(obj: Record<string, unknown>, path: string, value: unknown) {
+  const parts = path.split(".");
+  let cursor = obj;
+  parts.slice(0, -1).forEach((key) => {
+    if (!cursor[key] || typeof cursor[key] !== "object") cursor[key] = {};
+    cursor = cursor[key] as Record<string, unknown>;
+  });
+  cursor[parts[parts.length - 1]] = value;
+}
+
+function clampInt(value: unknown, min = 0, max = 99) {
+  const n = parseInt(String(value ?? ""), 10);
+  return Math.max(min, Math.min(max, Number.isFinite(n) ? n : min));
+}
+
+function clampDecimal(value: unknown, min = 0, max = 99999, decimals = 0) {
+  const n = parseFloat(String(value ?? ""));
+  const clamped = Math.max(min, Math.min(max, Number.isFinite(n) ? n : min));
+  if (!decimals) return Math.round(clamped);
+  const pow = Math.pow(10, decimals);
+  return Number((Math.round(clamped * pow) / pow).toFixed(decimals));
+}
+
+function steppedNumber(value: unknown, delta: number, min: number, max: number, decimals = 0) {
+  const base = parseFloat(String(value ?? ""));
+  const next = clampDecimal((Number.isFinite(base) ? base : min) + delta, min, max, decimals);
+  return decimals ? String(next).replace(/\.0$/, "") : String(Math.round(next));
+}
+
+function getGoal(goal: GoalKey) {
+  return goals.find((item) => item.key === goal) ?? goals[1];
+}
+
+function getPropertyType(type: PropertyKey) {
+  return propertyTypes.find((item) => item.key === type) ?? propertyTypes[0];
+}
+
+function modeOf(goal: GoalKey): "sale" | "rent" {
+  return getGoal(goal).mode;
+}
+
+function needsRooms(draft: SmartDraft) {
+  return Boolean(getPropertyType(draft.propertyType).residential);
+}
+
+function isCommercial(draft: SmartDraft) {
+  return Boolean(getPropertyType(draft.propertyType).commercial);
+}
+
+function areaLabel(draft: SmartDraft) {
+  if (draft.propertyType === "land") return "Газрын талбай";
+  if (draft.propertyType === "parking") return "Зогсоолын талбай";
+  if (draft.propertyType === "warehouse") return "Агуулахын талбай";
+  return "Нийт талбай (Гэрчилгээгээр)";
+}
+
+function priceOf(draft: SmartDraft) {
+  return modeOf(draft.goal) === "sale"
+    ? parseFloat(draft.pricing.totalPrice) || 0
+    : parseFloat(draft.pricing.monthlyPrice) || 0;
+}
+
+function windowTotal(value: unknown) {
+  const counts = normalizeWindows(value);
+  return windowDirections.reduce((sum, dir) => sum + (Number(counts[dir.key]) || 0), 0);
+}
+
+function windowSummary(value: unknown) {
+  const counts = normalizeWindows(value);
+  return windowDirections
+    .map((dir) => {
+      const n = Number(counts[dir.key]) || 0;
+      return n > 0 ? `${dir.label} ${n} цонх` : "";
+    })
+    .filter(Boolean)
+    .join(" · ");
+}
+
+function floorList(draft: SmartDraft) {
+  const basement = Math.max(0, draft.address.floorBasement || 0);
+  const above = Math.max(1, draft.address.floorAbove || 1);
+  return Array.from({ length: basement }, (_, i) => `B${basement - i}`).concat(
+    Array.from({ length: Math.min(above, 80) }, (_, i) => `F${String(i + 1).padStart(2, "0")}`)
+  );
+}
+
+function normalizeSelectedFloor(draft: SmartDraft) {
+  const floors = floorList(draft);
+  if (!floors.includes(draft.address.selectedFloor)) {
+    draft.address.selectedFloor = floors.includes("F01") ? "F01" : floors[0] || "F01";
+  }
+}
+
+function formatFloor(type: "B" | "F", num: unknown) {
+  const n = clampInt(num, 1, 99);
+  return type === "B" ? `B${n}` : `F${String(n).padStart(2, "0")}`;
+}
+
+function floorParts(draft: SmartDraft) {
+  const raw = draft.address.selectedFloor || "F01";
+  const type: "B" | "F" = raw[0] === "B" ? "B" : "F";
+  const max = type === "B" ? Math.max(1, draft.address.floorBasement || 1) : Math.max(1, draft.address.floorAbove || 1);
+  const num = clampInt(raw.replace(/\D/g, ""), 1, max);
+  return { type, num, value: formatFloor(type, num) };
+}
+
+function floorTitle(value: string) {
+  if (value[0] === "B") return `${value} · зоорийн ${parseInt(value.slice(1), 10) || 1}`;
+  return `${value} · ${parseInt(value.slice(1), 10) || 1}-р давхар`;
+}
+
+function floorCandidates(draft: SmartDraft) {
+  const basement = Math.max(0, draft.address.floorBasement || 0);
+  const above = Math.max(0, draft.address.floorAbove || 0);
+  const items: Array<{ type: "B" | "F"; num: number }> = [];
+  if (basement > 1) items.push({ type: "B", num: basement });
+  if (basement > 0) items.push({ type: "B", num: 1 });
+  [1, 2, 3, Math.ceil((above || 1) / 2), above || 1]
+    .filter((n) => n >= 1 && n <= Math.max(above, 1))
+    .forEach((num) => items.push({ type: "F", num }));
+  const seen = new Set<string>();
+  return items.filter((item) => {
+    const key = formatFloor(item.type, item.num);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function addressLine(draft: SmartDraft) {
+  return [
+    draft.address.district,
+    draft.address.khoroo ? `${draft.address.khoroo}-р хороо` : "",
+    draft.address.khotkhon || draft.address.street,
+    draft.address.buildingNumber ? `${draft.address.buildingNumber}-р байр` : draft.address.buildingName,
+  ]
+    .filter(Boolean)
+    .join(", ");
+}
+
+function areaQuickValues(draft: SmartDraft) {
+  if (draft.propertyType === "land") return [300, 500, 700, 1000, 1500];
+  if (draft.propertyType === "parking") return [12, 15, 18, 24, 30];
+  if (draft.propertyType === "warehouse" || draft.propertyType === "industrial") return [50, 100, 200, 500, 1000];
+  if (isCommercial(draft)) return [30, 50, 80, 120, 200];
+  return [30, 40, 50, 60, 80, 100];
+}
+
+function money(value: number) {
+  return value ? `${value.toLocaleString("en-US")}₮` : "-";
+}
+
+function squareMeters(value: unknown) {
+  const n = parseFloat(String(value || ""));
+  return n > 0 ? `${n.toLocaleString("en-US")} м²` : "-";
+}
+
+function requiredItems(draft: SmartDraft): Requirement[] {
+  return [
+    { label: "Зорилго", ok: Boolean(draft.goal), step: 1 },
+    { label: "ҮХЭХ зориулалт", ok: Boolean(draft.propertyType), step: 1 },
+    { label: "Дэд зориулалт", ok: Boolean(draft.subtype), step: 1 },
+    { label: "Дүүрэг/Сум", ok: Boolean(draft.address.district), step: 2 },
+    { label: "Хороо/Баг", ok: Boolean(draft.address.khoroo.trim()), step: 2 },
+    { label: "Хотхон, хороолол эсвэл гудамж", ok: Boolean((draft.address.khotkhon || draft.address.street).trim()), step: 2 },
+    { label: areaLabel(draft), ok: (parseFloat(draft.specs.areaCert) || 0) > 0, step: 2 },
+    { label: "Нийт өрөөний тоо", ok: !needsRooms(draft) || Boolean(draft.specs.rooms), step: 2 },
+    { label: modeOf(draft.goal) === "sale" ? "Нийт үнэ" : "Нийт үнэ/сар", ok: priceOf(draft) > 0, step: 4 },
+    { label: "Зураг", ok: draft.media.photos.length > 0, step: 4 },
+    { label: "Холбоо хамаарал", ok: Boolean(draft.services.relation), step: 5 },
+    { label: "Дээрх мэдээлэл үнэн зөв", ok: draft.declarations.truth, step: 5 },
+    { label: "Эрх бүхий этгээд", ok: draft.declarations.authority, step: 5 },
+    { label: "Үйлчилгээний нөхцөл зөвшөөрөх", ok: draft.declarations.terms, step: 5 },
+  ];
+}
+
+function optionalItems(draft: SmartDraft): OptionalItem[] {
+  return [
+    { label: "Map pin эсвэл Google Maps линк", ok: draft.locationTouched || Boolean(draft.address.googleMapLink.trim()) },
+    { label: "Хотхоны үйлчилгээ", ok: communityGroups.some((group) => draft.community[group.key].length > 0) },
+    { label: "Дагалдах зүйлс", ok: includedGroups.some((group) => draft.included[group.key].length > 0) },
+    { label: "Гэрчилгээний дугаар", ok: Boolean(draft.state.certNumber.trim()) },
+    { label: "Баримт хавсаргасан", ok: draft.state.certificateAttached || draft.state.contractAttached },
+    { label: "Видео/линк", ok: Boolean(draft.media.videoLink.trim()) },
+  ];
+}
+
+function completionPercent(draft: SmartDraft) {
+  const req = requiredItems(draft);
+  const opt = optionalItems(draft);
+  return Math.round(
+    (req.filter((item) => item.ok).length / req.length) * 74 +
+      (opt.filter((item) => item.ok).length / opt.length) * 26
+  );
+}
+
+function buildSubmission(draft: SmartDraft): SubmissionPayload {
+  const id = Date.now();
+  const type = getPropertyType(draft.propertyType);
+  const price = priceOf(draft);
+  const area = parseFloat(draft.specs.areaCert) || 0;
+  const unitPrice = area && price ? Math.round(price / area) : 0;
+  const titlePlace = draft.address.khotkhon || draft.address.street || draft.address.district;
+  const features = [
+    ...communityGroups.flatMap((group) => draft.community[group.key]),
+    ...includedGroups.flatMap((group) => draft.included[group.key]),
+    ...draft.specs.officeNeeds,
+  ];
+
+  return {
+    id,
+    createdAt: new Date().toISOString(),
+    listing: {
+      id,
+      mode: modeOf(draft.goal),
+      title: `${type.label} · ${titlePlace}`,
+      propertyType: type.label,
+      subtype: draft.subtype,
+      district: draft.address.district,
+      khoroo: draft.address.khoroo,
+      addressLine: addressLine(draft),
+      area,
+      rooms: parseInt(draft.specs.rooms, 10) || 0,
+      bedrooms: parseInt(draft.specs.bedrooms, 10) || 0,
+      bathrooms: parseInt(draft.specs.bathrooms, 10) || 0,
+      floor: draft.address.selectedFloor,
+      price,
+      unitPrice,
+      features,
+      lat: draft.lat,
+      lng: draft.lng,
+      coverSeed: draft.media.photos[draft.media.coverIndex]?.seed || "neomap-cover",
+    },
+    detail: cloneDraft(draft),
+  };
+}
 
 function Field({
   label,
@@ -352,7 +1362,11 @@ function Field({
           <Badge variant="destructive" className="ml-1 h-5 px-1.5 text-[10px]">
             заавал
           </Badge>
-        ) : null}
+        ) : (
+          <Badge variant="outline" className="ml-1 h-5 px-1.5 text-[10px]">
+            дараа нөхөж болно
+          </Badge>
+        )}
       </Label>
       {children}
       {hint ? <p className="text-[11px] leading-4 text-muted-foreground">{hint}</p> : null}
@@ -367,19 +1381,23 @@ function NativeSelect({
 }: {
   value: string;
   onChange: (value: string) => void;
-  options: string[];
+  options: SelectOption[];
 }) {
   return (
     <select
       value={value}
       onChange={(event) => onChange(event.target.value)}
-      className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-sm outline-none transition-colors focus:border-ring focus:ring-3 focus:ring-ring/20"
+      className="h-9 w-full rounded-md border border-input bg-background px-2.5 text-sm outline-none transition-colors focus:border-ring focus:ring-3 focus:ring-ring/20"
     >
-      {options.map((option) => (
-        <option key={option} value={option}>
-          {option}
-        </option>
-      ))}
+      {options.map((option) => {
+        const value = typeof option === "string" ? option : option.value;
+        const label = typeof option === "string" ? option : option.label;
+        return (
+          <option key={value} value={value}>
+            {label}
+          </option>
+        );
+      })}
     </select>
   );
 }
@@ -401,11 +1419,167 @@ function ToggleChip({
       variant={active ? "default" : "outline"}
       size="sm"
       onClick={onClick}
-      className={cn("h-auto min-h-8 justify-start whitespace-normal rounded-md px-2.5 py-1.5 text-left", active && "shadow-none")}
+      className={cn(
+        "h-auto min-h-8 justify-start whitespace-normal rounded-md px-2.5 py-1.5 text-left",
+        active && "shadow-none"
+      )}
     >
       {Icon ? <Icon className="size-3.5 shrink-0" /> : null}
       {children}
     </Button>
+  );
+}
+
+function NumberStepper({
+  label,
+  value,
+  onChange,
+  required,
+  min = 0,
+  max = 99999,
+  step = 1,
+  decimals = 0,
+  placeholder = "",
+  quick,
+  quickSuffix = "",
+  hint,
+}: {
+  label: string;
+  value: string | number | null;
+  onChange: (value: string) => void;
+  required?: boolean;
+  min?: number;
+  max?: number;
+  step?: number;
+  decimals?: number;
+  placeholder?: string;
+  quick?: number[];
+  quickSuffix?: string;
+  hint?: string;
+}) {
+  const rawValue = value == null ? "" : String(value);
+  const numeric = parseFloat(rawValue);
+  return (
+    <div className="lp-step-control">
+      <Field label={label} required={required} hint={hint}>
+        <div className="lp-stepper">
+          <button
+            type="button"
+            className="lp-step-btn"
+            disabled={Number.isFinite(numeric) && numeric <= min}
+            onClick={() => onChange(steppedNumber(rawValue, -step, min, max, decimals))}
+            aria-label={`${label} хасах`}
+          >
+            <Minus className="size-3.5" />
+          </button>
+          <input
+            className="lp-step-value"
+            type="number"
+            inputMode={decimals ? "decimal" : "numeric"}
+            min={min}
+            max={max}
+            step={step}
+            placeholder={placeholder}
+            value={rawValue}
+            onChange={(event) => onChange(event.target.value)}
+          />
+          <button
+            type="button"
+            className="lp-step-btn primary"
+            disabled={Number.isFinite(numeric) && numeric >= max}
+            onClick={() => onChange(steppedNumber(rawValue, step, min, max, decimals))}
+            aria-label={`${label} нэмэх`}
+          >
+            <Plus className="size-3.5" />
+          </button>
+        </div>
+      </Field>
+      {quick?.length ? (
+        <div className="lp-quick-row">
+          {quick.map((item) => (
+            <button
+              key={item}
+              type="button"
+              className={cn("lp-quick-chip", Number.isFinite(numeric) && Math.abs(numeric - item) < 0.001 && "is-active")}
+              onClick={() => onChange(String(item))}
+            >
+              {item}
+              {quickSuffix}
+            </button>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function WindowStepper({
+  value,
+  onChange,
+  compact,
+  label,
+}: {
+  value: number;
+  onChange: (value: number) => void;
+  compact?: boolean;
+  label: string;
+}) {
+  return (
+    <div className={cn("lp-window-stepper", compact && "compact")}>
+      <button
+        type="button"
+        className="lp-window-step-btn"
+        disabled={value <= 0}
+        onClick={() => onChange(Math.max(0, value - 1))}
+        aria-label={`${label} цонх хасах`}
+      >
+        <Minus className="size-3" />
+      </button>
+      <input
+        className="lp-window-value"
+        type="number"
+        min={0}
+        max={99}
+        value={value}
+        onChange={(event) => onChange(clampInt(event.target.value, 0, 99))}
+        aria-label={`${label} харсан цонхны тоо`}
+      />
+      <button
+        type="button"
+        className="lp-window-step-btn primary"
+        onClick={() => onChange(Math.min(99, value + 1))}
+        aria-label={`${label} цонх нэмэх`}
+      >
+        <Plus className="size-3" />
+      </button>
+    </div>
+  );
+}
+
+function CheckboxRow({
+  checked,
+  onChange,
+  title,
+  sub,
+}: {
+  checked: boolean;
+  onChange: (value: boolean) => void;
+  title: string;
+  sub?: string;
+}) {
+  return (
+    <label className="flex cursor-pointer items-start gap-3 rounded-md border bg-card p-3 transition-colors hover:bg-muted">
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(event) => onChange(event.target.checked)}
+        className="mt-0.5 size-4 accent-primary"
+      />
+      <span className="min-w-0">
+        <span className="block text-sm font-semibold">{title}</span>
+        {sub ? <span className="mt-0.5 block text-xs leading-5 text-muted-foreground">{sub}</span> : null}
+      </span>
+    </label>
   );
 }
 
@@ -436,65 +1610,104 @@ function StepHeader({ step }: { step: number }) {
 
 export function ListPropertyWizard() {
   const [step, setStep] = useState(1);
-  const [draft, setDraft] = useState<Draft>(defaultDraft);
-  const [submitted, setSubmitted] = useState(false);
+  const [draft, setDraft] = useState<SmartDraft>(() => loadInitialDraft());
+  const [submitted, setSubmitted] = useState<SubmissionPayload | null>(null);
+  const [savedAt, setSavedAt] = useState<string | null>(null);
 
-  const selectedType = propertyTypes.find((item) => item.key === draft.propertyType) ?? propertyTypes[0];
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(SMART_LIST_PROP_DRAFT_KEY, JSON.stringify(draft));
+    } catch {
+      // Ignore storage errors; the in-memory form stays usable.
+    }
+  }, [draft]);
+
+  const selectedType = getPropertyType(draft.propertyType);
   const SelectedTypeIcon = selectedType.icon;
-  const isRent = draft.goal === "rent";
-  const price = Number(isRent ? draft.monthlyPrice : draft.totalPrice) || 0;
-  const area = Number(draft.area) || 0;
+  const isRent = modeOf(draft.goal) === "rent";
+  const price = priceOf(draft);
+  const area = parseFloat(draft.specs.areaCert) || 0;
   const unitPrice = price && area ? Math.round(price / area) : 0;
-
-  const required = useMemo(
-    () => [
-      { label: "Зорилго", ok: Boolean(draft.goal), step: 1 },
-      { label: "Зориулалт", ok: Boolean(draft.propertyType), step: 1 },
-      { label: "Дэд зориулалт", ok: Boolean(draft.subtype), step: 1 },
-      { label: "Дүүрэг/Сум", ok: Boolean(draft.district), step: 2 },
-      { label: "Хороо/Баг", ok: Boolean(draft.khoroo.trim()), step: 2 },
-      { label: "Хотхон эсвэл гудамж", ok: Boolean(draft.khotkhon.trim() || draft.street.trim()), step: 2 },
-      { label: "Талбай", ok: area > 0, step: 2 },
-      { label: "Өрөөний тоо", ok: !selectedType.residential || Boolean(draft.rooms), step: 2 },
-      { label: isRent ? "Нийт үнэ/сар" : "Нийт үнэ", ok: price > 0, step: 4 },
-      { label: "Зураг", ok: draft.photos.length > 0, step: 4 },
-      { label: "Холбоо хамаарал", ok: Boolean(draft.relation), step: 5 },
-      { label: "Үнэн зөв", ok: draft.truth, step: 5 },
-      { label: "Эрх бүхий этгээд", ok: draft.authority, step: 5 },
-      { label: "Нөхцөл зөвшөөрөх", ok: draft.terms, step: 5 },
-    ],
-    [area, draft, isRent, price, selectedType.residential]
-  );
-
-  const completion = Math.round((required.filter((item) => item.ok).length / required.length) * 100);
+  const required = useMemo(() => requiredItems(draft), [draft]);
+  const optional = useMemo(() => optionalItems(draft), [draft]);
+  const completion = useMemo(() => completionPercent(draft), [draft]);
   const missing = required.filter((item) => !item.ok);
 
-  const update = <K extends keyof Draft>(key: K, value: Draft[K]) => {
+  const mutate = (recipe: (next: SmartDraft) => void) => {
     setDraft((current) => {
-      const next = { ...current, [key]: value };
-      if (key === "propertyType") {
-        const nextType = value as PropertyKey;
-        next.subtype = subtypes[nextType][0];
-      }
-      return next;
+      const next = cloneDraft(current);
+      recipe(next);
+      setSubmitted(null);
+      return normalizeDraft(next);
     });
-    setSubmitted(false);
   };
 
-  const toggleList = (key: "amenities" | "included" | "services", value: string) => {
-    setDraft((current) => {
-      const set = new Set(current[key]);
-      if (set.has(value)) set.delete(value);
-      else set.add(value);
-      return { ...current, [key]: Array.from(set) };
-    });
+  const actions: DraftActions = {
+    setPath: (path, value) => {
+      mutate((next) => {
+        const prevType = next.propertyType;
+        const prevDistrict = next.address.district;
+        setByPath(next as unknown as Record<string, unknown>, path, value);
+        if (path === "propertyType" && next.propertyType !== prevType) {
+          next.subtype = subtypes[next.propertyType][0];
+        }
+        if (path === "address.district" && next.address.district !== prevDistrict && !next.locationTouched) {
+          const loc = defaultListPropLocation(next.address.district);
+          next.lat = loc.lat;
+          next.lng = loc.lng;
+        }
+      });
+    },
+    toggleArray: (path, value) => {
+      mutate((next) => {
+        const current = arrayOfStrings(getByPath(next, path));
+        const set = new Set(current);
+        if (set.has(value)) set.delete(value);
+        else set.add(value);
+        setByPath(next as unknown as Record<string, unknown>, path, Array.from(set));
+      });
+    },
+    toggleBoolean: (path) => {
+      mutate((next) => {
+        setByPath(next as unknown as Record<string, unknown>, path, !getByPath(next, path));
+      });
+    },
+    mutate,
+  };
+
+  const saveDraft = () => {
+    try {
+      window.localStorage.setItem(SMART_LIST_PROP_DRAFT_KEY, JSON.stringify(draft));
+      setSavedAt(new Date().toLocaleTimeString("mn-MN", { hour: "2-digit", minute: "2-digit" }));
+    } catch {
+      setSavedAt("хадгалах боломжгүй");
+    }
+  };
+
+  const resetDraft = () => {
+    const next = createDefaultDraft();
+    setDraft(next);
+    setSubmitted(null);
+    setSavedAt(null);
+    try {
+      window.localStorage.removeItem(SMART_LIST_PROP_DRAFT_KEY);
+    } catch {
+      // noop
+    }
+  };
+
+  const submit = () => {
+    if (missing.length) return;
+    const payload = buildSubmission(draft);
+    storeSubmission(payload);
+    setSubmitted(payload);
   };
 
   const goNext = () => setStep((current) => Math.min(5, current + 1));
   const goBack = () => setStep((current) => Math.max(1, current - 1));
 
   return (
-    <div className="min-h-screen px-4 py-5 lg:px-8">
+    <div className="lp-shadcn min-h-screen px-4 py-5 lg:px-8">
       <div className="mx-auto max-w-7xl">
         <header className="mb-5 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
@@ -507,20 +1720,19 @@ export function ListPropertyWizard() {
                 className="shrink-0"
               />
               <Badge className="rounded-full bg-accent text-accent-foreground hover:bg-accent">
-                <Sparkles className="size-3.5" />
-                shadcn wizard
+                <WandSparkles className="size-3.5" />
+                Ухаалаг зарын туслах
               </Badge>
             </div>
             <h1 className="text-3xl font-semibold">Зар оруулах</h1>
             <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">
-              13 алхмын мэдээллийг 5 хэсэгт бөглөж, нийтлэх хүсэлт илгээх
-              owner-side workflow.
+              Зар оруулах 13 алхмын мэдээлэл, логик, баталгаажуулалтыг 5 хэсэгт нэгтгэсэн хялбар урсгал.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
             <Badge variant="outline" className="h-8 rounded-full px-3">
               {isRent ? <KeyRound className="size-3.5" /> : <Banknote className="size-3.5" />}
-              {isRent ? "Түрээс" : "Худалдаа"}
+              {isRent ? "Түрээс / хөлслүүлэх" : "Худалдаа"}
             </Badge>
             <Badge variant="outline" className="h-8 rounded-full px-3">
               <SelectedTypeIcon className="size-3.5" />
@@ -611,65 +1823,68 @@ export function ListPropertyWizard() {
           <section className="min-w-0 space-y-4">
             <StepHeader step={step} />
             {step === 1 ? (
-              <StepOne draft={draft} update={update} />
+              <StepOne draft={draft} actions={actions} />
             ) : step === 2 ? (
-              <StepTwo draft={draft} update={update} selectedType={selectedType} />
+              <StepTwo draft={draft} actions={actions} selectedType={selectedType} />
             ) : step === 3 ? (
-              <StepThree draft={draft} toggleList={toggleList} />
+              <StepThree draft={draft} actions={actions} />
             ) : step === 4 ? (
               <StepFour
                 draft={draft}
-                update={update}
+                actions={actions}
                 isRent={isRent}
                 price={price}
                 area={area}
                 unitPrice={unitPrice}
-                toggleList={toggleList}
               />
             ) : (
               <StepFive
                 draft={draft}
-                update={update}
-                toggleList={toggleList}
+                actions={actions}
                 missing={missing}
+                optional={optional}
                 price={price}
                 selectedType={selectedType}
+                goStep={setStep}
               />
             )}
 
             <div className="flex flex-col gap-2 border-t pt-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex flex-col gap-2 sm:flex-row">
-                <Button variant="outline" onClick={step === 1 ? () => setDraft(defaultDraft) : goBack}>
+                <Button variant="outline" onClick={step === 1 ? resetDraft : goBack}>
                   {step === 1 ? <X className="size-4" /> : <ChevronLeft className="size-4" />}
                   {step === 1 ? "Цэвэрлэх" : "Буцах"}
                 </Button>
-                <Button variant="outline">
+                <Button variant="outline" onClick={saveDraft}>
                   <Save className="size-4" />
                   Түр хадгалах
                 </Button>
               </div>
-              {step < 5 ? (
-                <Button onClick={goNext}>
-                  Дараагийнх
-                  <ChevronRight className="size-4" />
-                </Button>
-              ) : (
-                <Button
-                  onClick={() => setSubmitted(true)}
-                  disabled={missing.length > 0}
-                  className="bg-primary text-primary-foreground"
-                >
-                  <Send className="size-4" />
-                  Зар нийтлэх хүсэлт илгээх
-                </Button>
-              )}
+              <div className="flex flex-col gap-2 sm:items-end">
+                {savedAt ? <span className="text-xs text-muted-foreground">Draft: {savedAt}</span> : null}
+                {step < 5 ? (
+                  <Button onClick={goNext}>
+                    Дараагийнх
+                    <ChevronRight className="size-4" />
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={submit}
+                    disabled={missing.length > 0}
+                    className="bg-primary text-primary-foreground"
+                  >
+                    <Send className="size-4" />
+                    Зар нийтлэх хүсэлт илгээх
+                  </Button>
+                )}
+              </div>
             </div>
             {submitted ? (
               <Card className="rounded-md border-emerald-600 bg-emerald-50 text-emerald-950">
-                <CardContent className="flex items-center gap-3 py-4">
-                  <BadgeCheck className="size-5" />
+                <CardContent className="flex items-start gap-3 py-4">
+                  <BadgeCheck className="mt-0.5 size-5 shrink-0" />
                   <span className="text-sm font-medium">
-                    Зар нийтлэх хүсэлт бэлэн боллоо. NEOMAP баг баталгаажуулалтын дараагийн шат руу шилжүүлнэ.
+                    Зар нийтлэх хүсэлт бэлэн боллоо. #{submitted.id} draft хадгалагдсан ба дэлгэрэнгүй мэдээллийн бүх задаргаа багтсан.
                   </span>
                 </CardContent>
               </Card>
@@ -681,13 +1896,7 @@ export function ListPropertyWizard() {
   );
 }
 
-function StepOne({
-  draft,
-  update,
-}: {
-  draft: Draft;
-  update: <K extends keyof Draft>(key: K, value: Draft[K]) => void;
-}) {
+function StepOne({ draft, actions }: { draft: SmartDraft; actions: DraftActions }) {
   return (
     <div className="space-y-4">
       <Card className="rounded-md">
@@ -696,7 +1905,7 @@ function StepOne({
             <Target className="size-4 text-accent" />
             01. Зар оруулах
           </CardTitle>
-          <CardDescription>Худалдах эсвэл түрээслүүлэх зорилгоо сонгоно.</CardDescription>
+          <CardDescription>Худалдах эсвэл түрээслүүлэх, хөлслүүлэх зорилгоо сонгоно.</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-3 md:grid-cols-2">
           {goals.map((goal) => {
@@ -706,7 +1915,7 @@ function StepOne({
               <button
                 key={goal.key}
                 type="button"
-                onClick={() => update("goal", goal.key)}
+                onClick={() => actions.setPath("goal", goal.key)}
                 className={cn(
                   "rounded-md border bg-card p-4 text-left transition-colors hover:border-primary",
                   active && "border-primary bg-primary/10"
@@ -743,7 +1952,7 @@ function StepOne({
               <button
                 key={type.key}
                 type="button"
-                onClick={() => update("propertyType", type.key)}
+                onClick={() => actions.setPath("propertyType", type.key)}
                 className={cn(
                   "flex min-h-24 gap-3 rounded-md border bg-card p-3 text-left transition-colors hover:border-primary hover:bg-muted",
                   active && "border-primary bg-primary/10"
@@ -770,8 +1979,8 @@ function StepOne({
       <Card className="rounded-md">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Layers3 className="size-4 text-accent" />
-            03. Дэд зориулалт
+            <GitBranch className="size-4 text-accent" />
+            03. Үл хөдлөх эд хөрөнгийн зориулалт - дэд зориулалт
           </CardTitle>
         </CardHeader>
         <CardContent className="flex flex-wrap gap-2">
@@ -779,7 +1988,7 @@ function StepOne({
             <ToggleChip
               key={item}
               active={draft.subtype === item}
-              onClick={() => update("subtype", item)}
+              onClick={() => actions.setPath("subtype", item)}
             >
               {item}
             </ToggleChip>
@@ -792,139 +2001,910 @@ function StepOne({
 
 function StepTwo({
   draft,
-  update,
+  actions,
   selectedType,
 }: {
-  draft: Draft;
+  draft: SmartDraft;
+  actions: DraftActions;
   selectedType: (typeof propertyTypes)[number];
-  update: <K extends keyof Draft>(key: K, value: Draft[K]) => void;
 }) {
+  const areaCert = parseFloat(draft.specs.areaCert) || 0;
+  const areaInterior = parseFloat(draft.specs.areaInterior) || 0;
+  const extraArea =
+    (parseFloat(draft.specs.areaBalcony) || 0) +
+    (parseFloat(draft.specs.areaGarage) || 0) +
+    (parseFloat(draft.specs.areaStorage) || 0);
+  const areaWarn = areaCert > 0 && areaInterior > areaCert;
+  const roomSummary = needsRooms(draft)
+    ? draft.specs.rooms
+      ? `${draft.specs.rooms} өрөө`
+      : "Сонгоогүй"
+    : selectedType.label;
+
   return (
     <div className="space-y-4">
       <Card className="rounded-md">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <MapPin className="size-4 text-accent" />
-            04. Хаяг, байршил
-          </CardTitle>
-          <CardDescription>
-            Дүүрэг, хороо, хотхон/гудамж, барилгын мэдээллээ оруулна.
-          </CardDescription>
+          <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <MapPin className="size-4 text-accent" />
+                04. Хаяг, байршил
+              </CardTitle>
+              <CardDescription>
+                Дүүрэг, хороо, хотхон/гудамжаа бөглөөд барилга, давхар, map pin-ээ нарийвчилна.
+              </CardDescription>
+            </div>
+            <Badge variant={draft.locationTouched ? "default" : "outline"} className="rounded-full">
+              {draft.locationTouched ? <CircleCheck className="size-3.5" /> : <CircleAlert className="size-3.5" />}
+              {draft.locationTouched ? "Байршил сонгосон" : "Pin сонгоогүй"}
+            </Badge>
+          </div>
         </CardHeader>
-        <CardContent className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
+        <CardContent className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_380px]">
           <div className="space-y-4">
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Field label="Дүүрэг / Сум" required>
-                <NativeSelect value={draft.district} onChange={(value) => update("district", value)} options={districts} />
-              </Field>
-              <Field label="Хороо / Баг" required>
-                <Input value={draft.khoroo} onChange={(event) => update("khoroo", event.target.value)} placeholder="15" />
-              </Field>
-              <Field label="Хотхон, хороолол" required hint="Гудамжтай бол хоосон үлдээж болно.">
-                <Input value={draft.khotkhon} onChange={(event) => update("khotkhon", event.target.value)} placeholder="Time Tower" />
-              </Field>
-              <Field label="Гудамж">
-                <Input value={draft.street} onChange={(event) => update("street", event.target.value)} placeholder="Нарны зам" />
-              </Field>
-              <Field label="Барилгын дугаар">
-                <Input value={draft.buildingNumber} onChange={(event) => update("buildingNumber", event.target.value)} placeholder="204" />
-              </Field>
-              <Field label="Тоот / хаалга">
-                <Input value={draft.unit} onChange={(event) => update("unit", event.target.value)} placeholder="301" />
-              </Field>
+            <div className="rounded-md border bg-muted/40 p-3">
+              <div className="mb-3 flex flex-wrap gap-2">
+                <Badge variant="outline" className="rounded-full">
+                  <Lock className="size-3.5" />
+                  {draft.address.country}
+                </Badge>
+                <Badge variant="outline" className="rounded-full">
+                  <Building2 className="size-3.5" />
+                  {draft.address.city}
+                </Badge>
+              </div>
+              <div className="mb-3 flex items-center gap-2 text-sm font-semibold">
+                <Navigation className="size-4 text-accent" />
+                Үндсэн байршил
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Field label="Дүүрэг / Сум" required>
+                  <NativeSelect
+                    value={draft.address.district}
+                    onChange={(value) => actions.setPath("address.district", value)}
+                    options={[...DISTRICTS]}
+                  />
+                </Field>
+                <Field label="Хороо / Баг" required>
+                  <Input
+                    value={draft.address.khoroo}
+                    onChange={(event) => actions.setPath("address.khoroo", event.target.value)}
+                    placeholder="15"
+                  />
+                </Field>
+                <Field label="Хотхон, хороолол" required hint="Гудамжтай бол хоосон үлдээж болно.">
+                  <Input
+                    value={draft.address.khotkhon}
+                    list="khotkhon-options"
+                    onChange={(event) => actions.setPath("address.khotkhon", event.target.value)}
+                    placeholder="Time Tower"
+                  />
+                  <datalist id="khotkhon-options">
+                    {KHOTKHON.map((item) => (
+                      <option key={item} value={item} />
+                    ))}
+                  </datalist>
+                </Field>
+                <Field label="Гудамж" hint="Хотхон байхгүй үед гудамж нь заавалд тооцогдоно.">
+                  <Input
+                    value={draft.address.street}
+                    onChange={(event) => actions.setPath("address.street", event.target.value)}
+                    placeholder="Нарны зам"
+                  />
+                </Field>
+              </div>
             </div>
-            <Separator />
-            <div className="grid gap-3 sm:grid-cols-3">
-              <Field label="Үндсэн давхар">
-                <Input value={draft.floorAbove} onChange={(event) => update("floorAbove", event.target.value)} placeholder="16" />
-              </Field>
-              <Field label="Байрлах давхар">
-                <Input value={draft.selectedFloor} onChange={(event) => update("selectedFloor", event.target.value)} placeholder="F08" />
-              </Field>
-              <Field label="Төлөв">
-                <NativeSelect
-                  value={draft.condition}
-                  onChange={(value) => update("condition", value)}
-                  options={["Сул, чөлөөтэй байгаа", "Амьдарч байгаа", "Түрээсийн гэрээтэй", "Бусад"]}
-                />
-              </Field>
+
+            <FloorSection draft={draft} actions={actions} />
+
+            <div className="rounded-md border bg-card p-3">
+              <div className="mb-3 flex items-center gap-2 text-sm font-semibold">
+                <Signpost className="size-4 text-accent" />
+                Нарийвчилсан хаяг
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Field label="Хаягийн бүс / zipcode">
+                  <Input
+                    value={draft.address.zip}
+                    onChange={(event) => actions.setPath("address.zip", event.target.value)}
+                    placeholder="17011"
+                  />
+                </Field>
+                <Field label="Гудамжны дугаар">
+                  <Input
+                    value={draft.address.streetNumber}
+                    onChange={(event) => actions.setPath("address.streetNumber", event.target.value)}
+                    placeholder="12"
+                  />
+                </Field>
+                <Field label="Барилга, байр, блокын дугаар">
+                  <Input
+                    value={draft.address.buildingNumber}
+                    onChange={(event) => actions.setPath("address.buildingNumber", event.target.value)}
+                    placeholder="204"
+                  />
+                </Field>
+                <Field label="Барилга, байр, блокын нэр">
+                  <Input
+                    value={draft.address.buildingName}
+                    onChange={(event) => actions.setPath("address.buildingName", event.target.value)}
+                    placeholder="A block"
+                  />
+                </Field>
+              </div>
+              <div className="mt-3">
+                <Field label="Хаяг, байршлын тайлбар">
+                  <Textarea
+                    value={draft.address.note}
+                    onChange={(event) => actions.setPath("address.note", event.target.value)}
+                    placeholder="Орц, хашаа, орох зам, таних тэмдэг..."
+                  />
+                </Field>
+              </div>
             </div>
           </div>
-          <div className="overflow-hidden rounded-md border bg-muted">
-            <div className="relative h-72 bg-[linear-gradient(135deg,#e2e8f0,#f8fafc)]">
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_25%_30%,rgba(18,60,105,.16),transparent_22%),radial-gradient(circle_at_70%_60%,rgba(201,162,39,.18),transparent_24%)]" />
-              <div className="absolute inset-4 rounded-md border border-white/70" />
-              <div className="absolute left-[48%] top-[42%] flex -translate-x-1/2 -translate-y-1/2 items-center gap-2 rounded-full border-2 border-white bg-accent px-3 py-2 text-xs font-semibold text-accent-foreground shadow-lg">
-                <MapPin className="size-4" />
-                {draft.khotkhon || draft.district}
-              </div>
-              <div className="absolute bottom-3 left-3 right-3 rounded-md bg-slate-950/85 px-3 py-2 text-xs text-white">
-                Газрын зураг дээрээс барилга / газар сонгох
-              </div>
-            </div>
-          </div>
+          <MapPanel draft={draft} actions={actions} />
         </CardContent>
       </Card>
 
       <Card className="rounded-md">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <ClipboardCheck className="size-4 text-accent" />
+            <Ruler className="size-4 text-accent" />
             05. Үзүүлэлт
           </CardTitle>
+          <CardDescription>
+            Гэрчилгээний талбай нь үнэлгээ, нэгжийн үнэ, хайлтын шүүлтэд ашиглагдана.
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid gap-3 md:grid-cols-4">
-            <Field label={selectedType.key === "land" ? "Газрын талбай (м²)" : "Нийт талбай (м²)"} required>
-              <Input type="number" value={draft.area} onChange={(event) => update("area", event.target.value)} placeholder="68" />
-            </Field>
-            <Field label="Нийт өрөө" required={selectedType.residential}>
-              <Input type="number" value={draft.rooms} onChange={(event) => update("rooms", event.target.value)} placeholder="2" />
-            </Field>
-            <Field label="Унтлагын өрөө">
-              <Input type="number" value={draft.bedrooms} onChange={(event) => update("bedrooms", event.target.value)} placeholder="1" />
-            </Field>
-            <Field label="Ариун цэврийн өрөө">
-              <Input type="number" value={draft.bathrooms} onChange={(event) => update("bathrooms", event.target.value)} placeholder="1" />
-            </Field>
+          <div className="grid gap-3 xl:grid-cols-[minmax(0,1.35fr)_280px]">
+            <div className="rounded-md border bg-muted/40 p-3">
+              <div className="mb-3 flex items-center gap-2 text-sm font-semibold">
+                <Maximize2 className="size-4 text-accent" />
+                Талбай
+              </div>
+              <div className="grid gap-3 md:grid-cols-2">
+                <NumberStepper
+                  label={`${areaLabel(draft)} (м²)`}
+                  required
+                  value={draft.specs.areaCert}
+                  onChange={(value) => actions.setPath("specs.areaCert", value)}
+                  min={0}
+                  max={99999}
+                  step={1}
+                  decimals={1}
+                  quick={areaQuickValues(draft)}
+                  quickSuffix=" м²"
+                  placeholder="0"
+                  hint="Гэрчилгээний үндсэн талбай."
+                />
+                <NumberStepper
+                  label="Дотор цэвэр талбай (м²)"
+                  value={draft.specs.areaInterior}
+                  onChange={(value) => actions.setPath("specs.areaInterior", value)}
+                  min={0}
+                  max={99999}
+                  step={1}
+                  decimals={1}
+                  quick={[30, 50, 70, 90]}
+                  quickSuffix=" м²"
+                />
+                <NumberStepper
+                  label="Тагт / террас / лодж (м²)"
+                  value={draft.specs.areaBalcony}
+                  onChange={(value) => actions.setPath("specs.areaBalcony", value)}
+                  min={0}
+                  max={99999}
+                  step={0.5}
+                  decimals={1}
+                  quick={[2, 4, 6, 8]}
+                  quickSuffix=" м²"
+                />
+                <NumberStepper
+                  label="Авто дулаан зогсоол (м²)"
+                  value={draft.specs.areaGarage}
+                  onChange={(value) => actions.setPath("specs.areaGarage", value)}
+                  min={0}
+                  max={99999}
+                  step={1}
+                  decimals={1}
+                  quick={[12, 15, 18, 24]}
+                  quickSuffix=" м²"
+                />
+                <NumberStepper
+                  label="Агуулах, техникийн өрөө (м²)"
+                  value={draft.specs.areaStorage}
+                  onChange={(value) => actions.setPath("specs.areaStorage", value)}
+                  min={0}
+                  max={99999}
+                  step={1}
+                  decimals={1}
+                  quick={[2, 4, 6, 10]}
+                  quickSuffix=" м²"
+                />
+              </div>
+              {areaWarn ? (
+                <div className="mt-3 flex items-start gap-2 rounded-md border border-amber-500/30 bg-amber-50 p-3 text-sm text-amber-900">
+                  <CircleAlert className="mt-0.5 size-4 shrink-0" />
+                  Дотор цэвэр талбай гэрчилгээний талбайгаас их байна. Тоогоо дахин шалгана уу.
+                </div>
+              ) : null}
+            </div>
+            <div className="grid gap-2">
+              <AreaTile label={areaLabel(draft)} value={squareMeters(areaCert)} strong />
+              <AreaTile label="Дотор цэвэр талбай" value={squareMeters(areaInterior)} />
+              <AreaTile label="Нэмэлт талбай" value={squareMeters(extraArea)} />
+              <AreaTile label="Өрөөний бүтэц" value={roomSummary} />
+            </div>
           </div>
-          <Field label="Өрөө, обьектын нэмэлт тайлбар">
-            <Textarea value={draft.desc} onChange={(event) => update("desc", event.target.value)} placeholder="Нар сайн тусдаг, үйлчилгээ ойр..." />
+
+          {needsRooms(draft) ? (
+            <div className="rounded-md border bg-card p-3">
+              <div className="mb-3 flex items-center gap-2 text-sm font-semibold">
+                <DoorOpen className="size-4 text-accent" />
+                Өрөөний бүтэц
+              </div>
+              <div className="grid gap-3 md:grid-cols-3">
+                <NumberStepper
+                  label="Нийт өрөөний тоо"
+                  required
+                  value={draft.specs.rooms}
+                  onChange={(value) => actions.setPath("specs.rooms", value)}
+                  min={1}
+                  max={20}
+                  quick={[1, 2, 3, 4, 5]}
+                />
+                <NumberStepper
+                  label="Унтлагын өрөөний нийт тоо"
+                  value={draft.specs.bedrooms}
+                  onChange={(value) => actions.setPath("specs.bedrooms", value)}
+                  min={0}
+                  max={20}
+                  quick={[0, 1, 2, 3, 4]}
+                />
+                <NumberStepper
+                  label="Ариун цэврийн өрөөний нийт тоо"
+                  value={draft.specs.bathrooms}
+                  onChange={(value) => actions.setPath("specs.bathrooms", value)}
+                  min={0}
+                  max={20}
+                  quick={[0, 1, 2, 3, 4]}
+                />
+              </div>
+              <WindowDirectionMap draft={draft} actions={actions} />
+            </div>
+          ) : null}
+
+          {isCommercial(draft) ? (
+            <div className="rounded-md border bg-card p-3">
+              <div className="mb-3 flex items-center gap-2 text-sm font-semibold">
+                <BriefcaseBusiness className="size-4 text-accent" />
+                Тохиромжтой чиглэл
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {officeNeeds.map((item) => (
+                  <ToggleChip
+                    key={item}
+                    active={draft.specs.officeNeeds.includes(item)}
+                    onClick={() => actions.toggleArray("specs.officeNeeds", item)}
+                    icon={draft.specs.officeNeeds.includes(item) ? Check : undefined}
+                  >
+                    {item}
+                  </ToggleChip>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
+          <Field label="Өрөөнүүдийн талаар нэмэлт мэдээлэл, тайлбар">
+            <Textarea
+              value={draft.desc}
+              onChange={(event) => actions.setPath("desc", event.target.value)}
+              placeholder="Обьектын онцлог, давуу тал, тохиромжтой хэрэглээг товч бичнэ үү"
+            />
           </Field>
         </CardContent>
       </Card>
+
+      <RoomDetailsEditor draft={draft} actions={actions} />
     </div>
   );
 }
 
-function StepThree({
-  draft,
-  toggleList,
-}: {
-  draft: Draft;
-  toggleList: (key: "amenities" | "included" | "services", value: string) => void;
-}) {
+function FloorSection({ draft, actions }: { draft: SmartDraft; actions: DraftActions }) {
+  const selected = floorParts(draft);
+  const floorTotal = draft.address.floorBasement + draft.address.floorAbove;
+
+  const setFloor = (type: "B" | "F", num: number) => {
+    actions.mutate((next) => {
+      const value = formatFloor(type, num);
+      if (type === "B") next.address.floorBasement = Math.max(next.address.floorBasement, num);
+      else next.address.floorAbove = Math.max(next.address.floorAbove, num);
+      next.address.selectedFloor = value;
+    });
+  };
+
+  return (
+    <div className="rounded-md border bg-card p-3">
+      <div className="mb-3 flex items-center gap-2 text-sm font-semibold">
+        <Layers3 className="size-4 text-accent" />
+        Давхар, хаалга
+      </div>
+      <div className="grid gap-3 md:grid-cols-[160px_minmax(0,1fr)_minmax(0,1fr)]">
+        <div className="rounded-md border bg-muted/50 p-3 text-center">
+          <div className="text-xs text-muted-foreground">Нийт давхар</div>
+          <div className="text-3xl font-semibold tabular-nums">{floorTotal || "-"}</div>
+          <div className="text-[11px] text-muted-foreground">
+            {draft.address.floorBasement ? `B${draft.address.floorBasement} хүртэл` : "Зоорьгүй"} ·{" "}
+            {draft.address.floorAbove ? `F${String(draft.address.floorAbove).padStart(2, "0")} хүртэл` : "Үндсэн давхаргүй"}
+          </div>
+        </div>
+        <NumberStepper
+          label="Зоорийн давхрын тоо"
+          value={draft.address.floorBasement}
+          onChange={(value) => actions.setPath("address.floorBasement", clampInt(value, 0, 20))}
+          min={0}
+          max={20}
+          hint="B1, B2 гэх мэт."
+        />
+        <NumberStepper
+          label="Үндсэн давхрын тоо"
+          value={draft.address.floorAbove}
+          onChange={(value) => actions.setPath("address.floorAbove", clampInt(value, 0, 80))}
+          min={0}
+          max={80}
+          hint="F01, F02 гэх мэт."
+        />
+      </div>
+      <div className="mt-3 grid gap-3 lg:grid-cols-[250px_minmax(0,1fr)]">
+        <div className="rounded-md border bg-muted/50 p-3">
+          <div className="text-xs text-muted-foreground">Байрлах давхар</div>
+          <div className="mt-1 text-lg font-semibold">{floorTitle(selected.value)}</div>
+          <div className="mt-3 flex gap-2">
+            <Button
+              type="button"
+              variant={selected.type === "F" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setFloor("F", selected.type === "F" ? selected.num : 1)}
+            >
+              <Building2 className="size-3.5" />
+              Үндсэн
+            </Button>
+            <Button
+              type="button"
+              variant={selected.type === "B" ? "default" : "outline"}
+              size="sm"
+              disabled={draft.address.floorBasement === 0}
+              onClick={() => setFloor("B", selected.type === "B" ? selected.num : 1)}
+            >
+              <Layers2 className="size-3.5" />
+              Зоорь
+            </Button>
+          </div>
+        </div>
+        <div>
+          <NumberStepper
+            label={selected.type === "B" ? "Зоорийн давхар сонгох" : "Үндсэн давхар сонгох"}
+            value={selected.num}
+            onChange={(value) => setFloor(selected.type, clampInt(value, 1, selected.type === "B" ? 20 : 80))}
+            min={1}
+            max={selected.type === "B" ? 20 : 80}
+            hint={selected.type === "B" ? `${draft.address.floorBasement || 1} хүртэл B давхар` : `${draft.address.floorAbove || 1} хүртэл F давхар`}
+          />
+          <div className="lp-quick-row">
+            {floorCandidates(draft).map((item) => {
+              const value = formatFloor(item.type, item.num);
+              return (
+                <button
+                  key={value}
+                  type="button"
+                  className={cn("lp-quick-chip", draft.address.selectedFloor === value && "is-active")}
+                  onClick={() => setFloor(item.type, item.num)}
+                >
+                  {value}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+        <Field label="Тоот / хаалга">
+          <Input
+            value={draft.address.unit}
+            onChange={(event) => actions.setPath("address.unit", event.target.value)}
+            placeholder="301"
+          />
+        </Field>
+        <Field label="Google Maps линк">
+          <Input
+            type="url"
+            value={draft.address.googleMapLink}
+            onChange={(event) => actions.setPath("address.googleMapLink", event.target.value)}
+            placeholder="https://maps.google.com/..."
+          />
+        </Field>
+      </div>
+      <div className="mt-3 flex items-start gap-2 rounded-md border bg-muted/50 p-3 text-sm text-muted-foreground">
+        <Calculator className="mt-0.5 size-4 shrink-0 text-accent" />
+        <span>
+          {floorTotal
+            ? `${draft.address.floorBasement ? `${draft.address.floorBasement} зоорь` : "зоорьгүй"} · ${draft.address.floorAbove ? `${draft.address.floorAbove} үндсэн` : "үндсэн давхаргүй"} · ${floorTitle(draft.address.selectedFloor)}`
+            : "Давхрын мэдээлэл хоосон"}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function MapPanel({ draft, actions }: { draft: SmartDraft; actions: DraftActions }) {
+  const hasLink = Boolean(draft.address.googleMapLink.trim());
+  const pinLabel = draft.locationTouched ? "Сонгосон байршил" : draft.address.khotkhon || draft.address.district || "Байршил";
+  const manualLine = addressLine(draft) || `${draft.address.country}, ${draft.address.city}`;
+
+  const selectLocation = (event: MouseEvent<HTMLDivElement>) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    const lat = clampDecimal((event.clientX - rect.left) / rect.width, 0.02, 0.98, 3);
+    const lng = clampDecimal((event.clientY - rect.top) / rect.height, 0.02, 0.98, 3);
+    actions.mutate((next) => {
+      next.lat = lat;
+      next.lng = lng;
+      next.locationTouched = true;
+    });
+  };
+
+  return (
+    <div className="lp-map-panel">
+      <div className="lp-map-frame">
+        <div className="absolute inset-0 bg-[linear-gradient(135deg,#e2e8f0,#f8fafc)]">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_22%_25%,rgba(18,60,105,.16),transparent_20%),radial-gradient(circle_at_74%_58%,rgba(201,162,39,.20),transparent_22%),linear-gradient(90deg,transparent_0_24%,rgba(18,60,105,.10)_24%_25%,transparent_25%_58%,rgba(18,60,105,.10)_58%_59%,transparent_59%)]" />
+          <div className="absolute left-[18%] top-0 h-full w-px bg-white/70" />
+          <div className="absolute left-[61%] top-0 h-full w-px bg-white/70" />
+          <div className="absolute left-0 top-[36%] h-px w-full bg-white/70" />
+          <div className="absolute left-0 top-[70%] h-px w-full bg-white/70" />
+        </div>
+        <div onClick={selectLocation} className="lp-map-click" title="Газрын зураг дээр дарж тэмдэглэнэ" />
+        <div className="lp-map-top">
+          <span className="lp-map-status">
+            {draft.locationTouched ? <CircleCheck className="size-3.5 text-emerald-600" /> : hasLink ? <Link className="size-3.5 text-accent" /> : <MapPin className="size-3.5 text-accent" />}
+            {draft.locationTouched ? "Pin баталгаажсан" : hasLink ? "Google Maps линк нэмсэн" : "Дүүргийн дундаж цэг"}
+          </span>
+          <span className="lp-map-accuracy">
+            {draft.locationTouched ? <BadgeCheck className="size-3.5" /> : <Crosshair className="size-3.5" />}
+            {draft.locationTouched ? "Нарийвчилсан" : "Нарийвчлах"}
+          </span>
+        </div>
+        <div className="lp-map-pin" style={{ left: `${draft.lat * 100}%`, top: `${draft.lng * 100}%` }}>
+          <div className="lp-map-pin-inner">
+            <MapPin className="size-3.5" />
+            {pinLabel}
+          </div>
+        </div>
+        <div className="lp-map-bottom">
+          <span className="flex min-w-0 items-center gap-2">
+            <MousePointerClick className="size-3.5 shrink-0 text-accent" />
+            <span className="truncate">Газрын зураг дээрээс барилга / газар сонгох</span>
+          </span>
+          <span className="text-[11px] text-white/75">{draft.locationTouched ? "Сонгосон" : "Сонгоогүй"}</span>
+        </div>
+      </div>
+      <div className="lp-map-meta">
+        <MetaTile label="Гараар оруулсан хаяг" value={manualLine} icon={MapPinned} />
+        <MetaTile
+          label="Баталгаажуулалт"
+          value={draft.locationTouched ? "Map pin сонгосон" : hasLink ? "Линкээр дэмжсэн" : "Гараар үргэлжилнэ"}
+          icon={ShieldCheck}
+        />
+      </div>
+    </div>
+  );
+}
+
+function MetaTile({ label, value, icon: Icon }: { label: string; value: string; icon: LucideIcon }) {
+  return (
+    <div className="lp-meta-tile">
+      <div className="lp-meta-label">
+        <Icon className="size-3.5 text-accent" />
+        {label}
+      </div>
+      <div className="lp-meta-value">{value || "-"}</div>
+    </div>
+  );
+}
+
+function AreaTile({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
+  return (
+    <div className={cn("rounded-md border bg-card p-3", strong && "border-primary bg-primary/10")}>
+      <div className="text-lg font-semibold tabular-nums">{value}</div>
+      <div className="text-xs text-muted-foreground">{label}</div>
+    </div>
+  );
+}
+
+function WindowDirectionMap({ draft, actions }: { draft: SmartDraft; actions: DraftActions }) {
+  const total = windowTotal(draft.specs.windows);
+  const rows: Array<Array<WindowKey | "total">> = [
+    ["northwest", "north", "northeast"],
+    ["west", "total", "east"],
+    ["southwest", "south", "southeast"],
+  ];
+  const setWindow = (key: WindowKey, value: number) => actions.setPath(`specs.windows.${key}`, clampInt(value, 0, 99));
+
+  return (
+    <div className="mt-4">
+      <Field label="Цонхны тоо, байрлал">
+        <div className="grid items-stretch gap-4 xl:grid-cols-[300px_1fr]">
+          <div className="flex min-h-[300px] items-center justify-center rounded-md border bg-muted/40 p-4">
+            <div className="relative size-[240px] rounded-full border bg-[radial-gradient(circle_at_center,var(--background)_0_34%,transparent_35%),conic-gradient(from_0deg,rgba(201,162,39,.16),transparent_16%,rgba(10,31,68,.08)_25%,transparent_34%,rgba(201,162,39,.16)_50%,transparent_66%,rgba(10,31,68,.08)_75%,transparent_84%,rgba(201,162,39,.16))] shadow-sm">
+              <div className="absolute inset-[82px] flex flex-col items-center justify-center rounded-full border-2 border-accent bg-accent/10 text-center">
+                <Compass className="mb-1 size-5 text-accent" />
+                <span className="text-xl font-bold leading-tight tabular-nums">{total}</span>
+                <span className="text-[10px] font-semibold text-muted-foreground">нийт цонх</span>
+              </div>
+              {windowDirections.map((dir) => {
+                const count = draft.specs.windows[dir.key] || 0;
+                return (
+                  <button
+                    key={dir.key}
+                    type="button"
+                    onClick={() => setWindow(dir.key, count + 1)}
+                    className={cn("lp-window-map-chip", dir.chipClass, count && "is-active")}
+                    aria-label={`${dir.label} цонх нэмэх`}
+                  >
+                    <span className="text-[11px] font-semibold leading-none">{dir.short}</span>
+                    <span className="text-sm font-bold leading-tight tabular-nums">{count}</span>
+                    <Plus className="lp-window-map-plus" />
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          <div className="overflow-hidden rounded-md border bg-card">
+            <div className="grid grid-cols-3 gap-px bg-border">
+              {rows.flatMap((row) =>
+                row.map((key) => {
+                  if (key === "total") {
+                    return (
+                      <div key="total" className="bg-card">
+                        <div className="lp-window-total-cell">
+                          <span className="text-xs font-semibold text-muted-foreground">Нийт</span>
+                          <span className="text-2xl font-bold leading-tight tabular-nums">{total}</span>
+                          {total ? (
+                            <button
+                              type="button"
+                              className="lp-window-reset-btn"
+                              onClick={() => actions.setPath("specs.windows", defaultWindows())}
+                              aria-label="Цонхны тоог тэглэх"
+                            >
+                              <RotateCcw className="size-3.5" />
+                            </button>
+                          ) : null}
+                        </div>
+                      </div>
+                    );
+                  }
+                  const dir = windowDirections.find((item) => item.key === key)!;
+                  const count = draft.specs.windows[dir.key] || 0;
+                  const Icon = dir.icon;
+                  return (
+                    <div key={key} className="bg-card">
+                      <div className={cn("lp-window-cell", count && "is-active")}>
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-sm font-semibold">{dir.short}</span>
+                          <Icon className={cn("size-4", count ? "text-accent" : "text-muted-foreground")} />
+                        </div>
+                        <WindowStepper value={count} onChange={(value) => setWindow(dir.key, value)} label={dir.label} />
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        </div>
+      </Field>
+      {total ? <div className="mt-2 text-xs text-muted-foreground">{windowSummary(draft.specs.windows)}</div> : null}
+    </div>
+  );
+}
+
+function RoomDetailsEditor({ draft, actions }: { draft: SmartDraft; actions: DraftActions }) {
+  const addRoom = (typeKey: string) => {
+    const meta = ROOM_TYPES.find((item) => item.key === typeKey) ?? ROOM_TYPES[0];
+    actions.mutate((next) => {
+      next.roomDetails.push({
+        id: `room-${Date.now()}-${next.roomDetails.length}`,
+        typeKey: meta.key,
+        label: meta.label,
+        floor: next.address.selectedFloor,
+        area: "",
+        windows: defaultWindows(),
+        tags: [],
+        note: "",
+      });
+    });
+  };
+
+  const updateRoom = (id: string, recipe: (room: RoomDetailDraft) => void) => {
+    actions.mutate((next) => {
+      const room = next.roomDetails.find((item) => item.id === id);
+      if (room) recipe(room);
+    });
+  };
+
+  const removeRoom = (id: string) => {
+    actions.mutate((next) => {
+      next.roomDetails = next.roomDetails.filter((item) => item.id !== id);
+    });
+  };
+
+  return (
+    <Card className="rounded-md">
+      <CardHeader>
+        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <DoorOpen className="size-4 text-accent" />
+              Өрөө тус бүрийн задаргаа
+            </CardTitle>
+            <CardDescription>
+              Өрөөний төрөл, талбай, tag, цонхны чиглэлийн мэдээллийг дэлгэрэнгүй задаргаанд хадгална.
+            </CardDescription>
+          </div>
+          <Badge variant="outline" className="rounded-full">
+            {draft.roomDetails.length} өрөө
+          </Badge>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="flex flex-wrap gap-2">
+          {ROOM_TYPES.slice(0, 10).map((room) => (
+            <ToggleChip key={room.key} active={false} onClick={() => addRoom(room.key)} icon={Plus}>
+              {room.label}
+            </ToggleChip>
+          ))}
+        </div>
+        <details className="rounded-md border bg-muted/40">
+          <summary className="cursor-pointer px-3 py-2 text-sm font-semibold">Бүх өрөөний төрлийг харах</summary>
+          <div className="flex flex-wrap gap-2 p-3">
+            {ROOM_TYPES.slice(10).map((room) => (
+              <ToggleChip key={room.key} active={false} onClick={() => addRoom(room.key)} icon={Plus}>
+                {room.label}
+              </ToggleChip>
+            ))}
+          </div>
+        </details>
+
+        {draft.roomDetails.length ? (
+          <div className="space-y-3">
+            {draft.roomDetails.map((room, index) => {
+              const meta = ROOM_TYPES.find((item) => item.key === room.typeKey) ?? ROOM_TYPES[0];
+              const tags = ROOM_TAGS_BY_TYPE[meta.tagGroup] ?? [];
+              return (
+                <div key={room.id} className="rounded-md border bg-card p-3">
+                  <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <div className="text-sm font-semibold">
+                        {index + 1}. {room.label}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {room.floor} · {room.area ? `${room.area} м²` : "талбай хоосон"} · {windowTotal(room.windows)} цонх
+                      </div>
+                    </div>
+                    <Button type="button" variant="destructive" size="sm" onClick={() => removeRoom(room.id)}>
+                      <Trash2 className="size-3.5" />
+                      Устгах
+                    </Button>
+                  </div>
+                  <div className="grid gap-3 lg:grid-cols-4">
+                    <Field label="Өрөөний төрөл">
+                      <NativeSelect
+                        value={room.typeKey}
+                        onChange={(value) =>
+                          updateRoom(room.id, (next) => {
+                            const nextMeta = ROOM_TYPES.find((item) => item.key === value) ?? ROOM_TYPES[0];
+                            next.typeKey = nextMeta.key;
+                            next.label = nextMeta.label;
+                            next.tags = [];
+                          })
+                        }
+                        options={ROOM_TYPES.map((item) => ({ value: item.key, label: item.label }))}
+                      />
+                    </Field>
+                    <Field label="Нэр / label">
+                      <Input
+                        value={room.label}
+                        onChange={(event) => updateRoom(room.id, (next) => { next.label = event.target.value; })}
+                      />
+                    </Field>
+                    <Field label="Давхар">
+                      <NativeSelect
+                        value={room.floor}
+                        onChange={(value) => updateRoom(room.id, (next) => { next.floor = value; })}
+                        options={floorList(draft)}
+                      />
+                    </Field>
+                    <NumberStepper
+                      label="Талбай (м²)"
+                      value={room.area}
+                      onChange={(value) => updateRoom(room.id, (next) => { next.area = value; })}
+                      min={0}
+                      max={99999}
+                      step={0.5}
+                      decimals={1}
+                    />
+                  </div>
+                  {tags.length ? (
+                    <div className="mt-3">
+                      <div className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+                        <Pencil className="size-3.5 text-accent" />
+                        Өрөөний tag
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {tags.map((tag) => (
+                          <ToggleChip
+                            key={tag}
+                            active={room.tags.includes(tag)}
+                            onClick={() =>
+                              updateRoom(room.id, (next) => {
+                                const set = new Set(next.tags);
+                                if (set.has(tag)) set.delete(tag);
+                                else set.add(tag);
+                                next.tags = Array.from(set);
+                              })
+                            }
+                            icon={room.tags.includes(tag) ? Check : undefined}
+                          >
+                            {tag}
+                          </ToggleChip>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
+                  <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                    {windowDirections.map((dir) => (
+                      <div key={dir.key} className="rounded-md border bg-muted/30 p-2">
+                        <div className="mb-1 text-xs font-semibold">{dir.label}</div>
+                        <WindowStepper
+                          compact
+                          value={room.windows[dir.key] || 0}
+                          label={dir.label}
+                          onChange={(value) => updateRoom(room.id, (next) => { next.windows[dir.key] = value; })}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-3">
+                    <Field label="Өрөөний тайлбар">
+                      <Textarea
+                        value={room.note}
+                        onChange={(event) => updateRoom(room.id, (next) => { next.note = event.target.value; })}
+                        placeholder="Тус өрөөний онцлог..."
+                      />
+                    </Field>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="rounded-md border border-dashed bg-muted/30 p-4 text-sm text-muted-foreground">
+            Өрөөний дэлгэрэнгүй задаргаа нэмээгүй байна. Дээрх төрлүүдээс сонгож нэмнэ.
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function StepThree({ draft, actions }: { draft: SmartDraft; actions: DraftActions }) {
+  const popular = isCommercial(draft)
+    ? [
+        "Харуул, хамгаалалт 24/7",
+        "Домофон, дохиолол",
+        "Лифт - зорчигчийн 24/7",
+        "Төлбөртэй дулаан зогсоол",
+        "Фитнес, иога, веллнесс",
+        "Ресторан",
+        "Цахилгаан машины цэнэглэл станц",
+        "Лифт - ачааны 24/7",
+      ]
+    : [
+        "Хүнсний дэлгүүр",
+        "Фитнес, иога, веллнесс",
+        "Хүүхдийн тоглоомын талбай",
+        "Лифт - зорчигчийн 24/7",
+        "Төлбөргүй ил зогсоол",
+        "Харуул, хамгаалалт 24/7",
+        "Домофон, дохиолол",
+        "Ногоон байгууламж, нарлах салхилах талбай",
+      ];
+
   return (
     <div className="space-y-4">
       <Card className="rounded-md">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Sparkles className="size-4 text-accent" />
-            06-07. Дэд бүтэц, үйлчилгээ, тав тух
+            <PlugZap className="size-4 text-accent" />
+            06. Үзүүлэлт - Дэд бүтэц
           </CardTitle>
-          <CardDescription>Хэрэглэгч хайлт хийх үед match болон filter-д ашиглагдана.</CardDescription>
         </CardHeader>
-        <CardContent className="flex flex-wrap gap-2">
-          {amenities.map((item) => (
-            <ToggleChip
-              key={item}
-              active={draft.amenities.includes(item)}
-              onClick={() => toggleList("amenities", item)}
-              icon={draft.amenities.includes(item) ? Check : undefined}
-            >
-              {item}
-            </ToggleChip>
-          ))}
+        <CardContent className="space-y-4">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {infraFields.map((field) => {
+              const Icon = field.icon;
+              return (
+                <Field key={field.key} label={field.label} required={field.required}>
+                  <div className="relative">
+                    <Icon className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-accent" />
+                    <select
+                      value={draft.infra[field.key]}
+                      onChange={(event) => actions.setPath(`infra.${field.key}`, event.target.value)}
+                      className="h-9 w-full rounded-md border border-input bg-background py-1 pl-9 pr-2.5 text-sm outline-none transition-colors focus:border-ring focus:ring-3 focus:ring-ring/20"
+                    >
+                      {field.choices.map((item) => (
+                        <option key={item} value={item}>
+                          {item}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </Field>
+              );
+            })}
+          </div>
+          <Field label="Дэд бүтцийн бусад тайлбар">
+            <Textarea
+              value={draft.infra.note}
+              onChange={(event) => actions.setPath("infra.note", event.target.value)}
+              placeholder="Бусад эх үүсвэр, нөөцлүүр, хүчин чадал..."
+            />
+          </Field>
+        </CardContent>
+      </Card>
+
+      <Card className="rounded-md">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <BadgeCheck className="size-4 text-accent" />
+            07. Хотхон, төслийн дундын хэрэглээ, үйлчилгээ, аюулгүй байдал, тав тух
+          </CardTitle>
+          <CardDescription>Түгээмэл сонголтууд болон бүх бүлгийн сонголтууд filter/match-д ашиглагдана.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex flex-wrap gap-2">
+            {popular.map((item) => {
+              const group = communityGroups.find((candidate) => candidate.items.includes(item)) ?? communityGroups[2];
+              const active = draft.community[group.key].includes(item);
+              return (
+                <ToggleChip
+                  key={item}
+                  active={active}
+                  onClick={() => actions.toggleArray(`community.${group.key}`, item)}
+                  icon={active ? Check : undefined}
+                >
+                  {item}
+                </ToggleChip>
+              );
+            })}
+          </div>
+          <details className="rounded-md border bg-muted/40">
+            <summary className="cursor-pointer px-3 py-2 text-sm font-semibold">Бүх үйлчилгээ, аюулгүй байдал, тав тухыг харах</summary>
+            <div className="space-y-4 p-3">
+              {communityGroups.map((group) => (
+                <GroupedChips
+                  key={group.key}
+                  title={group.title}
+                  icon={group.icon}
+                  items={group.items}
+                  selected={draft.community[group.key]}
+                  onToggle={(item) => actions.toggleArray(`community.${group.key}`, item)}
+                />
+              ))}
+            </div>
+          </details>
         </CardContent>
       </Card>
 
@@ -935,16 +2915,16 @@ function StepThree({
             08. Үнэд багтсан дагалдах зүйлс
           </CardTitle>
         </CardHeader>
-        <CardContent className="flex flex-wrap gap-2">
-          {included.map((item) => (
-            <ToggleChip
-              key={item}
-              active={draft.included.includes(item)}
-              onClick={() => toggleList("included", item)}
-              icon={draft.included.includes(item) ? Check : undefined}
-            >
-              {item}
-            </ToggleChip>
+        <CardContent className="space-y-4">
+          {includedGroups.map((group) => (
+            <GroupedChips
+              key={group.key}
+              title={group.title}
+              icon={group.icon}
+              items={group.items}
+              selected={draft.included[group.key]}
+              onToggle={(item) => actions.toggleArray(`included.${group.key}`, item)}
+            />
           ))}
         </CardContent>
       </Card>
@@ -952,178 +2932,372 @@ function StepThree({
   );
 }
 
+function GroupedChips({
+  title,
+  icon: Icon,
+  items,
+  selected,
+  onToggle,
+}: {
+  title: string;
+  icon: LucideIcon;
+  items: string[];
+  selected: string[];
+  onToggle: (item: string) => void;
+}) {
+  return (
+    <div>
+      <div className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+        <Icon className="size-3.5 text-accent" />
+        {title}
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {items.map((item) => (
+          <ToggleChip
+            key={item}
+            active={selected.includes(item)}
+            onClick={() => onToggle(item)}
+            icon={selected.includes(item) ? Check : undefined}
+          >
+            {item}
+          </ToggleChip>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function StepFour({
   draft,
-  update,
+  actions,
   isRent,
   price,
   area,
   unitPrice,
-  toggleList,
 }: {
-  draft: Draft;
+  draft: SmartDraft;
+  actions: DraftActions;
   isRent: boolean;
   price: number;
   area: number;
   unitPrice: number;
-  update: <K extends keyof Draft>(key: K, value: Draft[K]) => void;
-  toggleList: (key: "amenities" | "included" | "services", value: string) => void;
 }) {
-  const addPhoto = (category: string) => {
-    update("photos", [...draft.photos, { id: Date.now(), category }]);
-  };
-  const removePhoto = (id: number) => {
-    update("photos", draft.photos.filter((photo) => photo.id !== id));
-  };
-  const deposit = Number(draft.deposit) || 0;
-
   return (
     <div className="space-y-4">
       <Card className="rounded-md">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <ClipboardCheck className="size-4 text-accent" />
+            <SearchCheck className="size-4 text-accent" />
             09. Үл хөдлөх эд хөрөнгийн төлөв
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="grid gap-3 md:grid-cols-2">
-          <Field label="Одоогийн байдал">
-            <NativeSelect
-              value={draft.condition}
-              onChange={(value) => update("condition", value)}
-              options={["Сул, чөлөөтэй байгаа", "Амьдарч байгаа", "Түрээсийн гэрээтэй", "Бусад"]}
-            />
-          </Field>
-          <Field label="Ашиглалтад орсон он">
-            <Input value={draft.commissionYear} onChange={(event) => update("commissionYear", event.target.value)} placeholder="2020" />
-          </Field>
-        </CardContent>
-      </Card>
-
-      <Card className="rounded-md">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Banknote className="size-4 text-accent" />
-            10. Үнэ, төлбөрийн нөхцөл
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-3 md:grid-cols-2">
-            <Field label={isRent ? "Нийт үнэ/сар (₮)" : "Нийт үнэ (₮)"} required>
-              <Input
-                type="number"
-                value={isRent ? draft.monthlyPrice : draft.totalPrice}
-                onChange={(event) => update(isRent ? "monthlyPrice" : "totalPrice", event.target.value)}
-                placeholder={isRent ? "4000000" : "450000000"}
+            <Field label="Ашиглалтад орсон эсэх">
+              <NativeSelect
+                value={draft.state.usage}
+                onChange={(value) => actions.setPath("state.usage", value)}
+                options={["Ашиглалтад орсон", "Ашиглалтад ороогүй"]}
               />
             </Field>
-            <Field label={isRent ? "Нэгжийн үнэ/сар (₮/м²)" : "Нэгжийн үнэ (₮/м²)"}>
-              <Input value={unitPrice ? unitPrice.toLocaleString("en-US") : ""} disabled placeholder="Автоматаар бодогдоно" />
+            <Field label="Ашиглалтад орсон он">
+              <Input
+                type="number"
+                min={1950}
+                max={2035}
+                value={draft.state.commissionYear}
+                onChange={(event) => actions.setPath("state.commissionYear", event.target.value)}
+                placeholder="2020"
+              />
             </Field>
-            {isRent ? (
-              <>
-                <Field label="Давтамж">
-                  <NativeSelect
-                    value={draft.rentFrequency}
-                    onChange={(value) => update("rentFrequency", value)}
-                    options={["1 сар тутам", "3 сар тутам", "6 сар тутам", "12 сар тутам"]}
-                  />
-                </Field>
-                <Field label="Барьцаа (₮)">
-                  <Input type="number" value={draft.deposit} onChange={(event) => update("deposit", event.target.value)} placeholder="4000000" />
-                </Field>
-              </>
-            ) : null}
+            <Field label="Ашиглалтад орох хугацаа">
+              <Input
+                value={draft.state.commissionDue}
+                onChange={(event) => actions.setPath("state.commissionDue", event.target.value)}
+                placeholder="2026.IV"
+              />
+            </Field>
+            <Field label="Улсын бүртгэлийн гэрчилгээтэй эсэх">
+              <NativeSelect
+                value={draft.state.certStatus}
+                onChange={(value) => actions.setPath("state.certStatus", value)}
+                options={certOptions}
+              />
+            </Field>
+            <Field label="ҮХЭХ улсын бүртгэлийн дугаар">
+              <Input
+                value={draft.state.certNumber}
+                onChange={(event) => actions.setPath("state.certNumber", event.target.value)}
+                placeholder="Ү220#######"
+              />
+            </Field>
+            <Field label="Ашиглагдаж байсан байдал">
+              <NativeSelect
+                value={draft.state.condition}
+                onChange={(value) => actions.setPath("state.condition", value)}
+                options={["Цоо шинэ, ашиглаж байгаагүй", "Ашиглагдаж байсан"]}
+              />
+            </Field>
+            <Field label="Одоогийн байдал (гэрээ байгуулах үеийн)">
+              <NativeSelect
+                value={draft.state.current}
+                onChange={(value) => actions.setPath("state.current", value)}
+                options={["Түрээсийн эсхүл хөлслүүлэх гэрээтэй байгаа", "Амьдарч, ашиглаж байгаа", "Сул, чөлөөтэй байгаа", "Бусад"]}
+              />
+            </Field>
+            <Field label="Дотор засал">
+              <NativeSelect
+                value={draft.state.interior}
+                onChange={(value) => actions.setPath("state.interior", value)}
+                options={interiorOptions.map((item) => ({ value: item, label: item || "Сонгох" }))}
+              />
+            </Field>
+            <Field label="Барьцаанд байгаа эсэх">
+              <NativeSelect
+                value={draft.state.collateral}
+                onChange={(value) => actions.setPath("state.collateral", value)}
+                options={collateralOptions}
+              />
+            </Field>
           </div>
-          {isRent ? (
-            <div className="overflow-hidden rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Давтамж</TableHead>
-                    <TableHead>Хөнгөлөлт</TableHead>
-                    <TableHead>Сар</TableHead>
-                    <TableHead>Нийт</TableHead>
-                    <TableHead>Анхны төлбөр</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {[1, 3, 6, 12].map((month) => {
-                    const discount = month >= 6 ? 5 : 0;
-                    const monthly = price ? Math.round(price * (1 - discount / 100)) : 0;
-                    const total = monthly * month;
-                    return (
-                      <TableRow key={month}>
-                        <TableCell>{month} сар тутам</TableCell>
-                        <TableCell>{discount}%</TableCell>
-                        <TableCell className="tabular-nums">{monthly ? monthly.toLocaleString("en-US") + "₮" : "-"}</TableCell>
-                        <TableCell className="tabular-nums">{total ? total.toLocaleString("en-US") + "₮" : "-"}</TableCell>
-                        <TableCell className="tabular-nums">{total ? (total + deposit).toLocaleString("en-US") + "₮" : "-"}</TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </div>
-          ) : null}
-          <div className="grid gap-2 sm:grid-cols-3">
-            {serviceOptions.map((item) => (
-              <ToggleChip
-                key={item}
-                active={draft.services.includes(item)}
-                onClick={() => toggleList("services", item)}
-                icon={draft.services.includes(item) ? Check : undefined}
-              >
-                {item}
-              </ToggleChip>
-            ))}
+          <Field label="Барьцаа, төлөвийн тайлбар">
+            <Textarea
+              value={draft.state.collateralNote}
+              onChange={(event) => actions.setPath("state.collateralNote", event.target.value)}
+              placeholder="Хэрэв аливаа хэлбэрийн барьцаанд байгаа бол тайлбар..."
+            />
+          </Field>
+          <div className="flex flex-wrap gap-2">
+            <ToggleChip
+              active={draft.state.certificateAttached}
+              onClick={() => actions.toggleBoolean("state.certificateAttached")}
+              icon={Paperclip}
+            >
+              Гэрчилгээ хавсаргах
+            </ToggleChip>
+            <ToggleChip
+              active={draft.state.contractAttached}
+              onClick={() => actions.toggleBoolean("state.contractAttached")}
+              icon={Paperclip}
+            >
+              Захиалгын гэрээ / улсын комиссын акт хавсаргах
+            </ToggleChip>
           </div>
-          <p className="text-xs text-muted-foreground">
-            {area && price ? `Нийт ${area} м² · ${unitPrice.toLocaleString("en-US")}₮/м²` : "Үнэ ба талбайгаа оруулахад нэгжийн үнэ автоматаар гарна."}
-          </p>
         </CardContent>
       </Card>
 
-      <Card className="rounded-md">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Camera className="size-4 text-accent" />
-            11. Зураг, бичлэг
-          </CardTitle>
-          <CardDescription>Хамгийн багадаа нэг зураг нэмнэ.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-            {["Нүүрний зураг", "План зураг", "Дотор зураг", "Гадна орчны зураг"].map((category) => (
-              <button
-                key={category}
-                type="button"
-                onClick={() => addPhoto(category)}
-                className="min-h-24 rounded-md border border-dashed bg-card p-3 text-left transition-colors hover:border-primary hover:bg-muted"
-              >
-                <Upload className="mb-2 size-4 text-accent" />
-                <div className="text-xs font-semibold">{category}</div>
-                <div className="mt-1 text-[11px] text-muted-foreground">
-                  {draft.photos.filter((photo) => photo.category === category).length} файл
+      <PricingSection draft={draft} actions={actions} isRent={isRent} price={price} area={area} unitPrice={unitPrice} />
+      <MediaSection draft={draft} actions={actions} />
+    </div>
+  );
+}
+
+function PricingSection({
+  draft,
+  actions,
+  isRent,
+  price,
+  area,
+  unitPrice,
+}: {
+  draft: SmartDraft;
+  actions: DraftActions;
+  isRent: boolean;
+  price: number;
+  area: number;
+  unitPrice: number;
+}) {
+  const deposit = parseFloat(draft.pricing.deposit) || 0;
+
+  return (
+    <Card className="rounded-md">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Banknote className="size-4 text-accent" />
+          10. Үнэ, төлбөрийн нөхцөл
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid gap-3 md:grid-cols-2">
+          <Field label={isRent ? "Нийт үнэ/сар (₮)" : "Нийт үнэ (₮)"} required>
+            <Input
+              type="number"
+              min={0}
+              value={isRent ? draft.pricing.monthlyPrice : draft.pricing.totalPrice}
+              onChange={(event) => actions.setPath(isRent ? "pricing.monthlyPrice" : "pricing.totalPrice", event.target.value)}
+              placeholder={isRent ? "4000000" : "450000000"}
+            />
+          </Field>
+          <Field label={isRent ? "Нэгжийн үнэ/сар (₮/м²/сар)" : "Нэгжийн үнэ (₮/м²)"}>
+            <Input value={unitPrice ? unitPrice.toLocaleString("en-US") : ""} disabled placeholder="Нийт үнийг нийт м²-т хувааж гаргана" />
+          </Field>
+
+          {isRent ? (
+            <>
+              <Field label="Давтамж">
+                <NativeSelect
+                  value={draft.pricing.rentFrequency}
+                  onChange={(value) => actions.setPath("pricing.rentFrequency", value)}
+                  options={rentFrequencies}
+                />
+              </Field>
+              <Field label="Барьцаа (₮)">
+                <Input
+                  type="number"
+                  min={0}
+                  value={draft.pricing.deposit}
+                  onChange={(event) => actions.setPath("pricing.deposit", event.target.value)}
+                  placeholder="4000000"
+                />
+              </Field>
+            </>
+          ) : null}
+        </div>
+
+        <div className="grid gap-2 md:grid-cols-2">
+          <CheckboxRow
+            checked={draft.pricing.vatIncluded}
+            onChange={(value) => actions.setPath("pricing.vatIncluded", value)}
+            title={`Дээрх үнэд НӨАТ ${draft.pricing.vatIncluded ? "багтсан" : "багтаагүй"}`}
+          />
+          <CheckboxRow
+            checked={draft.pricing.ebarimt}
+            onChange={(value) => actions.setPath("pricing.ebarimt", value)}
+            title={`Гэрээлэгч-ид НӨАТ-тэй ebarimt ${draft.pricing.ebarimt ? "олгоно" : "олгохгүй"}`}
+          />
+        </div>
+
+        {isRent ? (
+          <div className="lp-rent-table">
+            <div className="lp-rent-table-inner">
+              <div className="lp-rent-table-head">
+                <div className="lp-rent-table-cell">Давтамж</div>
+                <div className="lp-rent-table-cell">Хөнгөлөлт %</div>
+                <div className="lp-rent-table-cell">Үнийн дүн [төгрөг/сар]</div>
+                <div className="lp-rent-table-cell">Үнийн дүн [төгрөг]</div>
+                <div className="lp-rent-table-cell">Анхны төлбөр [төгрөг]</div>
+              </div>
+              {rentMonths.map((month) => {
+                const discount = draft.pricing.rentDiscounts[month] || 0;
+                const monthly = price ? Math.round(price * (1 - discount / 100)) : 0;
+                const total = monthly * month;
+                return (
+                  <div key={month} className="lp-rent-table-row">
+                    <div className="lp-rent-table-cell">{month} сар тутам</div>
+                    <div className="lp-rent-table-cell">
+                      <Input
+                        type="number"
+                        min={0}
+                        max={100}
+                        value={discount}
+                        onChange={(event) => actions.setPath(`pricing.rentDiscounts.${month}`, clampDecimal(event.target.value, 0, 100, 1))}
+                        className="h-8"
+                      />
+                    </div>
+                    <div className="lp-rent-table-cell tabular-nums">{money(monthly)}</div>
+                    <div className="lp-rent-table-cell tabular-nums">{money(total)}</div>
+                    <div className="lp-rent-table-cell tabular-nums">{money(total ? total + deposit : 0)}</div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ) : (
+          <div>
+            <div className="mb-2 text-xs font-semibold text-muted-foreground">ТӨЛБӨРИЙН НӨХЦӨЛ</div>
+            <div className="flex flex-wrap gap-2">
+              {salePaymentForms.map((item) => (
+                <ToggleChip
+                  key={item}
+                  active={draft.pricing.paymentForms.includes(item)}
+                  onClick={() => actions.toggleArray("pricing.paymentForms", item)}
+                  icon={draft.pricing.paymentForms.includes(item) ? Check : undefined}
+                >
+                  {item}
+                </ToggleChip>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <p className="text-xs text-muted-foreground">
+          {area && price
+            ? `Нийт ${area.toLocaleString("en-US")} м² · ${unitPrice.toLocaleString("en-US")}₮/м²`
+            : "Үнэ ба талбайгаа оруулахад нэгжийн үнэ автоматаар гарна."}
+        </p>
+      </CardContent>
+    </Card>
+  );
+}
+
+function MediaSection({ draft, actions }: { draft: SmartDraft; actions: DraftActions }) {
+  const addPhoto = (category: string) => {
+    actions.mutate((next) => {
+      next.media.photos.push({
+        id: `photo-${Date.now()}-${next.media.photos.length}`,
+        seed: `${category}-${Date.now()}-${next.media.photos.length}`,
+        category,
+      });
+      if (next.media.photos.length === 1) next.media.coverIndex = 0;
+    });
+  };
+  const removePhoto = (index: number) => {
+    actions.mutate((next) => {
+      next.media.photos.splice(index, 1);
+      next.media.coverIndex = Math.min(next.media.coverIndex, Math.max(0, next.media.photos.length - 1));
+    });
+  };
+
+  return (
+    <Card className="rounded-md">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Images className="size-4 text-accent" />
+          11. Зураг, бичлэг
+        </CardTitle>
+        <CardDescription>Хамгийн багадаа нэг зураг нэмнэ. Cover index болон category нь detail payload-д хадгалагдана.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="lp-upload-grid">
+          {mediaCategories.map((category) => {
+            const Icon = category === "Нүүрний зураг" ? ImageUp : category === "План зураг" ? Scan : category === "Бичлэг" ? Video : Upload;
+            return (
+              <button key={category} type="button" onClick={() => addPhoto(category)} className="lp-upload-card">
+                <Icon className="size-4" />
+                <div className="lp-upload-title">{category}</div>
+                <div className="lp-upload-count">
+                  {draft.media.photos.filter((photo) => photo.category === category).length} файл
                 </div>
               </button>
-            ))}
-          </div>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-6">
-            {draft.photos.map((photo, index) => (
+            );
+          })}
+        </div>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-6">
+          {draft.media.photos.map((photo, index) => {
+            const isCover = draft.media.coverIndex === index;
+            return (
               <div
                 key={photo.id}
-                className="relative aspect-square overflow-hidden rounded-md border bg-[linear-gradient(135deg,#123c69,#c9a227)]"
+                className={cn(
+                  "relative aspect-square overflow-hidden rounded-md border-2 bg-[linear-gradient(135deg,#123c69,#c9a227)]",
+                  isCover ? "border-accent" : "border-border"
+                )}
               >
                 <div className="absolute inset-0 bg-black/10" />
-                <Badge className="absolute left-1 top-1 rounded-md bg-accent text-accent-foreground hover:bg-accent">
-                  {index === 0 ? "Нүүр" : "Зураг"}
-                </Badge>
+                <Button
+                  type="button"
+                  size="xs"
+                  variant="secondary"
+                  onClick={() => actions.setPath("media.coverIndex", index)}
+                  className="absolute left-1 top-1 h-6"
+                >
+                  {isCover ? "Нүүр" : "Сонгох"}
+                </Button>
                 <Button
                   type="button"
                   size="icon-sm"
                   variant="secondary"
-                  onClick={() => removePhoto(photo.id)}
+                  onClick={() => removePhoto(index)}
                   className="absolute right-1 top-1"
                 >
                   <Trash2 className="size-3.5" />
@@ -1132,7 +3306,9 @@ function StepFour({
                   {photo.category}
                 </div>
               </div>
-            ))}
+            );
+          })}
+          {draft.media.photos.length < 15 ? (
             <button
               type="button"
               onClick={() => addPhoto("Дотор зураг")}
@@ -1140,33 +3316,43 @@ function StepFour({
             >
               <Plus className="size-5" />
             </button>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+          ) : null}
+        </div>
+        <Field label="Зураг, бичлэг агуулсан линк">
+          <Input
+            value={draft.media.videoLink}
+            onChange={(event) => actions.setPath("media.videoLink", event.target.value)}
+            placeholder="https://..."
+          />
+        </Field>
+      </CardContent>
+    </Card>
   );
 }
 
 function StepFive({
   draft,
-  update,
-  toggleList,
+  actions,
   missing,
+  optional,
   price,
   selectedType,
+  goStep,
 }: {
-  draft: Draft;
+  draft: SmartDraft;
   selectedType: (typeof propertyTypes)[number];
   price: number;
-  missing: Array<{ label: string; ok: boolean; step: number }>;
-  update: <K extends keyof Draft>(key: K, value: Draft[K]) => void;
-  toggleList: (key: "amenities" | "included" | "services", value: string) => void;
+  missing: Requirement[];
+  optional: OptionalItem[];
+  actions: DraftActions;
+  goStep: (step: number) => void;
 }) {
+  const suggested = optional.filter((item) => !item.ok).slice(0, 4);
   const review = [
-    { label: "Зорилго", value: draft.goal === "rent" ? "Түрээс" : "Худалдаа", icon: Target },
+    { label: "Зорилго", value: getGoal(draft.goal).label, icon: Target },
     { label: "Төрөл", value: `${selectedType.label} · ${draft.subtype}`, icon: Building2 },
-    { label: "Байршил", value: `${draft.district}, ${draft.khoroo || "-"}-р хороо`, icon: MapPin },
-    { label: "Үнэ", value: price ? `${price.toLocaleString("en-US")}₮${draft.goal === "rent" ? "/сар" : ""}` : "-", icon: Banknote },
+    { label: "Байршил", value: `${draft.address.district}, ${draft.address.khoroo || "-"}-р хороо`, icon: MapPin },
+    { label: "Үнэ", value: price ? `${price.toLocaleString("en-US")}₮${modeOf(draft.goal) === "rent" ? "/сар" : ""}` : "-", icon: Banknote },
   ];
 
   return (
@@ -1200,7 +3386,26 @@ function StepFive({
               </div>
               <div className="flex flex-wrap gap-2">
                 {missing.map((item) => (
-                  <Badge key={item.label} variant="destructive" className="rounded-full">
+                  <Button
+                    key={item.label}
+                    type="button"
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => goStep(item.step)}
+                    className="h-auto min-h-7 whitespace-normal"
+                  >
+                    {item.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          ) : null}
+          {suggested.length ? (
+            <div className="rounded-md border bg-muted/40 p-3">
+              <div className="mb-2 text-sm font-semibold">Нийтлэсний дараа нөхөж болох зүйлс</div>
+              <div className="flex flex-wrap gap-2">
+                {suggested.map((item) => (
+                  <Badge key={item.label} variant="outline" className="rounded-full">
                     {item.label}
                   </Badge>
                 ))}
@@ -1208,33 +3413,24 @@ function StepFive({
             </div>
           ) : null}
           <div className="space-y-2">
-            {[
-              ["truth", "Дээрх мэдээлэл үнэн зөв", "Мэдээлэл нь үнэн зөв, бүрэн, бодитой гэдгийг баталж байна."],
-              ["authority", "Эрх бүхий этгээд мөн", "Энэхүү зарыг оруулах эрхтэй этгээд мөн гэдгийг баталж байна."],
-              ["terms", "Үйлчилгээний нөхцөл зөвшөөрөх", "NEOMAP үйлчилгээний нөхцөлийг хүлээн зөвшөөрч байна."],
-            ].map(([key, title, sub]) => {
-              const checked = Boolean(draft[key as "truth" | "authority" | "terms"]);
-              return (
-                <label
-                  key={key}
-                  className={cn(
-                    "flex cursor-pointer gap-3 rounded-md border bg-card p-3 transition-colors hover:bg-muted",
-                    checked && "border-primary bg-primary/10"
-                  )}
-                >
-                  <input
-                    type="checkbox"
-                    checked={checked}
-                    onChange={(event) => update(key as "truth" | "authority" | "terms", event.target.checked)}
-                    className="mt-0.5 size-4 accent-primary"
-                  />
-                  <span>
-                    <span className="block text-sm font-semibold">{title}</span>
-                    <span className="mt-0.5 block text-xs leading-5 text-muted-foreground">{sub}</span>
-                  </span>
-                </label>
-              );
-            })}
+            <CheckboxRow
+              checked={draft.declarations.truth}
+              onChange={(value) => actions.setPath("declarations.truth", value)}
+              title="Дээрх мэдээлэл үнэн зөв"
+              sub="Дээрх мэдээлэл нь үнэн зөв, бүрэн, бодитой гэдгийг би баталж байна."
+            />
+            <CheckboxRow
+              checked={draft.declarations.authority}
+              onChange={(value) => actions.setPath("declarations.authority", value)}
+              title="Эрх бүхий этгээд мөн"
+              sub="Би энэхүү зарыг оруулж, олон нийтэд мэдээлэх эрх бүхий этгээд мөн гэдгийг баталж байна."
+            />
+            <CheckboxRow
+              checked={draft.declarations.terms}
+              onChange={(value) => actions.setPath("declarations.terms", value)}
+              title="Үйлчилгээний нөхцөл зөвшөөрөх"
+              sub="www.neomap.mn веб сайтын ҮЙЛЧИЛГЭЭНИЙ НӨХЦӨЛ-ийг бүрэн уншиж танилцсан бөгөөд бүрэн хүлээн зөвшөөрч байна."
+            />
           </div>
         </CardContent>
       </Card>
@@ -1248,24 +3444,35 @@ function StepFive({
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex flex-wrap gap-2">
-            {serviceOptions.map((item) => (
-              <ToggleChip
-                key={item}
-                active={draft.services.includes(item)}
-                onClick={() => toggleList("services", item)}
-                icon={draft.services.includes(item) ? Check : undefined}
-              >
-                {item}
-              </ToggleChip>
-            ))}
+            <ToggleChip
+              active={draft.services.verified}
+              onClick={() => actions.toggleBoolean("services.verified")}
+              icon={BadgeCheck}
+            >
+              Та өөрийн зарыг VERIFIED болгохыг хүсэж байна уу? ТЭГЬЕ.
+            </ToggleChip>
+            <ToggleChip
+              active={draft.services.brokerage}
+              onClick={() => actions.toggleBoolean("services.brokerage")}
+              icon={Users}
+            >
+              Та энэ үл хөдлөх эд хөрөнгөө манай мэргэжлийн зуучлагчаар зуучлуулах уу? ТЭГЬЕ.
+            </ToggleChip>
+            <ToggleChip
+              active={draft.services.sponsored}
+              onClick={() => actions.toggleBoolean("services.sponsored")}
+              icon={Megaphone}
+            >
+              Та энэхүү зарыг SPONSORED болгохыг хүсэж байна уу? ТЭГЬЕ.
+            </ToggleChip>
           </div>
           <Field label="Та энэ үл хөдлөх эд хөрөнгөтэй ямар холбоотой вэ?" required>
             <div className="flex flex-wrap gap-2">
               {relations.map((relation) => (
                 <ToggleChip
                   key={relation}
-                  active={draft.relation === relation}
-                  onClick={() => update("relation", relation)}
+                  active={draft.services.relation === relation}
+                  onClick={() => actions.setPath("services.relation", relation)}
                 >
                   {relation}
                 </ToggleChip>

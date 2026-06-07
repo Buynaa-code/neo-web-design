@@ -2,13 +2,19 @@
 
 import { useEffect, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
+import { useShallow } from "zustand/react/shallow";
+import { BookmarkPlus, CheckCircle2, Sparkles, SlidersHorizontal, TrendingUp } from "lucide-react";
 import { useStore } from "@/lib/store";
-import { filteredListings } from "@/lib/filters";
+import { filteredListings, activeListings } from "@/lib/filters";
+import { fmtCompact } from "@/data/formatters";
 import { FilterSidebar } from "./FilterSidebar";
 import { ActiveFilterChips } from "./ActiveFilterChips";
 import { ResultsList } from "./ResultsList";
 import { ResultsMap } from "./ResultsMap";
 import { SortBar } from "./SortBar";
+import { AdvancedFiltersModal } from "./AdvancedFiltersModal";
+import { AISearchBar } from "./AISearchBar";
+import { SaveSearchModal } from "./SavedSearchModals";
 
 export function ResultsScreen() {
   const params = useSearchParams();
@@ -17,26 +23,28 @@ export function ResultsScreen() {
   const mobileView = useStore((s) => s.mobileView);
   const setMobileView = useStore((s) => s.setMobileView);
 
-  const state = useStore((s) => ({
-    mode: s.mode,
-    filterDistrict: s.filterDistrict,
-    filterRooms: s.filterRooms,
-    filterBusStop: s.filterBusStop,
-    filterLifestyle: s.filterLifestyle,
-    filterVerified: s.filterVerified,
-    filterIpoteh: s.filterIpoteh,
-    filterNewProject: s.filterNewProject,
-    filterSchool: s.filterSchool,
-    filterIncome: s.filterIncome,
-    filterPriceMin: s.filterPriceMin,
-    filterPriceMax: s.filterPriceMax,
-    filterPpmMin: s.filterPpmMin,
-    filterPpmMax: s.filterPpmMax,
-    filterAreaMin: s.filterAreaMin,
-    filterAreaMax: s.filterAreaMax,
-    drawnPolygon: s.drawnPolygon,
-    sortBy: s.sortBy,
-  }));
+  const state = useStore(
+    useShallow((s) => ({
+      mode: s.mode,
+      filterDistrict: s.filterDistrict,
+      filterRooms: s.filterRooms,
+      filterBusStop: s.filterBusStop,
+      filterLifestyle: s.filterLifestyle,
+      filterVerified: s.filterVerified,
+      filterIpoteh: s.filterIpoteh,
+      filterNewProject: s.filterNewProject,
+      filterSchool: s.filterSchool,
+      filterIncome: s.filterIncome,
+      filterPriceMin: s.filterPriceMin,
+      filterPriceMax: s.filterPriceMax,
+      filterPpmMin: s.filterPpmMin,
+      filterPpmMax: s.filterPpmMax,
+      filterAreaMin: s.filterAreaMin,
+      filterAreaMax: s.filterAreaMax,
+      drawnPolygon: s.drawnPolygon,
+      sortBy: s.sortBy,
+    }))
+  );
 
   useEffect(() => {
     const m = params.get("mode");
@@ -47,8 +55,52 @@ export function ResultsScreen() {
 
   const listings = useMemo(() => filteredListings(state), [state]);
 
+  const stats = useMemo(() => {
+    const base = activeListings().filter(
+      (l) => l.mode === state.mode && (!state.filterDistrict || l.district === state.filterDistrict)
+    );
+    if (!base.length) return { avgPrice: 0, count: 0, avgPpm: 0 };
+    const avgPrice = Math.round(base.reduce((s, l) => s + l.price, 0) / base.length);
+    const avgPpm = Math.round(
+      base.reduce((s, l) => s + (l.area ? l.price / l.area : 0), 0) / base.length
+    );
+    return { avgPrice, count: base.length, avgPpm };
+  }, [state.mode, state.filterDistrict]);
+
+  const districtLabel = state.filterDistrict ?? "Бүх дүүрэг";
+  const pushToast = useStore((s) => s.pushToast);
+  const openModal = useStore((s) => s.openModal);
+  const openAdvanced = () => openModal(<AdvancedFiltersModal />, "lg");
+
   return (
     <div className="results-shell">
+      <AISearchBar />
+      <div className="results-hero">
+        <div>
+          <h1 className="results-title">Хайлтын үр дүн</h1>
+          <p className="results-subtitle">
+            <span className="num">{listings.length}</span> үл хөдлөх хөрөнгө олдлоо ·{" "}
+            {districtLabel}
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={openAdvanced}
+          >
+            <SlidersHorizontal className="w-4 h-4" /> Дэлгэрэнгүй шүүлтүүр
+          </button>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={() => openModal(<SaveSearchModal />, "md")}
+          >
+            <BookmarkPlus className="w-4 h-4" /> Хайлтаа хадгалах
+          </button>
+        </div>
+      </div>
+
       <div className="results-grid">
         <div className="results-sidebar-col">
           <FilterSidebar />
@@ -79,10 +131,93 @@ export function ResultsScreen() {
             </div>
             <div className="results-map-col">
               <ResultsMap listings={listings} />
+              <div className="results-side-stack">
+                <div className="results-side-block">
+                  <div className="results-side-title">
+                    Зах зээлийн тойм
+                    <span className="results-side-sub">({districtLabel})</span>
+                  </div>
+                  <div className="results-stats-grid">
+                    <Stat
+                      label="Дундаж үнэ"
+                      value={stats.avgPrice ? fmtCompact(stats.avgPrice) : "—"}
+                      delta="▲ 4.6%"
+                    />
+                    <Stat
+                      label="Идэвхтэй зар"
+                      value={String(stats.count || "—")}
+                      delta="▲ 12.1%"
+                      separators
+                    />
+                    <Stat
+                      label="₮/м²"
+                      value={
+                        stats.avgPpm ? stats.avgPpm.toLocaleString("en-US") + "₮" : "—"
+                      }
+                      delta="▲ 3.8%"
+                    />
+                  </div>
+                </div>
+
+                <div className="results-side-block results-ai-pick">
+                  <div className="results-ai-pick-head">
+                    <div className="results-ai-pick-icon">
+                      <Sparkles className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="text-sm font-semibold">AI санал болгох</div>
+                      <div
+                        className="text-[11px]"
+                        style={{ color: "var(--text-3)" }}
+                      >
+                        Таны хайлтад тохирох боломжууд
+                      </div>
+                    </div>
+                  </div>
+                  <div className="results-ai-pick-line">
+                    <CheckCircle2 className="w-4 h-4" />
+                    60–120 м² талбайтай 3 өрөө хамгийн эрэлттэй
+                  </div>
+                  <div className="results-ai-pick-line">
+                    <TrendingUp className="w-4 h-4" />
+                    {districtLabel} сүүлийн 30 хоногт +4.6% өсөв
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+function Stat({
+  label,
+  value,
+  delta,
+  separators,
+}: {
+  label: string;
+  value: string;
+  delta: string;
+  separators?: boolean;
+}) {
+  return (
+    <div
+      className="results-stat"
+      style={
+        separators
+          ? {
+              borderLeft: "1px solid var(--border)",
+              borderRight: "1px solid var(--border)",
+            }
+          : undefined
+      }
+    >
+      <div className="results-stat-label">{label}</div>
+      <div className="num results-stat-value">{value}</div>
+      <div className="results-stat-delta">{delta}</div>
     </div>
   );
 }

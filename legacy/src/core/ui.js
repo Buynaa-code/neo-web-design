@@ -4,6 +4,7 @@ function goTo(name) {
   if (!APP_SCREENS.includes(name)) return;
   // Auth guard — нэвтрэхгүй байж хамгаалагдсан дэлгэц рүү очвол auth руу шилжүүлнэ
   if (PROTECTED_SCREENS.includes(name) && !state.isLoggedIn) {
+    state.postAuthRedirect = name;
     if (typeof showToast === 'function') showToast('Үргэлжлүүлэхийн тулд нэвтэрнэ үү', 'info');
     name = 'auth';
   }

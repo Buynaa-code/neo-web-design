@@ -1441,12 +1441,13 @@ function maybeShowOnboarding() {
   if (!shouldShowOnboarding()) return;
   if (document.getElementById('onboard-modal-root')) return;
   setTimeout(() => {
-    if (shouldShowOnboarding()) renderOnboardingModal();
+    if (shouldShowOnboarding() && !document.getElementById('onboard-modal-root')) renderOnboardingModal();
   }, 400);
 }
 window.maybeShowOnboarding = maybeShowOnboarding;
 
 function renderOnboardingModal() {
+  if (document.getElementById('onboard-modal-root')) return;
   const remaining = onboardRemainingKinds();
   if (remaining.length === 0) return;
 
@@ -1527,8 +1528,7 @@ function onboardSkip() {
 window.onboardSkip = onboardSkip;
 
 function closeOnboardingModal() {
-  const el = document.getElementById('onboard-modal-root');
-  if (el) el.remove();
+  document.querySelectorAll('#onboard-modal-root').forEach((el) => el.remove());
 }
 window.closeOnboardingModal = closeOnboardingModal;
 

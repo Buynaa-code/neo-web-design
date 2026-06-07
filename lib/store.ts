@@ -35,8 +35,8 @@ export interface InterestsProfile {
   name: string;
   lifestyle: string;
   mode: ListingMode;
-  budgetMin: number;
-  budgetMax: number;
+  budgetMin: number | null;
+  budgetMax: number | null;
   bedrooms: number[];
   bathroomsMin: number;
   office: boolean;
@@ -59,6 +59,7 @@ interface StoreState {
   mode: ListingMode;
   currentListingId: number | null;
   highlightedId: number | null;
+  highlightSource: "map" | "list" | null;
 
   // Filters
   filterDistrict: string | null;
@@ -106,7 +107,12 @@ interface StoreState {
   loanYears: number;
 
   // Rental management
-  rentalMgmtTab: "overview" | "occupancy" | "income" | "issues" | "tenants";
+  rentalMgmtTab: "overview" | "properties" | "tenants" | "contracts" | "income";
+
+  // Schedule viewing
+  scheduleDate: string | null;
+  scheduleTime: string | null;
+  scheduleListingId: number | null;
 
   // Home AI chat
   homeAIChat: AIChatMessage[];
@@ -163,7 +169,7 @@ interface StoreActions {
   setFullMap: (v: boolean) => void;
   setMobileView: (v: "list" | "map") => void;
   setMapMode: (v: "pins" | "heatmap") => void;
-  setHighlightedId: (id: number | null) => void;
+  setHighlightedId: (id: number | null, source?: "map" | "list") => void;
   setCurrentListingId: (id: number | null) => void;
   setMediaTab: (t: StoreState["mediaTab"]) => void;
   setSavedTab: (t: "listings" | "searches") => void;
@@ -196,6 +202,12 @@ interface StoreActions {
   setLoanDownPct: (pct: number) => void;
   setLoanYears: (y: number) => void;
 
+  // Schedule
+  setScheduleDate: (d: string | null) => void;
+  setScheduleTime: (t: string | null) => void;
+  setScheduleListingId: (id: number | null) => void;
+  resetSchedule: () => void;
+
   // Home AI chat
   pushAIChat: (m: AIChatMessage) => void;
   setHomeAIChatCollapsed: (v: boolean) => void;
@@ -210,6 +222,11 @@ interface StoreActions {
   // Saved listings
   toggleSavedListing: (id: number) => void;
   isSaved: (id: number) => boolean;
+
+  // Saved searches
+  addSavedSearch: (s: Omit<SavedSearch, "id">) => SavedSearch;
+  updateSavedSearch: (id: number, patch: Partial<SavedSearch>) => void;
+  removeSavedSearch: (id: number) => void;
 
   // Viewed
   markViewed: (id: number) => void;
@@ -248,6 +265,7 @@ const initialState: StoreState = {
   mode: "sale",
   currentListingId: null,
   highlightedId: null,
+  highlightSource: null,
 
   filterDistrict: null,
   filterRooms: null,
@@ -287,6 +305,10 @@ const initialState: StoreState = {
   loanYears: 20,
 
   rentalMgmtTab: "overview",
+
+  scheduleDate: null,
+  scheduleTime: null,
+  scheduleListingId: null,
 
   homeAIChat: [],
   homeAIChatCollapsed: false,
@@ -338,7 +360,8 @@ export const useStore = create<StoreState & StoreActions>()(
       setFullMap: (fullMap) => set({ fullMap }),
       setMobileView: (mobileView) => set({ mobileView }),
       setMapMode: (mapMode) => set({ mapMode }),
-      setHighlightedId: (highlightedId) => set({ highlightedId }),
+      setHighlightedId: (highlightedId, highlightSource) =>
+        set({ highlightedId, highlightSource: highlightedId ? highlightSource ?? null : null }),
       setCurrentListingId: (currentListingId) => set({ currentListingId }),
       setMediaTab: (mediaTab) => set({ mediaTab }),
       setSavedTab: (savedTab) => set({ savedTab }),
@@ -398,6 +421,11 @@ export const useStore = create<StoreState & StoreActions>()(
       setLoanDownPct: (loanDownPct) => set({ loanDownPct }),
       setLoanYears: (loanYears) => set({ loanYears }),
 
+      setScheduleDate: (scheduleDate) => set({ scheduleDate }),
+      setScheduleTime: (scheduleTime) => set({ scheduleTime }),
+      setScheduleListingId: (scheduleListingId) => set({ scheduleListingId }),
+      resetSchedule: () => set({ scheduleDate: null, scheduleTime: null, scheduleListingId: null }),
+
       pushAIChat: (m) => set((s) => ({ homeAIChat: [...s.homeAIChat, m] })),
       setHomeAIChatCollapsed: (homeAIChatCollapsed) => set({ homeAIChatCollapsed }),
       clearAIChat: () => set({ homeAIChat: [] }),
@@ -414,6 +442,24 @@ export const useStore = create<StoreState & StoreActions>()(
             : [...s.savedListingIds, id],
         })),
       isSaved: (id) => get().savedListingIds.includes(id),
+
+      addSavedSearch: (draft) => {
+        const id =
+          get().savedSearches.reduce((m, x) => Math.max(m, x.id), 0) + 1;
+        const next: SavedSearch = { ...draft, id };
+        set((s) => ({ savedSearches: [...s.savedSearches, next] }));
+        return next;
+      },
+      updateSavedSearch: (id, patch) =>
+        set((s) => ({
+          savedSearches: s.savedSearches.map((x) =>
+            x.id === id ? { ...x, ...patch } : x
+          ),
+        })),
+      removeSavedSearch: (id) =>
+        set((s) => ({
+          savedSearches: s.savedSearches.filter((x) => x.id !== id),
+        })),
 
       markViewed: (id) =>
         set((s) =>
@@ -512,6 +558,7 @@ export const useStore = create<StoreState & StoreActions>()(
         isLoggedIn: s.isLoggedIn,
         currentUser: s.currentUser,
         savedListingIds: s.savedListingIds,
+        savedSearches: s.savedSearches,
         viewedIds: s.viewedIds,
         myPlaces: s.myPlaces,
         userInterestsList: s.userInterestsList,

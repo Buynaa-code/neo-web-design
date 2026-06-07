@@ -156,6 +156,12 @@ export const LISTINGS: Listing[] = [
   { id: 42, mode: "rent", district: "Сүхбаатар", khoroo: "5", khotkhon: "Global Plaza", rooms: 2, area: 68, floor: "11/16", year: 2022,
     price: 1750000, photos: 42, status: "new", listedDays: 2, viewCount: 58, viewingCount: 2,
     features: ["Шинэ", "Premium", "Тавилгатай", "Хотын төв", "Лифт"], agentId: 2, lat: 0.48, lng: 0.28 },
+  { id: 100, mode: "sale", district: "Хан-Уул", khoroo: "11", khotkhon: "Грийн Вилла хотхон", rooms: 4, area: 320, floor: "3/4", year: 2026,
+    price: 7500000000, photos: 100, status: "new", listedDays: 1, viewCount: 12, viewingCount: 1,
+    features: ["Шинэ", "Single", "Зайсан", "Premium хотхон", "Хувийн gym", "Sauna", "Төвлөрсөн дулаан", "Ногоон байгууламж"],
+    agentId: 1, lat: 0.28, lng: 0.78,
+    desc: "Грийн Вилла хотхон 204-р байр 301 тоот. Зайсаны premium амины орон сууц. 320м² 4 өрөө, B1 давхарт gym+sauna+агуулах. 7.5 тэрбум, доод үнэ 7.0 тэрбум. Гэрчилгээгүй - захиалгын гэрээтэй, 2026.IV улирлын ашиглалт.",
+    photoSeeds: ["green-villa-main", "green-villa-lounge", "green-villa-kitchen", "green-villa-sauna", "green-villa-yard"] },
 ];
 
 export const MAP_LABELS: MapLabel[] = [

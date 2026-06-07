@@ -13,6 +13,7 @@ const state = {
   activityTab: 'viewings',
   savedListId: 1,
   authTab: 'signin',
+  postAuthRedirect: null,
   filterDistrict: null,
   filterRooms: null,
   filterBusStop: null, // BUS_STOPS[].id — сонгосон автобусны буудал
@@ -120,6 +121,7 @@ function saveAuth() {
 function clearAuth() {
   state.isLoggedIn = false;
   state.currentUser = null;
+  state.postAuthRedirect = null;
   try {
     localStorage.removeItem(AUTH_KEY);
   } catch (e) {}
@@ -279,4 +281,3 @@ const APP_SCREENS = [
 ];
 // Нэвтрэлт шаардах дэлгэцүүд — зочин эдгээрт орвол auth руу шилжинэ
 const PROTECTED_SCREENS = ['profile', 'activity', 'saved', 'alerts', 'rental-mgmt', 'list-property', 'schedule'];
-

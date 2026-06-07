@@ -12,7 +12,7 @@
       ]
     },
     {
-      "source": "/public/images/(.*)",
+      "source": "/assets/images/(.*)",
       "headers": [
         {
           "key": "Cache-Control",

@@ -1872,17 +1872,17 @@ function bmFooter() {
         <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-8">
           <div class="col-span-2 md:col-span-3 lg:col-span-2">
             <div class="flex items-center mb-4">
-              <img src="public/images/logo/horizontal-light.png" alt="NEOMAP" class="neo-logo neo-logo-light h-10" />
-              <img src="public/images/logo/horizontal-dark.png" alt="NEOMAP" class="neo-logo neo-logo-dark h-10" />
+              <img src="assets/images/logo/horizontal-light.png" alt="NEOMAP" class="neo-logo neo-logo-light h-10" />
+              <img src="assets/images/logo/horizontal-dark.png" alt="NEOMAP" class="neo-logo neo-logo-dark h-10" />
             </div>
             <p class="text-sm" style="color: var(--text-2); max-width: 360px; line-height: 1.6;">
               NEOMAP бол Монголын үл хөдлөхийн хамгийн найдвартай, ухаалаг, хүртээмжтэй зуучлал, зөвлөгөө, үнэлгээний цогц платформ юм.
             </p>
             <div class="flex items-center gap-3 mt-6">
-              <a class="w-8 h-8 rounded-full bg-[var(--surface-2)] flex items-center justify-center hover:bg-[var(--gold-soft)] transition" style="color: var(--text-2);"><i data-lucide="facebook" class="w-4 h-4"></i></a>
-              <a class="w-8 h-8 rounded-full bg-[var(--surface-2)] flex items-center justify-center hover:bg-[var(--gold-soft)] transition" style="color: var(--text-2);"><i data-lucide="instagram" class="w-4 h-4"></i></a>
-              <a class="w-8 h-8 rounded-full bg-[var(--surface-2)] flex items-center justify-center hover:bg-[var(--gold-soft)] transition" style="color: var(--text-2);"><i data-lucide="youtube" class="w-4 h-4"></i></a>
-              <a class="w-8 h-8 rounded-full bg-[var(--surface-2)] flex items-center justify-center hover:bg-[var(--gold-soft)] transition" style="color: var(--text-2);"><i data-lucide="linkedin" class="w-4 h-4"></i></a>
+              <a class="w-8 h-8 rounded-full bg-[var(--surface-2)] flex items-center justify-center hover:bg-[var(--gold-soft)] transition" style="color: var(--text-2);"><i data-lucide="message-circle" class="w-4 h-4"></i></a>
+              <a class="w-8 h-8 rounded-full bg-[var(--surface-2)] flex items-center justify-center hover:bg-[var(--gold-soft)] transition" style="color: var(--text-2);"><i data-lucide="camera" class="w-4 h-4"></i></a>
+              <a class="w-8 h-8 rounded-full bg-[var(--surface-2)] flex items-center justify-center hover:bg-[var(--gold-soft)] transition" style="color: var(--text-2);"><i data-lucide="play" class="w-4 h-4"></i></a>
+              <a class="w-8 h-8 rounded-full bg-[var(--surface-2)] flex items-center justify-center hover:bg-[var(--gold-soft)] transition" style="color: var(--text-2);"><i data-lucide="briefcase" class="w-4 h-4"></i></a>
             </div>
           </div>
 

@@ -8,6 +8,7 @@ import {
   KeyRound,
   PawPrint,
   Sofa,
+  Sparkles,
   TrendingUp,
   Users,
   type LucideIcon,
@@ -213,4 +214,3 @@ function Toggle({
   );
 }
 
-import { Sparkles } from "lucide-react";

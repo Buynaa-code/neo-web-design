@@ -1,5 +1,7 @@
 /* ============== ACTIONS — listing + agent + directions ============== */
 
+window.VIEWED_IDS = window.VIEWED_IDS || [];
+
 function markViewed(id) {
   const i = VIEWED_IDS.indexOf(id);
   if (i >= 0) VIEWED_IDS.splice(i, 1);
@@ -296,4 +298,3 @@ function toggleSaved(id, btnEl) {
   }
   if (typeof refreshInterestsBadge === 'function') refreshInterestsBadge();
 }
-

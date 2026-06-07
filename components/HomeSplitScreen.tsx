@@ -15,7 +15,7 @@ import {
   SlidersHorizontal,
   X,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { DISTRICTS } from "@/data/constants";
 import {
@@ -30,6 +30,8 @@ import { cn } from "@/lib/utils";
 import { photoUrl } from "@/data/listings";
 import type { Listing } from "@/lib/types";
 import { ResultsMap } from "@/components/results/ResultsMap";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 const roomOptions = [1, 2, 3, 4] as const;
 
@@ -243,9 +245,18 @@ export function HomeSplitScreen() {
           </div>
 
           {listings.length ? (
-            listings.slice(0, 30).map((listing) => (
-              <HomeListingRow key={listing.id} listing={listing} />
-            ))
+            <>
+              {listings.slice(0, 30).map((listing) => (
+                <HomeListingRow key={listing.id} listing={listing} />
+              ))}
+              {listings.length > 30 && (
+                <div className="text-center mt-3">
+                  <Link href="/results" className="bk-mapbtn inline-flex">
+                    Бүх <span className="num mx-1">{listings.length}</span> зар →
+                  </Link>
+                </div>
+              )}
+            </>
           ) : (
             <div className="bk-empty">
               <h3>Үр дүн олдсонгүй</h3>
@@ -263,10 +274,10 @@ export function HomeSplitScreen() {
         <div className="home-map-overlay">
           <div className="home-topbar">
             <div className="home-topbar-right">
-              <button type="button" className="home-filter-btn" title="Дэлгэрэнгүй шүүлтүүр">
+              <Link href="/results" className="home-filter-btn" title="Дэлгэрэнгүй шүүлтүүр">
                 <SlidersHorizontal className="size-4" />
                 <span>Дэлгэрэнгүй</span>
-              </button>
+              </Link>
               <button
                 type="button"
                 className="home-icon-btn"
@@ -276,9 +287,9 @@ export function HomeSplitScreen() {
                 <MapPinned className="size-4" />
                 {myPlaces.length ? <span className="home-icon-badge num">{myPlaces.length}</span> : null}
               </button>
-              <button type="button" className="home-icon-btn" title="Хадгалсан">
+              <Link href="/saved" className="home-icon-btn" title="Хадгалсан">
                 <Heart className="size-4" />
-              </button>
+              </Link>
             </div>
           </div>
           <div className="home-stats-strip">
@@ -526,22 +537,34 @@ function CheckRow({
 }
 
 function HomeListingRow({ listing }: { listing: Listing }) {
+  const router = useRouter();
   const highlightedId = useStore((s) => s.highlightedId);
+  const highlightSource = useStore((s) => s.highlightSource);
   const setHighlightedId = useStore((s) => s.setHighlightedId);
   const isSaved = useStore((s) => s.savedListingIds.includes(listing.id));
   const toggleSaved = useStore((s) => s.toggleSavedListing);
   const isRent = listing.mode === "rent";
+  const articleRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    if (highlightedId !== listing.id) return;
+    if (highlightSource !== "map") return;
+    articleRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }, [highlightedId, highlightSource, listing.id]);
 
   return (
     <article
+      ref={articleRef}
       className={cn(
         "bk-card",
         (listing.status === "hot" || highlightedId === listing.id) && "bk-card-active"
       )}
       data-listing-id={listing.id}
-      onMouseEnter={() => setHighlightedId(listing.id)}
+      onMouseEnter={() => setHighlightedId(listing.id, "list")}
       onMouseLeave={() => setHighlightedId(null)}
-      onClick={() => setHighlightedId(listing.id)}
+      onClick={() => router.push(`/property/${listing.id}`)}
+      role="link"
+      style={{ cursor: "pointer" }}
     >
       <div
         className="bk-card-img"
@@ -550,16 +573,13 @@ function HomeListingRow({ listing }: { listing: Listing }) {
       <div className="bk-card-body bm-listing-row-body">
         <div className="bm-listing-row-top">
           <div className="min-w-0">
-            <button
-              type="button"
+            <Link
+              href={`/property/${listing.id}`}
               className="bm-listing-row-title bk-card-title text-left"
-              onClick={(event) => {
-                event.stopPropagation();
-                setHighlightedId(listing.id);
-              }}
+              onClick={(event) => event.stopPropagation()}
             >
               {listing.khotkhon}
-            </button>
+            </Link>
             <div className="bm-listing-row-loc">
               {listing.district} дүүрэг, {listing.khoroo}-р хороо
             </div>
