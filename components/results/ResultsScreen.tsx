@@ -3,7 +3,19 @@
 import { useEffect, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import { useShallow } from "zustand/react/shallow";
-import { BookmarkPlus, CheckCircle2, Sparkles, SlidersHorizontal, TrendingUp } from "lucide-react";
+import {
+  BookmarkPlus,
+  CheckCircle2,
+  Flame,
+  MapPin,
+  Maximize2,
+  Minimize2,
+  PenLine,
+  Sparkles,
+  SlidersHorizontal,
+  Trash2,
+  TrendingUp,
+} from "lucide-react";
 import { useStore } from "@/lib/store";
 import { filteredListings, activeListings } from "@/lib/filters";
 import { fmtCompact } from "@/data/formatters";
@@ -15,6 +27,7 @@ import { SortBar } from "./SortBar";
 import { AdvancedFiltersModal } from "./AdvancedFiltersModal";
 import { AISearchBar } from "./AISearchBar";
 import { SaveSearchModal } from "./SavedSearchModals";
+import { DetailedStatsModal } from "./DetailedStatsModal";
 
 export function ResultsScreen() {
   const params = useSearchParams();
@@ -41,6 +54,7 @@ export function ResultsScreen() {
       filterPpmMax: s.filterPpmMax,
       filterAreaMin: s.filterAreaMin,
       filterAreaMax: s.filterAreaMax,
+      filterPropertyKind: s.filterPropertyKind,
       drawnPolygon: s.drawnPolygon,
       sortBy: s.sortBy,
     }))
@@ -71,9 +85,30 @@ export function ResultsScreen() {
   const pushToast = useStore((s) => s.pushToast);
   const openModal = useStore((s) => s.openModal);
   const openAdvanced = () => openModal(<AdvancedFiltersModal />, "lg");
+  const fullMap = useStore((s) => s.fullMap);
+  const setFullMap = useStore((s) => s.setFullMap);
+  const mapMode = useStore((s) => s.mapMode);
+  const setMapMode = useStore((s) => s.setMapMode);
+  const drawingPolygon = useStore((s) => s.drawingPolygon);
+  const setDrawingPolygon = useStore((s) => s.setDrawingPolygon);
+  const drawnPolygon = useStore((s) => s.drawnPolygon);
+  const setDrawnPolygon = useStore((s) => s.setDrawnPolygon);
+
+  useEffect(() => {
+    if (!fullMap) return;
+    document.body.classList.add("map-fs-open");
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setFullMap(false);
+    };
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.body.classList.remove("map-fs-open");
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [fullMap, setFullMap]);
 
   return (
-    <div className="results-shell">
+    <div className={`results-shell${fullMap ? " full-map" : ""}`}>
       <AISearchBar />
       <div className="results-hero">
         <div>
@@ -130,12 +165,104 @@ export function ResultsScreen() {
               <ResultsList listings={listings} />
             </div>
             <div className="results-map-col">
-              <ResultsMap listings={listings} />
+              <div className="results-map-wrap">
+                <ResultsMap listings={listings} />
+                <div className="results-map-tools">
+                  <div className="results-map-pill" role="tablist" aria-label="Map mode">
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={mapMode === "pins"}
+                      className={mapMode === "pins" ? "active" : undefined}
+                      onClick={() => setMapMode("pins")}
+                      title="Pin горим"
+                    >
+                      <MapPin className="w-3.5 h-3.5" />
+                      <span className="hidden sm:inline">Pin</span>
+                    </button>
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={mapMode === "heatmap"}
+                      className={mapMode === "heatmap" ? "active" : undefined}
+                      onClick={() => setMapMode("heatmap")}
+                      title="Heatmap"
+                    >
+                      <Flame className="w-3.5 h-3.5" />
+                      <span className="hidden sm:inline">Heatmap</span>
+                    </button>
+                  </div>
+                  <button
+                    type="button"
+                    className={`results-map-icon-btn${drawingPolygon ? " active" : ""}`}
+                    onClick={() => {
+                      if (drawingPolygon) {
+                        setDrawingPolygon(false);
+                      } else {
+                        setDrawnPolygon(null);
+                        setDrawingPolygon(true);
+                        pushToast("Газрын зураг дээр товшиж бүс зурна (давхар click дуусгах)", "info");
+                      }
+                    }}
+                    title={drawingPolygon ? "Зурах горим зогсоох" : "Бүс зурж шүүх"}
+                  >
+                    <PenLine className="w-3.5 h-3.5" />
+                  </button>
+                  {drawnPolygon && drawnPolygon.length > 0 && (
+                    <button
+                      type="button"
+                      className="results-map-icon-btn"
+                      onClick={() => {
+                        setDrawnPolygon(null);
+                        setDrawingPolygon(false);
+                        pushToast("Бүс арилгалаа", "info");
+                      }}
+                      title="Бүс арилгах"
+                      style={{ color: "var(--danger)" }}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  className="results-map-fs-btn"
+                  onClick={() => setFullMap(!fullMap)}
+                  title={fullMap ? "Жагсаалт нээх" : "Газрын зургийг дэлгэх"}
+                  aria-label={fullMap ? "Хаах" : "Бүтэн дэлгэц"}
+                >
+                  {fullMap ? (
+                    <Minimize2 className="w-4 h-4" />
+                  ) : (
+                    <Maximize2 className="w-4 h-4" />
+                  )}
+                  <span className="hidden sm:inline">
+                    {fullMap ? "Жагсаалт нээх" : "Бүтэн дэлгэц"}
+                  </span>
+                </button>
+              </div>
               <div className="results-side-stack">
                 <div className="results-side-block">
                   <div className="results-side-title">
-                    Зах зээлийн тойм
-                    <span className="results-side-sub">({districtLabel})</span>
+                    <span>
+                      Зах зээлийн тойм{" "}
+                      <span className="results-side-sub">({districtLabel})</span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        openModal(
+                          <DetailedStatsModal
+                            initialDistrict={state.filterDistrict ?? "all"}
+                          />,
+                          "lg"
+                        )
+                      }
+                      className="text-xs font-medium hover:underline ml-auto"
+                      style={{ color: "var(--gold-brand)" }}
+                    >
+                      Дэлгэрэнгүй →
+                    </button>
                   </div>
                   <div className="results-stats-grid">
                     <Stat

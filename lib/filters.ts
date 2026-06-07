@@ -1,4 +1,4 @@
-import type { Listing } from "@/lib/types";
+import type { Listing, ListingPropertyKind } from "@/lib/types";
 import { LISTINGS } from "@/data/listings";
 import { AGENTS } from "@/data/agents";
 import { BUS_STOPS, BUS_STOP_RADIUS } from "@/data/bus-stops";
@@ -33,6 +33,15 @@ export function isNewProject(l: Listing): boolean {
   return l.year >= 2022 || l.status === "new";
 }
 
+export function getPropertyKind(l: Listing): ListingPropertyKind {
+  if (l.propertyKind) return l.propertyKind;
+  const feats = (l.features ?? []).join(" ").toLowerCase();
+  const floor = (l.floor ?? "").toLowerCase();
+  if (/хаус|вилла|амины орон сууц|townhouse/.test(feats + " " + floor)) return "house";
+  if (/оффис|худалдаа|агуулах|зочид буудал|service|commercial/.test(feats)) return "other";
+  return "apartment";
+}
+
 export function getLifestyleTags(l: Listing): string[] {
   const feats = (l.features ?? []).join(" ").toLowerCase();
   const tags: string[] = [];
@@ -51,6 +60,7 @@ export function getLifestyleTags(l: Listing): string[] {
 
 export interface FilterState {
   mode: "sale" | "rent";
+  filterPropertyKind: ListingPropertyKind | null;
   filterDistrict: string | null;
   filterRooms: number[] | null;
   filterBusStop: string | null;
@@ -73,6 +83,8 @@ export interface FilterState {
 export function filteredListings(s: FilterState): Listing[] {
   let list = activeListings().filter((l) => l.mode === s.mode);
 
+  if (s.filterPropertyKind)
+    list = list.filter((l) => getPropertyKind(l) === s.filterPropertyKind);
   if (s.filterDistrict) list = list.filter((l) => l.district === s.filterDistrict);
   if (s.filterRooms && s.filterRooms.length)
     list = list.filter((l) => s.filterRooms!.includes(l.rooms));

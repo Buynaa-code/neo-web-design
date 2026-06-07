@@ -91,13 +91,24 @@ export function CallAgentModal({ agent }: { agent: Agent }) {
         <button type="button" onClick={copyPhone} className="btn btn-secondary flex-1">
           <Copy className="w-4 h-4" /> Хуулах
         </button>
-        <a
-          href={`tel:${agent.phone.replace(/[^0-9+]/g, "")}`}
+        <button
+          type="button"
           className="btn btn-cta flex-1"
-          onClick={() => closeModal()}
+          onClick={() => {
+            const tel = `tel:${agent.phone.replace(/[^0-9+]/g, "")}`;
+            const isMobile =
+              typeof window !== "undefined" &&
+              /Mobi|Android|iPhone|iPad/i.test(window.navigator.userAgent);
+            if (isMobile) {
+              window.location.href = tel;
+            } else {
+              copyPhone();
+            }
+            closeModal();
+          }}
         >
           <Phone className="w-4 h-4" /> Залгах
-        </a>
+        </button>
       </div>
     </div>
   );

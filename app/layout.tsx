@@ -11,6 +11,7 @@ import { CmdPalette } from "@/components/CmdPalette";
 import { PlacePicker } from "@/components/PlacePicker";
 import { Lightbox } from "@/components/property/Lightbox";
 import { FooterShell } from "@/components/FooterShell";
+import { DevTools } from "@/components/DevTools";
 import { BrandLogoSymbol } from "@/components/BrandLogo";
 import { cn } from "@/lib/utils";
 
@@ -106,6 +107,7 @@ export default function RootLayout({
           <CmdPalette />
           <PlacePicker />
           <Lightbox />
+          <DevTools />
         </ThemeProvider>
       </body>
     </html>

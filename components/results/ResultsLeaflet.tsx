@@ -2,13 +2,23 @@
 
 import { useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { MapContainer, Marker, Popup, TileLayer, useMap } from "react-leaflet";
+import {
+  CircleMarker,
+  MapContainer,
+  Marker,
+  Polygon,
+  Popup,
+  TileLayer,
+  useMap,
+  useMapEvents,
+} from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import type { Listing } from "@/lib/types";
 import { fmtMapPinPrice } from "@/data/formatters";
 import { useStore, type MyPlace } from "@/lib/store";
 import { normalisedToLatLng } from "@/lib/utils";
+import { fmtMinutes, listingToPlace } from "@/lib/travel";
 
 const PLACE_KIND_META: Record<MyPlace["kind"], { icon: string; tone: string }> = {
   home: { icon: "🏠", tone: "#0F766E" },
@@ -76,12 +86,95 @@ function PanToHighlight({ listings }: { listings: Listing[] }) {
   return null;
 }
 
+function PolygonDrawer() {
+  const drawing = useStore((s) => s.drawingPolygon);
+  const polygon = useStore((s) => s.drawnPolygon);
+  const setPolygon = useStore((s) => s.setDrawnPolygon);
+  const setDrawing = useStore((s) => s.setDrawingPolygon);
+
+  useMapEvents({
+    click(e) {
+      if (!drawing) return;
+      // store uses { x: lat, y: lng }
+      const next = [...(polygon ?? []), { x: e.latlng.lat, y: e.latlng.lng }];
+      setPolygon(next);
+    },
+    dblclick() {
+      if (drawing) setDrawing(false);
+    },
+  });
+
+  if (!polygon || polygon.length === 0) return null;
+  const positions = polygon.map((p) => [p.x, p.y] as [number, number]);
+  return (
+    <Polygon
+      positions={positions.length >= 3 ? positions : [...positions, positions[0]]}
+      pathOptions={{
+        color: "var(--gold-brand)",
+        fillColor: "var(--gold-brand)",
+        fillOpacity: 0.12,
+        weight: 2,
+      }}
+    />
+  );
+}
+
+function TravelMini({ listing, places }: { listing: Listing; places: MyPlace[] }) {
+  if (places.length === 0) return null;
+  const nearest = places
+    .map((p) => ({ p, est: listingToPlace(listing, p) }))
+    .sort((a, b) => a.est.car.minutes - b.est.car.minutes)
+    .slice(0, 2);
+  return (
+    <div
+      className="neo-pin-travel"
+      style={{
+        marginTop: 6,
+        paddingTop: 6,
+        borderTop: "1px solid rgba(0,0,0,.1)",
+        fontSize: 11,
+      }}
+    >
+      {nearest.map(({ p, est }) => (
+        <div
+          key={p.id}
+          style={{ display: "flex", alignItems: "center", gap: 4 }}
+        >
+          <span>
+            {p.kind === "home"
+              ? "🏠"
+              : p.kind === "work"
+                ? "💼"
+                : p.kind === "school"
+                  ? "🎓"
+                  : p.kind === "daycare"
+                    ? "🧸"
+                    : "📍"}
+          </span>
+          <span style={{ fontWeight: 600 }}>{p.label}:</span>
+          <span style={{ marginLeft: "auto" }}>
+            🚗 {fmtMinutes(est.car.minutes)} · 🚶 {fmtMinutes(est.walk.minutes)}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function priceTone(l: Listing): string {
+  if (l.status === "hot") return "#C44545";
+  if (l.status === "new") return "#1F6B47";
+  if (l.status === "drop") return "#C9A35F";
+  return "#0A1F44";
+}
+
 export function ResultsLeaflet({ listings }: { listings: Listing[] }) {
   const router = useRouter();
   const highlightedId = useStore((s) => s.highlightedId);
   const setHighlightedId = useStore((s) => s.setHighlightedId);
   const myPlaces = useStore((s) => s.myPlaces);
   const openPlacePicker = useStore((s) => s.openPlacePicker);
+  const mapMode = useStore((s) => s.mapMode);
 
   const markers = useMemo(
     () =>
@@ -106,34 +199,72 @@ export function ResultsLeaflet({ listings }: { listings: Listing[] }) {
       />
       <FitBounds listings={listings} />
       <PanToHighlight listings={listings} />
-      {markers.map(({ l, lat, lng }) => (
-        <Marker
-          key={l.id}
-          position={[lat, lng]}
-          icon={buildPriceIcon(l, highlightedId === l.id)}
-          eventHandlers={{
-            click: () => setHighlightedId(l.id, "map"),
-            mouseover: () => setHighlightedId(l.id, "map"),
-            mouseout: () => setHighlightedId(null),
-          }}
-        >
-          <Popup>
-            <div className="neo-pin-popup">
-              <strong>{l.khotkhon}</strong>
-              <div>
-                {l.district} · {l.rooms} өрөө · {l.area}м²
-              </div>
-              <button
-                type="button"
-                className="btn-primary text-xs mt-2"
-                onClick={() => router.push(`/property/${l.id}`)}
-              >
-                Дэлгэрэнгүй
-              </button>
-            </div>
-          </Popup>
-        </Marker>
-      ))}
+      <PolygonDrawer />
+      {mapMode === "heatmap"
+        ? markers.map(({ l, lat, lng }) => (
+            <CircleMarker
+              key={l.id}
+              center={[lat, lng]}
+              radius={highlightedId === l.id ? 24 : 18}
+              pathOptions={{
+                color: priceTone(l),
+                fillColor: priceTone(l),
+                fillOpacity: highlightedId === l.id ? 0.45 : 0.25,
+                weight: 1,
+              }}
+              eventHandlers={{
+                click: () => setHighlightedId(l.id, "map"),
+                mouseover: () => setHighlightedId(l.id, "map"),
+                mouseout: () => setHighlightedId(null),
+              }}
+            >
+              <Popup>
+                <div className="neo-pin-popup">
+                  <strong>{l.khotkhon}</strong>
+                  <div>
+                    {l.district} · {l.rooms} өрөө · {l.area}м²
+                  </div>
+                  <TravelMini listing={l} places={myPlaces} />
+                  <button
+                    type="button"
+                    className="btn-primary text-xs mt-2"
+                    onClick={() => router.push(`/property/${l.id}`)}
+                  >
+                    Дэлгэрэнгүй
+                  </button>
+                </div>
+              </Popup>
+            </CircleMarker>
+          ))
+        : markers.map(({ l, lat, lng }) => (
+            <Marker
+              key={l.id}
+              position={[lat, lng]}
+              icon={buildPriceIcon(l, highlightedId === l.id)}
+              eventHandlers={{
+                click: () => setHighlightedId(l.id, "map"),
+                mouseover: () => setHighlightedId(l.id, "map"),
+                mouseout: () => setHighlightedId(null),
+              }}
+            >
+              <Popup>
+                <div className="neo-pin-popup">
+                  <strong>{l.khotkhon}</strong>
+                  <div>
+                    {l.district} · {l.rooms} өрөө · {l.area}м²
+                  </div>
+                  <TravelMini listing={l} places={myPlaces} />
+                  <button
+                    type="button"
+                    className="btn-primary text-xs mt-2"
+                    onClick={() => router.push(`/property/${l.id}`)}
+                  >
+                    Дэлгэрэнгүй
+                  </button>
+                </div>
+              </Popup>
+            </Marker>
+          ))}
       {myPlaces.map((p) => (
         <Marker key={p.id} position={[p.lat, p.lng]} icon={buildPlaceIcon(p)}>
           <Popup>

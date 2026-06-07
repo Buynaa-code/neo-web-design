@@ -152,7 +152,8 @@ export const LISTINGS: Listing[] = [
     priceHistory: [{ d: "2026-03-15", p: 445000000 }, { d: "2026-04-25", p: 430000000 }, { d: "2026-05-15", p: 415000000 }] },
   { id: 41, mode: "sale", district: "Налайх", khoroo: "5", khotkhon: "Country Side", rooms: 5, area: 320, floor: "Хаус", year: 2020,
     price: 850000000, photos: 41, status: "active", listedDays: 42, viewCount: 187, viewingCount: 6,
-    features: ["Хаус", "Том хашаа", "3 машины гараж", "Эко", "Цэцэрлэгтэй"], agentId: 5, lat: 0.9, lng: 0.9 },
+    features: ["Хаус", "Том хашаа", "3 машины гараж", "Эко", "Цэцэрлэгтэй"], agentId: 5, lat: 0.9, lng: 0.9,
+    propertyKind: "house" },
   { id: 42, mode: "rent", district: "Сүхбаатар", khoroo: "5", khotkhon: "Global Plaza", rooms: 2, area: 68, floor: "11/16", year: 2022,
     price: 1750000, photos: 42, status: "new", listedDays: 2, viewCount: 58, viewingCount: 2,
     features: ["Шинэ", "Premium", "Тавилгатай", "Хотын төв", "Лифт"], agentId: 2, lat: 0.48, lng: 0.28 },
@@ -161,7 +162,8 @@ export const LISTINGS: Listing[] = [
     features: ["Шинэ", "Single", "Зайсан", "Premium хотхон", "Хувийн gym", "Sauna", "Төвлөрсөн дулаан", "Ногоон байгууламж"],
     agentId: 1, lat: 0.28, lng: 0.78,
     desc: "Грийн Вилла хотхон 204-р байр 301 тоот. Зайсаны premium амины орон сууц. 320м² 4 өрөө, B1 давхарт gym+sauna+агуулах. 7.5 тэрбум, доод үнэ 7.0 тэрбум. Гэрчилгээгүй - захиалгын гэрээтэй, 2026.IV улирлын ашиглалт.",
-    photoSeeds: ["green-villa-main", "green-villa-lounge", "green-villa-kitchen", "green-villa-sauna", "green-villa-yard"] },
+    photoSeeds: ["green-villa-main", "green-villa-lounge", "green-villa-kitchen", "green-villa-sauna", "green-villa-yard"],
+    propertyKind: "house" },
 ];
 
 export const MAP_LABELS: MapLabel[] = [

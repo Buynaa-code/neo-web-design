@@ -4,6 +4,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type {
   ListingMode,
+  ListingPropertyKind,
   SavedList,
   SavedSearch,
   Screen,
@@ -62,6 +63,7 @@ interface StoreState {
   highlightSource: "map" | "list" | null;
 
   // Filters
+  filterPropertyKind: ListingPropertyKind | null;
   filterDistrict: string | null;
   filterRooms: number[] | null;
   filterBusStop: string | null;
@@ -176,6 +178,7 @@ interface StoreActions {
   setSavedListId: (id: number) => void;
 
   // Filters
+  setFilterPropertyKind: (k: ListingPropertyKind | null) => void;
   setFilterDistrict: (d: string | null) => void;
   setFilterRooms: (r: number[] | null) => void;
   setFilterBusStop: (id: string | null) => void;
@@ -267,6 +270,7 @@ const initialState: StoreState = {
   highlightedId: null,
   highlightSource: null,
 
+  filterPropertyKind: null,
   filterDistrict: null,
   filterRooms: null,
   filterBusStop: null,
@@ -367,6 +371,7 @@ export const useStore = create<StoreState & StoreActions>()(
       setSavedTab: (savedTab) => set({ savedTab }),
       setSavedListId: (savedListId) => set({ savedListId }),
 
+      setFilterPropertyKind: (filterPropertyKind) => set({ filterPropertyKind, page: 1 }),
       setFilterDistrict: (filterDistrict) => set({ filterDistrict, page: 1 }),
       setFilterRooms: (filterRooms) => set({ filterRooms, page: 1 }),
       setFilterBusStop: (filterBusStop) => set({ filterBusStop, page: 1 }),
@@ -393,6 +398,7 @@ export const useStore = create<StoreState & StoreActions>()(
       setAiQuery: (aiQuery, aiExtracted = null) => set({ aiQuery, aiExtracted, page: 1 }),
       clearAllFilters: () =>
         set({
+          filterPropertyKind: null,
           filterDistrict: null,
           filterRooms: null,
           filterBusStop: null,

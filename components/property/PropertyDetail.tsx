@@ -67,6 +67,8 @@ import {
   CallAgentModal,
   ReviewsModal,
 } from "@/components/property/AgentModals";
+import { PriceHistory } from "@/components/property/PriceHistory";
+import { TravelTimes } from "@/components/property/TravelTimes";
 import { hasIpoteh, isListingVerified } from "@/lib/filters";
 import { useStore } from "@/lib/store";
 import { cn, geoDistance } from "@/lib/utils";
@@ -490,6 +492,20 @@ export function PropertyDetail({ listing }: { listing: Listing }) {
                 </div>
               ))}
             </div>
+          </section>
+
+          {listing.priceHistory && listing.priceHistory.length >= 2 && (
+            <section>
+              <h2 className="mb-3 text-base font-semibold">Үнийн чиг хандлага</h2>
+              <PriceHistory listing={listing} />
+            </section>
+          )}
+
+          <section>
+            <h2 className="mb-3 text-base font-semibold">
+              Хүрэх хугацаа (миний байршлуудаас)
+            </h2>
+            <TravelTimes listing={listing} />
           </section>
 
           {rooms.length ? (

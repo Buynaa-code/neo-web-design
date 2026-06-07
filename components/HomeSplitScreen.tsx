@@ -4,15 +4,21 @@ import {
   ArrowUpDown,
   BedDouble,
   Building2,
+  Calendar,
   Check,
+  Flame,
   Heart,
   Home,
+  House,
   KeyRound,
+  LayoutGrid,
   MapPin,
   MapPinned,
   Ruler,
   Search,
   SlidersHorizontal,
+  Sparkles,
+  TrendingDown,
   X,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -24,12 +30,14 @@ import {
   listingMinutesAgo,
   listingPrice,
 } from "@/data/formatters";
-import { activeListings, filteredListings, hasIpoteh, isListingVerified, isNewProject } from "@/lib/filters";
+import { activeListings, filteredListings, getPropertyKind, hasIpoteh, isListingVerified, isNewProject } from "@/lib/filters";
 import { useStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 import { photoUrl } from "@/data/listings";
 import type { Listing } from "@/lib/types";
 import { ResultsMap } from "@/components/results/ResultsMap";
+import { HomeAIChat } from "@/components/HomeAIChat";
+import { DualRangeSlider } from "@/components/DualRangeSlider";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -90,6 +98,8 @@ export function HomeSplitScreen() {
   const filterPpmMax = useStore((s) => s.filterPpmMax);
   const filterAreaMin = useStore((s) => s.filterAreaMin);
   const filterAreaMax = useStore((s) => s.filterAreaMax);
+  const filterPropertyKind = useStore((s) => s.filterPropertyKind);
+  const setFilterPropertyKind = useStore((s) => s.setFilterPropertyKind);
   const drawnPolygon = useStore((s) => s.drawnPolygon);
   const clearAllFilters = useStore((s) => s.clearAllFilters);
   const openPlacePicker = useStore((s) => s.openPlacePicker);
@@ -113,6 +123,7 @@ export function HomeSplitScreen() {
       filterPpmMax,
       filterAreaMin,
       filterAreaMax,
+      filterPropertyKind,
       drawnPolygon,
       sortBy,
     }),
@@ -132,6 +143,7 @@ export function HomeSplitScreen() {
       filterPpmMax,
       filterAreaMin,
       filterAreaMax,
+      filterPropertyKind,
       drawnPolygon,
       sortBy,
     ]
@@ -144,6 +156,7 @@ export function HomeSplitScreen() {
   );
 
   const activeFilterCount = [
+    filterPropertyKind,
     filterDistrict,
     filterRooms?.length,
     filterPriceMin || filterPriceMax,
@@ -186,6 +199,13 @@ export function HomeSplitScreen() {
               Түрээс
             </button>
           </div>
+          {mode === "sale" ? (
+            <PropertyKindSegment
+              baseListings={baseListings}
+              value={filterPropertyKind}
+              onChange={setFilterPropertyKind}
+            />
+          ) : null}
         </div>
 
         {activeFilterCount ? (
@@ -203,6 +223,25 @@ export function HomeSplitScreen() {
         <aside className="bk-sidebar" aria-label="Шүүлтүүрийн самбар">
           <div className="bk-side-title">Шүүх:</div>
           <DistrictFilter baseListings={baseListings} />
+          <RoomFilter
+            baseListings={baseListings}
+            filterRooms={filterRooms ?? []}
+            setFilterRooms={setFilterRooms}
+          />
+          <PriceRangeFilter
+            mode={mode}
+            baseListings={baseListings}
+            filterPriceMin={filterPriceMin}
+            filterPriceMax={filterPriceMax}
+            setPriceRange={setPriceRange}
+          />
+          <AreaRangeFilter
+            baseListings={baseListings}
+            filterAreaMin={filterAreaMin}
+            filterAreaMax={filterAreaMax}
+          />
+          <YearRangeFilter baseListings={baseListings} />
+          <StatusFilter baseListings={baseListings} />
           <PopularFilter
             baseListings={baseListings}
             filterVerified={filterVerified}
@@ -217,17 +256,6 @@ export function HomeSplitScreen() {
             toggleSchool={toggleSchool}
             toggleIncome={toggleIncome}
             toggleFurnished={() => toggleLifestyle("furnished")}
-          />
-          <PriceFilter
-            mode={mode}
-            filterPriceMin={filterPriceMin}
-            filterPriceMax={filterPriceMax}
-            setPriceRange={setPriceRange}
-          />
-          <RoomFilter
-            baseListings={baseListings}
-            filterRooms={filterRooms ?? []}
-            setFilterRooms={setFilterRooms}
           />
         </aside>
       </aside>
@@ -300,9 +328,60 @@ export function HomeSplitScreen() {
               </span>
             </span>
           </div>
+          <HomeAIChat />
         </div>
       </div>
     </section>
+  );
+}
+
+function PropertyKindSegment({
+  baseListings,
+  value,
+  onChange,
+}: {
+  baseListings: Listing[];
+  value: "apartment" | "house" | "other" | null;
+  onChange: (kind: "apartment" | "house" | "other" | null) => void;
+}) {
+  const counts = useMemo(() => {
+    const acc = { apartment: 0, house: 0, other: 0 };
+    for (const l of baseListings) acc[getPropertyKind(l)]++;
+    return acc;
+  }, [baseListings]);
+
+  const items: Array<{
+    key: "apartment" | "house" | "other";
+    label: string;
+    Icon: typeof Building2;
+    count: number;
+  }> = [
+    { key: "apartment", label: "Орон сууц", Icon: Building2, count: counts.apartment },
+    { key: "house", label: "Байшин", Icon: House, count: counts.house },
+    { key: "other", label: "Бусад", Icon: LayoutGrid, count: counts.other },
+  ];
+
+  return (
+    <div className="bk-kind-pill" role="tablist" aria-label="Үл хөдлөхийн төрөл">
+      {items.map(({ key, label, Icon, count }) => {
+        const active = value === key;
+        return (
+          <button
+            key={key}
+            type="button"
+            className={active ? "active" : undefined}
+            onClick={() => onChange(active ? null : key)}
+            role="tab"
+            aria-selected={active}
+            disabled={count === 0 && !active}
+          >
+            <Icon className="size-3.5" />
+            <span>{label}</span>
+            <span className="bk-kind-pill-count num">{count}</span>
+          </button>
+        );
+      })}
+    </div>
   );
 }
 
@@ -627,5 +706,223 @@ function HomeListingRow({ listing }: { listing: Listing }) {
         </div>
       </div>
     </article>
+  );
+}
+
+/* ─── New range-based filters ─── */
+
+function PriceRangeFilter({
+  mode,
+  baseListings,
+  filterPriceMin,
+  filterPriceMax,
+  setPriceRange,
+}: {
+  mode: "sale" | "rent";
+  baseListings: Listing[];
+  filterPriceMin: number | null;
+  filterPriceMax: number | null;
+  setPriceRange: (min: number | null, max: number | null) => void;
+}) {
+  const presets = mode === "rent" ? rentPricePresets : salePricePresets;
+
+  const { dataMin, dataMax, step } = useMemo(() => {
+    if (mode === "rent") {
+      return { dataMin: 200_000, dataMax: 6_000_000, step: 100_000 };
+    }
+    return { dataMin: 50_000_000, dataMax: 2_000_000_000, step: 10_000_000 };
+  }, [mode]);
+
+  const value: [number, number] = [
+    filterPriceMin ?? dataMin,
+    filterPriceMax ?? dataMax,
+  ];
+
+  const countInRange = baseListings.filter(
+    (l) => l.price >= value[0] && l.price <= value[1]
+  ).length;
+
+  return (
+    <section className="bk-side-section">
+      <div className="bk-side-heading">
+        <span className="bk-side-heading-left">
+          {mode === "rent" ? "Сарын түрээс" : "Төсөв"} (₮)
+        </span>
+        <span className="bk-side-heading-count num">{countInRange}</span>
+      </div>
+      <div className="bk-side-section-body">
+        <DualRangeSlider
+          min={dataMin}
+          max={dataMax}
+          step={step}
+          value={value}
+          onChange={([lo, hi]) =>
+            setPriceRange(lo > dataMin ? lo : null, hi < dataMax ? hi : null)
+          }
+          format={(v) => fmtCompact(v).replace("₮", "")}
+          ariaLabel="Үнэ"
+        />
+        <div className="bk-price-presets mt-1">
+          {presets.map((preset) => {
+            const active =
+              filterPriceMin === preset.min && filterPriceMax === preset.max;
+            return (
+              <button
+                key={preset.label}
+                type="button"
+                className={cn("bk-price-preset", active && "active")}
+                onClick={() =>
+                  active
+                    ? setPriceRange(null, null)
+                    : setPriceRange(preset.min, preset.max)
+                }
+              >
+                {preset.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function AreaRangeFilter({
+  baseListings,
+  filterAreaMin,
+  filterAreaMax,
+}: {
+  baseListings: Listing[];
+  filterAreaMin: number | null;
+  filterAreaMax: number | null;
+}) {
+  const setAreaRange = useStore((s) => s.setAreaRange);
+  const dataMin = 25;
+  const dataMax = 250;
+  const value: [number, number] = [
+    filterAreaMin ?? dataMin,
+    filterAreaMax ?? dataMax,
+  ];
+  const count = baseListings.filter(
+    (l) => l.area >= value[0] && l.area <= value[1]
+  ).length;
+  return (
+    <section className="bk-side-section">
+      <div className="bk-side-heading">
+        <span className="bk-side-heading-left">
+          <Ruler className="size-3.5 inline mr-1" />
+          Талбай (м²)
+        </span>
+        <span className="bk-side-heading-count num">{count}</span>
+      </div>
+      <div className="bk-side-section-body">
+        <DualRangeSlider
+          min={dataMin}
+          max={dataMax}
+          step={5}
+          value={value}
+          onChange={([lo, hi]) =>
+            setAreaRange(lo > dataMin ? lo : null, hi < dataMax ? hi : null)
+          }
+          format={(v) => `${v}`}
+          unit="м²"
+          ariaLabel="Талбай"
+        />
+      </div>
+    </section>
+  );
+}
+
+function YearRangeFilter({ baseListings }: { baseListings: Listing[] }) {
+  const [range, setRange] = useState<[number, number]>(() => {
+    const years = baseListings.map((l) => l.year).filter(Boolean);
+    if (!years.length) return [2000, new Date().getFullYear() + 1];
+    return [Math.min(...years), Math.max(...years)];
+  });
+  const dataMin = 2000;
+  const dataMax = new Date().getFullYear() + 1;
+  const count = baseListings.filter(
+    (l) => l.year >= range[0] && l.year <= range[1]
+  ).length;
+  return (
+    <section className="bk-side-section">
+      <div className="bk-side-heading">
+        <span className="bk-side-heading-left">
+          <Calendar className="size-3.5 inline mr-1" />
+          Ашиглалтад орсон он
+        </span>
+        <span className="bk-side-heading-count num">{count}</span>
+      </div>
+      <div className="bk-side-section-body">
+        <DualRangeSlider
+          min={dataMin}
+          max={dataMax}
+          step={1}
+          value={range}
+          onChange={setRange}
+          format={(v) => `${v}`}
+          ariaLabel="Он"
+        />
+      </div>
+    </section>
+  );
+}
+
+function StatusFilter({ baseListings }: { baseListings: Listing[] }) {
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const options = [
+    { key: "hot", label: "Эрэлттэй", icon: Flame, tone: "var(--danger)" },
+    { key: "new", label: "Шинэ", icon: Sparkles, tone: "var(--success)" },
+    { key: "drop", label: "Үнэ буурсан", icon: TrendingDown, tone: "var(--gold-brand)" },
+  ];
+  const countFor = (key: string) =>
+    baseListings.filter((l) => l.status === key).length;
+  const toggle = (k: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(k)) next.delete(k);
+      else next.add(k);
+      return next;
+    });
+  };
+  return (
+    <section className="bk-side-section">
+      <div className="bk-side-heading">
+        <span className="bk-side-heading-left">Зарын төлөв</span>
+      </div>
+      <div className="bk-side-section-body">
+        <div className="bk-status-chips">
+          {options.map((o) => {
+            const active = selected.has(o.key);
+            const n = countFor(o.key);
+            return (
+              <button
+                key={o.key}
+                type="button"
+                onClick={() => toggle(o.key)}
+                className={cn("bk-status-chip", active && "active")}
+                disabled={n === 0}
+                style={
+                  active
+                    ? {
+                        borderColor: o.tone,
+                        background:
+                          o.tone === "var(--gold-brand)"
+                            ? "var(--gold-soft)"
+                            : `color-mix(in srgb, ${o.tone} 12%, transparent)`,
+                        color: o.tone,
+                      }
+                    : undefined
+                }
+              >
+                <o.icon className="w-3 h-3" />
+                {o.label}
+                <span className="num text-[10px] opacity-60">({n})</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </section>
   );
 }

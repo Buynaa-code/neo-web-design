@@ -1,5 +1,6 @@
 export type ListingMode = "sale" | "rent";
 export type ListingStatus = "new" | "active" | "hot" | "drop" | "reserved" | "sold";
+export type ListingPropertyKind = "apartment" | "house" | "other";
 
 export interface PricePoint {
   d: string;
@@ -29,6 +30,7 @@ export interface Listing {
   desc?: string;
   priceHistory?: PricePoint[];
   photoSeeds?: (string | number)[];
+  propertyKind?: ListingPropertyKind;
 }
 
 export interface Agent {

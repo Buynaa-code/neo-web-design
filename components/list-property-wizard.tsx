@@ -204,7 +204,7 @@ type SmartDraft = {
     windows: WindowCounts;
     officeNeeds: string[];
   };
-  infra: Record<InfraKey, string> & { note: string };
+  infra: Record<InfraKey, string> & { note: string; heatingSub: string };
   community: Record<CommunityKey, string[]>;
   included: Record<IncludedKey, string[]>;
   state: {
@@ -529,7 +529,7 @@ const infraFields: Array<{
     label: "Дулаан",
     icon: Flame,
     required: true,
-    choices: ["Төвийн (улсын)", "Төвлөрсөн (хотхоны)", "Бие даасан", "Уурын зуух (нүүрсэн)", "Газан зуух", "Цахилгаан", "Цахилгаан радиатор", "Бусад"],
+    choices: ["Төсвийн (улсын)", "Төвлөрсөн (Хотхоны)", "Бие даасан"],
   },
   {
     key: "electric",
@@ -572,6 +572,11 @@ const infraFields: Array<{
     choices: ["Univision", "DDISH, Гэр интернет", "Mobinet", "Бусад"],
   },
 ];
+
+const heatingSubChoices: Record<string, string[]> = {
+  "Төвлөрсөн (Хотхоны)": ["Уурын зуух (Нүүрсэн)", "Газар зуух", "Цахилгаан"],
+  "Бие даасан": ["Газар зуух", "Цахилгаан зуух", "Цахилгаан радиатор"],
+};
 
 const communityGroups: Array<{
   key: CommunityKey;
@@ -826,7 +831,8 @@ function createDefaultDraft(): SmartDraft {
       officeNeeds: [],
     },
     infra: {
-      heating: "Төвийн (улсын)",
+      heating: "Төсвийн (улсын)",
+      heatingSub: "",
       electric: "Төвийн 100%",
       waterCold: "Төвийн шугам (улсын)",
       waterHot: "Төвийн шугам (улсын) - ялтсан бойлер",
@@ -1011,6 +1017,14 @@ function normalizeDraft(value?: unknown): SmartDraft {
       out.infra[field.key] = field.choices[0];
     }
   });
+  const heatingSubs = heatingSubChoices[out.infra.heating];
+  if (heatingSubs) {
+    if (!heatingSubs.includes(out.infra.heatingSub)) {
+      out.infra.heatingSub = heatingSubs[0];
+    }
+  } else {
+    out.infra.heatingSub = "";
+  }
   if (!certOptions.includes(out.state.certStatus)) out.state.certStatus = base.state.certStatus;
   if (!collateralOptions.includes(out.state.collateral)) out.state.collateral = base.state.collateral;
   if (!rentFrequencies.includes(out.pricing.rentFrequency)) out.pricing.rentFrequency = base.pricing.rentFrequency;
@@ -2763,19 +2777,24 @@ function RoomDetailsEditor({ draft, actions }: { draft: SmartDraft; actions: Dra
                       </div>
                     </div>
                   ) : null}
-                  <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-                    {windowDirections.map((dir) => (
-                      <div key={dir.key} className="rounded-md border bg-muted/30 p-2">
-                        <div className="mb-1 text-xs font-semibold">{dir.label}</div>
-                        <WindowStepper
-                          compact
-                          value={room.windows[dir.key] || 0}
-                          label={dir.label}
-                          onChange={(value) => updateRoom(room.id, (next) => { next.windows[dir.key] = value; })}
-                        />
-                      </div>
-                    ))}
-                  </div>
+                  <details className="mt-3 rounded-md border bg-muted/40" open={windowTotal(room.windows) > 0}>
+                    <summary className="cursor-pointer px-3 py-2 text-xs font-semibold">
+                      Дэлгэрэнгүй цонх нэмэх (8 чиглэлээр)
+                    </summary>
+                    <div className="grid gap-2 p-3 pt-0 sm:grid-cols-2 lg:grid-cols-4">
+                      {windowDirections.map((dir) => (
+                        <div key={dir.key} className="rounded-md border bg-background p-2">
+                          <div className="mb-1 text-xs font-semibold">{dir.label}</div>
+                          <WindowStepper
+                            compact
+                            value={room.windows[dir.key] || 0}
+                            label={dir.label}
+                            onChange={(value) => updateRoom(room.id, (next) => { next.windows[dir.key] = value; })}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </details>
                   <div className="mt-3">
                     <Field label="Өрөөний тайлбар">
                       <Textarea
@@ -2835,21 +2854,43 @@ function StepThree({ draft, actions }: { draft: SmartDraft; actions: DraftAction
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {infraFields.map((field) => {
               const Icon = field.icon;
+              const subOptions = field.key === "heating" ? heatingSubChoices[draft.infra.heating] : undefined;
               return (
                 <Field key={field.key} label={field.label} required={field.required}>
-                  <div className="relative">
-                    <Icon className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-accent" />
-                    <select
-                      value={draft.infra[field.key]}
-                      onChange={(event) => actions.setPath(`infra.${field.key}`, event.target.value)}
-                      className="h-9 w-full rounded-md border border-input bg-background py-1 pl-9 pr-2.5 text-sm outline-none transition-colors focus:border-ring focus:ring-3 focus:ring-ring/20"
-                    >
-                      {field.choices.map((item) => (
-                        <option key={item} value={item}>
-                          {item}
-                        </option>
-                      ))}
-                    </select>
+                  <div className="space-y-1.5">
+                    <div className="relative">
+                      <Icon className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-accent" />
+                      <select
+                        value={draft.infra[field.key]}
+                        onChange={(event) => {
+                          actions.setPath(`infra.${field.key}`, event.target.value);
+                          if (field.key === "heating") {
+                            const nextSubs = heatingSubChoices[event.target.value];
+                            actions.setPath("infra.heatingSub", nextSubs ? nextSubs[0] : "");
+                          }
+                        }}
+                        className="h-9 w-full rounded-md border border-input bg-background py-1 pl-9 pr-2.5 text-sm outline-none transition-colors focus:border-ring focus:ring-3 focus:ring-ring/20"
+                      >
+                        {field.choices.map((item) => (
+                          <option key={item} value={item}>
+                            {item}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    {subOptions ? (
+                      <select
+                        value={subOptions.includes(draft.infra.heatingSub) ? draft.infra.heatingSub : subOptions[0]}
+                        onChange={(event) => actions.setPath("infra.heatingSub", event.target.value)}
+                        className="h-9 w-full rounded-md border border-input bg-background py-1 px-2.5 text-sm outline-none transition-colors focus:border-ring focus:ring-3 focus:ring-ring/20"
+                      >
+                        {subOptions.map((item) => (
+                          <option key={item} value={item}>
+                            {item}
+                          </option>
+                        ))}
+                      </select>
+                    ) : null}
                   </div>
                 </Field>
               );

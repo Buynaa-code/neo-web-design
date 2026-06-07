@@ -9,11 +9,15 @@ import { useStore } from "@/lib/store";
 export function Footer() {
   const router = useRouter();
   const setMode = useStore((s) => s.setMode);
+  const pushToast = useStore((s) => s.pushToast);
 
   const go = (mode: "sale" | "rent") => {
     setMode(mode);
     router.push(`/results?mode=${mode}`);
   };
+
+  const soon = (label: string) => pushToast(`"${label}" удахгүй`, "info");
+  const social = (name: string) => pushToast(`${name} холбоос удахгүй`, "info");
 
   return (
     <footer className="bm-footer mt-16 lg:mt-24">
@@ -40,13 +44,20 @@ export function Footer() {
               NEOMAP бол Монголын үл хөдлөхийн хамгийн найдвартай, ухаалаг, хүртээмжтэй зуучлал, зөвлөгөө, үнэлгээний цогц платформ юм.
             </p>
             <div className="flex items-center gap-3 mt-6">
-              {[MessageCircle, Camera, Play, Briefcase].map((Icon, i) => (
+              {([
+                [MessageCircle, "Messenger"],
+                [Camera, "Instagram"],
+                [Play, "YouTube"],
+                [Briefcase, "LinkedIn"],
+              ] as const).map(([Icon, name]) => (
                 <button
-                  key={i}
+                  key={name}
                   type="button"
+                  onClick={() => social(name)}
                   className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-[var(--gold-soft)] transition"
                   style={{ background: "var(--surface-2)", color: "var(--text-2)" }}
-                  aria-label="social"
+                  aria-label={name}
+                  title={name}
                 >
                   <Icon className="w-4 h-4" />
                 </button>
@@ -68,20 +79,20 @@ export function Footer() {
           <div>
             <div className="bm-footer-h">Тусламж</div>
             <ul className="space-y-2.5">
-              <li><a>Тусламжийн төв</a></li>
-              <li><a>Хэрэглэх зааварчилгаа</a></li>
-              <li><a>Нууцлалын бодлого</a></li>
-              <li><a>Үйлчилгээний нөхцөл</a></li>
+              <li><button type="button" onClick={() => soon("Тусламжийн төв")}>Тусламжийн төв</button></li>
+              <li><button type="button" onClick={() => soon("Хэрэглэх зааварчилгаа")}>Хэрэглэх зааварчилгаа</button></li>
+              <li><button type="button" onClick={() => soon("Нууцлалын бодлого")}>Нууцлалын бодлого</button></li>
+              <li><button type="button" onClick={() => soon("Үйлчилгээний нөхцөл")}>Үйлчилгээний нөхцөл</button></li>
             </ul>
           </div>
 
           <div>
             <div className="bm-footer-h">Бидний тухай</div>
             <ul className="space-y-2.5">
-              <li><a>Бидний тухай</a></li>
+              <li><button type="button" onClick={() => soon("Бидний тухай")}>Бидний тухай</button></li>
               <li><Link href="/news">Мэдээ, нийтлэл</Link></li>
-              <li><a>Ажлын байр</a></li>
-              <li><a>Хамтран ажиллах</a></li>
+              <li><button type="button" onClick={() => soon("Ажлын байр")}>Ажлын байр</button></li>
+              <li><button type="button" onClick={() => soon("Хамтран ажиллах")}>Хамтран ажиллах</button></li>
             </ul>
           </div>
 
