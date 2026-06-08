@@ -20,6 +20,12 @@ export function activeListings(): Listing[] {
   return LISTINGS.filter((l) => l.status !== "sold");
 }
 
+export function baseListingsForMode(mode: "sale" | "rent"): Listing[] {
+  return activeListings().filter(
+    (l) => l.mode === mode && (mode !== "sale" || getPropertyKind(l) === "apartment")
+  );
+}
+
 export function isListingVerified(l: Listing): boolean {
   const ag = AGENTS.find((a) => a.id === l.agentId);
   return !!ag?.verified;
@@ -81,9 +87,9 @@ export interface FilterState {
 }
 
 export function filteredListings(s: FilterState): Listing[] {
-  let list = activeListings().filter((l) => l.mode === s.mode);
+  let list = baseListingsForMode(s.mode);
 
-  if (s.filterPropertyKind)
+  if (s.mode !== "sale" && s.filterPropertyKind)
     list = list.filter((l) => getPropertyKind(l) === s.filterPropertyKind);
   if (s.filterDistrict) list = list.filter((l) => l.district === s.filterDistrict);
   if (s.filterRooms && s.filterRooms.length)

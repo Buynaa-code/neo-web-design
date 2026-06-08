@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 import { MapContainer, Marker, Popup, TileLayer, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { LISTINGS } from "@/infrastructure/data/listings";
 import { fmtMapPinPrice } from "@/infrastructure/data/formatters";
+import { baseListingsForMode } from "@/application/filters";
 import { useStore } from "@/infrastructure/store";
 import { normalisedToLatLng } from "@/lib/utils";
 import type { Listing } from "@/domain/types";
@@ -49,10 +49,7 @@ export function NeomapLeaflet() {
   const highlightedId = useStore((s) => s.highlightedId);
   const setHighlightedId = useStore((s) => s.setHighlightedId);
 
-  const listings = useMemo(
-    () => LISTINGS.filter((l) => l.mode === mode),
-    [mode]
-  );
+  const listings = useMemo(() => baseListingsForMode(mode), [mode]);
 
   return (
     <MapContainer

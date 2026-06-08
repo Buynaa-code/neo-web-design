@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { RotateCcw } from "lucide-react";
 import { DISTRICTS } from "@/infrastructure/data/constants";
-import { activeListings } from "@/application/filters";
+import { baseListingsForMode } from "@/application/filters";
 import { useStore } from "@/infrastructure/store";
 import { cn } from "@/lib/utils";
 import type { ListingMode } from "@/domain/types";
@@ -39,7 +39,7 @@ export function AdvancedFiltersModal() {
   const [income, setIncome] = useState(initial.filterIncome);
 
   const districtCount = (d: string) =>
-    activeListings().filter((l) => l.district === d && l.mode === mode).length;
+    baseListingsForMode(mode).filter((l) => l.district === d).length;
 
   const isRent = mode === "rent";
   const priceMaxPlaceholder = isRent ? "2,000,000" : "600,000,000";

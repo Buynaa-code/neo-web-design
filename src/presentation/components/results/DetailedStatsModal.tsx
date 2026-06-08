@@ -3,12 +3,11 @@
 import { useState, useMemo } from "react";
 import { ArrowUpRight, BarChart3, TrendingDown, TrendingUp } from "lucide-react";
 import { DISTRICTS } from "@/infrastructure/data/constants";
-import { LISTINGS } from "@/infrastructure/data/listings";
 import { fmtCompact } from "@/infrastructure/data/formatters";
-import { hasIpoteh, isListingVerified, isNewProject } from "@/application/filters";
+import { baseListingsForMode, hasIpoteh, isListingVerified, isNewProject } from "@/application/filters";
 import { useStore } from "@/infrastructure/store";
 import { cn } from "@/lib/utils";
-import type { ListingMode } from "@/domain/types";
+import type { Listing, ListingMode } from "@/domain/types";
 
 const MONTHS = [
   "6-р",
@@ -38,7 +37,7 @@ interface StatsResult {
   ipotehPct: number;
 }
 
-function computeStats(scope: typeof LISTINGS): StatsResult {
+function computeStats(scope: Listing[]): StatsResult {
   const count = scope.length;
   if (!count) {
     return {
@@ -97,10 +96,7 @@ export function DetailedStatsModal({
   const mode = useStore((s) => s.mode);
   const [district, setDistrict] = useState<string>(initialDistrict);
 
-  const all = useMemo(
-    () => LISTINGS.filter((l) => l.mode === mode && l.status !== "sold"),
-    [mode]
-  );
+  const all = useMemo(() => baseListingsForMode(mode), [mode]);
   const scoped = useMemo(
     () => (district === "all" ? all : all.filter((l) => l.district === district)),
     [all, district]

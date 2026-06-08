@@ -17,7 +17,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { useStore } from "@/infrastructure/store";
-import { filteredListings, activeListings } from "@/application/filters";
+import { filteredListings, baseListingsForMode } from "@/application/filters";
 import { fmtCompact } from "@/infrastructure/data/formatters";
 import { FilterSidebar } from "./FilterSidebar";
 import { ActiveFilterChips } from "./ActiveFilterChips";
@@ -70,8 +70,8 @@ export function ResultsScreen() {
   const listings = useMemo(() => filteredListings(state), [state]);
 
   const stats = useMemo(() => {
-    const base = activeListings().filter(
-      (l) => l.mode === state.mode && (!state.filterDistrict || l.district === state.filterDistrict)
+    const base = baseListingsForMode(state.mode).filter(
+      (l) => !state.filterDistrict || l.district === state.filterDistrict
     );
     if (!base.length) return { avgPrice: 0, count: 0, avgPpm: 0 };
     const avgPrice = Math.round(base.reduce((s, l) => s + l.price, 0) / base.length);

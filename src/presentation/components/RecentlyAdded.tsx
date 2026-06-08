@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { LISTINGS } from "@/infrastructure/data/listings";
+import { baseListingsForMode } from "@/application/filters";
 import { useStore } from "@/infrastructure/store";
 import { ListingCard } from "./ListingCard";
 
@@ -9,7 +9,7 @@ export function RecentlyAdded() {
   const mode = useStore((s) => s.mode);
   const listings = useMemo(
     () =>
-      LISTINGS.filter((l) => l.mode === mode)
+      baseListingsForMode(mode)
         .slice()
         .sort((a, b) => a.listedDays - b.listedDays)
         .slice(0, 6),

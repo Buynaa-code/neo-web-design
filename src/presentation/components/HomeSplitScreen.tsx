@@ -9,9 +9,7 @@ import {
   Flame,
   Heart,
   Home,
-  House,
   KeyRound,
-  LayoutGrid,
   MapPin,
   MapPinned,
   Ruler,
@@ -30,13 +28,12 @@ import {
   listingMinutesAgo,
   listingPrice,
 } from "@/infrastructure/data/formatters";
-import { activeListings, filteredListings, getPropertyKind, hasIpoteh, isListingVerified, isNewProject } from "@/application/filters";
+import { baseListingsForMode, filteredListings, hasIpoteh, isListingVerified, isNewProject } from "@/application/filters";
 import { useStore } from "@/infrastructure/store";
 import { cn } from "@/lib/utils";
 import { photoUrl } from "@/infrastructure/data/listings";
 import type { Listing } from "@/domain/types";
 import { ResultsMap } from "@/components/results/ResultsMap";
-import { HomeAIChat } from "@/components/HomeAIChat";
 import { DualRangeSlider } from "@/components/DualRangeSlider";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -99,7 +96,6 @@ export function HomeSplitScreen() {
   const filterAreaMin = useStore((s) => s.filterAreaMin);
   const filterAreaMax = useStore((s) => s.filterAreaMax);
   const filterPropertyKind = useStore((s) => s.filterPropertyKind);
-  const setFilterPropertyKind = useStore((s) => s.setFilterPropertyKind);
   const drawnPolygon = useStore((s) => s.drawnPolygon);
   const clearAllFilters = useStore((s) => s.clearAllFilters);
   const openPlacePicker = useStore((s) => s.openPlacePicker);
@@ -150,10 +146,7 @@ export function HomeSplitScreen() {
   );
 
   const listings = useMemo(() => filteredListings(snapshot), [snapshot]);
-  const baseListings = useMemo(
-    () => activeListings().filter((listing) => listing.mode === mode),
-    [mode]
-  );
+  const baseListings = useMemo(() => baseListingsForMode(mode), [mode]);
 
   const activeFilterCount = [
     filterPropertyKind,
@@ -199,13 +192,6 @@ export function HomeSplitScreen() {
               Түрээс
             </button>
           </div>
-          {mode === "sale" ? (
-            <PropertyKindSegment
-              baseListings={baseListings}
-              value={filterPropertyKind}
-              onChange={setFilterPropertyKind}
-            />
-          ) : null}
         </div>
 
         {activeFilterCount ? (
@@ -328,60 +314,9 @@ export function HomeSplitScreen() {
               </span>
             </span>
           </div>
-          <HomeAIChat />
         </div>
       </div>
     </section>
-  );
-}
-
-function PropertyKindSegment({
-  baseListings,
-  value,
-  onChange,
-}: {
-  baseListings: Listing[];
-  value: "apartment" | "house" | "other" | null;
-  onChange: (kind: "apartment" | "house" | "other" | null) => void;
-}) {
-  const counts = useMemo(() => {
-    const acc = { apartment: 0, house: 0, other: 0 };
-    for (const l of baseListings) acc[getPropertyKind(l)]++;
-    return acc;
-  }, [baseListings]);
-
-  const items: Array<{
-    key: "apartment" | "house" | "other";
-    label: string;
-    Icon: typeof Building2;
-    count: number;
-  }> = [
-    { key: "apartment", label: "Орон сууц", Icon: Building2, count: counts.apartment },
-    { key: "house", label: "Байшин", Icon: House, count: counts.house },
-    { key: "other", label: "Бусад", Icon: LayoutGrid, count: counts.other },
-  ];
-
-  return (
-    <div className="bk-kind-pill" role="tablist" aria-label="Үл хөдлөхийн төрөл">
-      {items.map(({ key, label, Icon, count }) => {
-        const active = value === key;
-        return (
-          <button
-            key={key}
-            type="button"
-            className={active ? "active" : undefined}
-            onClick={() => onChange(active ? null : key)}
-            role="tab"
-            aria-selected={active}
-            disabled={count === 0 && !active}
-          >
-            <Icon className="size-3.5" />
-            <span>{label}</span>
-            <span className="bk-kind-pill-count num">{count}</span>
-          </button>
-        );
-      })}
-    </div>
   );
 }
 

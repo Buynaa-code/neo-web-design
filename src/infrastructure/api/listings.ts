@@ -2,6 +2,7 @@ import type { Listing, ListingCreateInput } from "@/domain/schemas/listing";
 import { listingSchema } from "@/domain/schemas/listing";
 import type { ListingDraftSubmission } from "@/domain/schemas/listing-draft";
 import { LISTINGS } from "@/infrastructure/data/listings";
+import { getPropertyKind } from "@/application/filters";
 import { apiFetch } from "./http";
 
 const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK_API === "true";
@@ -95,7 +96,10 @@ function getMockStore(): Listing[] {
 
 function listListingsMock(params: ListListingsParams): ListListingsResponse {
   let items = getMockStore();
-  if (params.mode) items = items.filter((l) => l.mode === params.mode);
+  if (params.mode) {
+    items = items.filter((l) => l.mode === params.mode);
+    if (params.mode === "sale") items = items.filter((l) => getPropertyKind(l) === "apartment");
+  }
   if (params.district) items = items.filter((l) => l.district === params.district);
   if (params.rooms?.length) {
     const rooms = params.rooms;

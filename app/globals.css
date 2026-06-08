@@ -6619,7 +6619,7 @@ body[data-theme="dark"] .header-sticky {
   position: fixed;
   right: 20px;
   bottom: calc(env(safe-area-inset-bottom, 0px) + 80px);
-  z-index: 60;
+  z-index: 100;
   width: 56px;
   height: 56px;
   border-radius: 999px;
@@ -6642,7 +6642,7 @@ body[data-theme="dark"] .header-sticky {
   position: fixed;
   right: 20px;
   bottom: calc(env(safe-area-inset-bottom, 0px) + 148px);
-  z-index: 60;
+  z-index: 100;
   width: min(360px, calc(100vw - 32px));
   background: var(--surface);
   border: 1px solid var(--border);

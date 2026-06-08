@@ -357,7 +357,12 @@ export const useStore = create<StoreState & StoreActions>()(
     (set, get) => ({
       ...initialState,
 
-      setMode: (mode) => set({ mode, page: 1 }),
+      setMode: (mode) =>
+        set((s) => ({
+          mode,
+          page: 1,
+          filterPropertyKind: mode === "sale" ? null : s.filterPropertyKind,
+        })),
       setSort: (sortBy) => set({ sortBy }),
       setPage: (page) => set({ page }),
       setViewMode: (viewMode) => set({ viewMode }),
