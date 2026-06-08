@@ -669,14 +669,15 @@ function InterestsWizard({
     set((prev) => (prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value]));
 
   const toggleDistrict = (district: string) => {
-    setDistricts((prev) => {
-      if (prev.includes(district)) return prev.filter((d) => d !== district);
-      if (prev.length >= 3) {
-        pushToast("Хамгийн ихдээ 3 дүүрэг сонгоно", "info");
-        return prev;
-      }
-      return [...prev, district];
-    });
+    if (districts.includes(district)) {
+      setDistricts((prev) => prev.filter((d) => d !== district));
+      return;
+    }
+    if (districts.length >= 3) {
+      pushToast("Хамгийн ихдээ 3 дүүрэг сонгоно", "info");
+      return;
+    }
+    setDistricts((prev) => [...prev, district]);
   };
 
   const selectBudget = (preset: BudgetPreset) => {

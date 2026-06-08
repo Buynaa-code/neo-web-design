@@ -403,6 +403,15 @@
     min-height: 64px;
     resize: vertical;
   }
+  .lp-shadcn input::placeholder,
+  .lp-shadcn textarea::placeholder {
+    color: var(--text-3);
+    opacity: 0.45;
+  }
+  body[data-theme="dark"] .lp-shadcn input::placeholder,
+  body[data-theme="dark"] .lp-shadcn textarea::placeholder {
+    opacity: 0.35;
+  }
   .lp-shadcn .input:focus,
   .lp-shadcn .lp-step-value:focus,
   .lp-shadcn .lp-window-value:focus {
@@ -6604,3 +6613,120 @@ body[data-theme="dark"] .header-sticky {
 @media (min-width: 1024px) { .bottom-tab { display: none; } }
 .bottom-tab a { display: inline-flex; flex-direction: column; align-items: center; gap: 2px; font-size: 11px; color: var(--text-3); text-decoration: none; padding: 6px 8px; border-radius: 8px; }
 .bottom-tab a.active { color: var(--primary); }
+
+/* ── Floating AI chat (bottom-right) ── */
+.floating-ai-fab {
+  position: fixed;
+  right: 20px;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 80px);
+  z-index: 60;
+  width: 56px;
+  height: 56px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  box-shadow: 0 12px 28px rgba(10, 31, 68, 0.32);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  cursor: pointer;
+}
+.floating-ai-fab:hover { transform: translateY(-2px); box-shadow: 0 16px 36px rgba(10, 31, 68, 0.4); }
+.floating-ai-fab.open { background: var(--surface); color: var(--text-1); border: 1px solid var(--border); }
+@media (min-width: 1024px) {
+  .floating-ai-fab { bottom: 24px; right: 24px; }
+}
+
+.floating-ai-panel {
+  position: fixed;
+  right: 20px;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 148px);
+  z-index: 60;
+  width: min(360px, calc(100vw - 32px));
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  box-shadow: 0 24px 48px rgba(10, 31, 68, 0.28);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: floatingAiIn 0.16s ease-out;
+}
+@keyframes floatingAiIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@media (min-width: 1024px) {
+  .floating-ai-panel { bottom: 92px; right: 24px; }
+}
+.floating-ai-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+}
+.floating-ai-head-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--text-1);
+}
+.floating-ai-head-title svg { color: var(--primary); }
+.floating-ai-close {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-3);
+  background: transparent;
+}
+.floating-ai-close:hover { background: var(--bg-2); color: var(--text-1); }
+.floating-ai-body { padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+.floating-ai-welcome { font-size: 12px; color: var(--text-2); margin: 0; line-height: 1.5; }
+.floating-ai-suggestions { display: flex; flex-wrap: wrap; gap: 6px; }
+.floating-ai-chip {
+  font-size: 11px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg-2);
+  color: var(--text-2);
+  cursor: pointer;
+}
+.floating-ai-chip:hover { background: var(--surface); border-color: var(--primary); color: var(--text-1); }
+.floating-ai-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-top: 1px solid var(--border);
+  background: var(--bg-2);
+}
+.floating-ai-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: 13px;
+  color: var(--text-1);
+}
+.floating-ai-input::placeholder { color: var(--text-3); }
+.floating-ai-send {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--primary);
+  color: #fff;
+  cursor: pointer;
+}
+.floating-ai-send:hover:not(:disabled) { background: var(--primary-dark); }
+.floating-ai-send:disabled { opacity: 0.4; cursor: not-allowed; }

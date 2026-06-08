@@ -454,27 +454,24 @@ const propertyTypes: Array<{
 ];
 
 const subtypes: Record<PropertyKey, string[]> = {
-  apartment: ["Энгийн", "Дуплекс", "Пентхаус", "Бусад: тайлбар оруулах"],
-  house: ["Single house", "Twin house", "Town house", "Multihouse", "Бусад: тайлбар оруулах"],
+  apartment: ["Энгийн", "Дуплекс", "Пентхаус"],
+  house: ["Single house", "Twin house", "Town house", "Multihouse"],
   office: [
     "Давхар дахь тодорхой хэсэг, өрөө(нүүд)",
     "Давхар бүхлээрээ",
     "Обьект бүхлээрээ",
-    "Бусад: тайлбар оруулах",
   ],
   retail: [
     "Давхар дахь тодорхой хэсэг, өрөө(нүүд)",
     "Давхар бүхлээрээ",
     "Обьект бүхлээрээ",
-    "Бусад: тайлбар оруулах",
   ],
   industrial: ["Зориулалтын талаар тайлбар оруулах"],
   parking: [
     "Оффис, Үйлчилгээ, Орон сууцны доорх / доторх",
     "Тусдаа авто дулаан зогсоолын блок дахь",
-    "Бусад: тайлбар оруулах",
   ],
-  warehouse: ["Оффис, Үйлчилгээ, Орон сууцны доорх / доторх", "Бусад: тайлбар оруулах"],
+  warehouse: ["Оффис, Үйлчилгээ, Орон сууцны доорх / доторх"],
   fence_house: ["Хашаа байшин (газартай)"],
   summer_land: ["Зуслангийн байшин (газартай)"],
   summer_no_land: ["Зуслангийн байшин (газаргүй)"],
@@ -880,7 +877,9 @@ function createDefaultDraft(): SmartDraft {
 }
 
 function cloneDraft(draft: SmartDraft): SmartDraft {
-  return JSON.parse(JSON.stringify(draft)) as SmartDraft;
+  return typeof structuredClone === "function"
+    ? structuredClone(draft)
+    : (JSON.parse(JSON.stringify(draft)) as SmartDraft);
 }
 
 function toRecord(value: unknown): Record<string, unknown> {
@@ -1634,11 +1633,14 @@ export function ListPropertyWizard() {
   const pushToast = useStore((s) => s.pushToast);
 
   useEffect(() => {
-    try {
-      window.localStorage.setItem(SMART_LIST_PROP_DRAFT_KEY, JSON.stringify(draft));
-    } catch {
-      // Ignore storage errors; the in-memory form stays usable.
-    }
+    const handle = window.setTimeout(() => {
+      try {
+        window.localStorage.setItem(SMART_LIST_PROP_DRAFT_KEY, JSON.stringify(draft));
+      } catch {
+        // Ignore storage errors; the in-memory form stays usable.
+      }
+    }, 400);
+    return () => window.clearTimeout(handle);
   }, [draft]);
 
   const selectedType = getPropertyType(draft.propertyType);
@@ -1657,7 +1659,7 @@ export function ListPropertyWizard() {
       const next = cloneDraft(current);
       recipe(next);
       setSubmitted(null);
-      return normalizeDraft(next);
+      return next;
     });
   };
 

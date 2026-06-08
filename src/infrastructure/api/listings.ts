@@ -1,9 +1,10 @@
 import type { Listing, ListingCreateInput } from "@/domain/schemas/listing";
 import { listingSchema } from "@/domain/schemas/listing";
 import type { ListingDraftSubmission } from "@/domain/schemas/listing-draft";
+import { LISTINGS } from "@/infrastructure/data/listings";
+import { apiFetch } from "./http";
 
-const API_BASE = "/api/listings";
-const DRAFTS_BASE = "/api/listing-drafts";
+const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK_API === "true";
 
 export interface ListListingsParams {
   mode?: "sale" | "rent";
@@ -22,65 +23,100 @@ export interface ListListingsResponse {
   pageSize: number;
 }
 
-function buildQuery(params: ListListingsParams): string {
-  const search = new URLSearchParams();
-  if (params.mode) search.set("mode", params.mode);
-  if (params.district) search.set("district", params.district);
-  if (params.rooms?.length) search.set("rooms", params.rooms.join(","));
-  if (params.priceMin != null) search.set("priceMin", String(params.priceMin));
-  if (params.priceMax != null) search.set("priceMax", String(params.priceMax));
-  if (params.page != null) search.set("page", String(params.page));
-  if (params.pageSize != null) search.set("pageSize", String(params.pageSize));
-  const qs = search.toString();
-  return qs ? `?${qs}` : "";
-}
-
 export async function listListings(
-  params: ListListingsParams = {},
-  init?: RequestInit
+  params: ListListingsParams = {}
 ): Promise<ListListingsResponse> {
-  const res = await fetch(`${API_BASE}${buildQuery(params)}`, init);
-  if (!res.ok) throw new Error(`listListings failed: ${res.status}`);
-  return (await res.json()) as ListListingsResponse;
+  if (USE_MOCK) return listListingsMock(params);
+  return apiFetch<ListListingsResponse>("/listings", {
+    query: {
+      mode: params.mode,
+      district: params.district,
+      rooms: params.rooms?.length ? params.rooms.join(",") : undefined,
+      priceMin: params.priceMin,
+      priceMax: params.priceMax,
+      page: params.page,
+      pageSize: params.pageSize,
+    },
+  });
 }
 
-export async function getListing(
-  id: number,
-  init?: RequestInit
-): Promise<Listing> {
-  const res = await fetch(`${API_BASE}/${id}`, init);
-  if (!res.ok) throw new Error(`getListing failed: ${res.status}`);
-  const data = await res.json();
+export async function getListing(id: number): Promise<Listing> {
+  if (USE_MOCK) {
+    const found = getMockStore().find((l) => l.id === id);
+    if (!found) throw new Error(`Listing ${id} not found`);
+    return found;
+  }
+  const data = await apiFetch<unknown>(`/listings/${id}`);
   return listingSchema.parse(data);
 }
 
 export async function createListing(
   input: ListingCreateInput
 ): Promise<Listing> {
-  const res = await fetch(API_BASE, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(input),
-  });
-  if (!res.ok) {
-    const detail = await res.text().catch(() => "");
-    throw new Error(`createListing failed: ${res.status} ${detail}`);
+  if (USE_MOCK) {
+    const store = getMockStore();
+    const nextId = store.reduce((m, l) => Math.max(m, l.id), 0) + 1;
+    const created = listingSchema.parse({
+      ...input,
+      id: nextId,
+      photos: input.photoSeeds?.length ?? 0,
+      listedDays: 0,
+      viewCount: 0,
+      viewingCount: 0,
+    });
+    store.unshift(created);
+    return created;
   }
-  const data = await res.json();
+  const data = await apiFetch<unknown>("/listings", {
+    method: "POST",
+    body: input,
+  });
   return listingSchema.parse(data);
 }
 
 export async function submitListingDraft(
   payload: ListingDraftSubmission
 ): Promise<ListingDraftSubmission> {
-  const res = await fetch(DRAFTS_BASE, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-  if (!res.ok) {
-    const detail = await res.text().catch(() => "");
-    throw new Error(`submitListingDraft failed: ${res.status} ${detail}`);
+  if (USE_MOCK) {
+    console.info("[mock] submitListingDraft", payload);
+    return payload;
   }
-  return (await res.json()) as ListingDraftSubmission;
+  return apiFetch<ListingDraftSubmission>("/listing-drafts", {
+    method: "POST",
+    body: payload,
+  });
+}
+
+let mockStore: Listing[] | null = null;
+function getMockStore(): Listing[] {
+  if (!mockStore) mockStore = [...LISTINGS];
+  return mockStore;
+}
+
+function listListingsMock(params: ListListingsParams): ListListingsResponse {
+  let items = getMockStore();
+  if (params.mode) items = items.filter((l) => l.mode === params.mode);
+  if (params.district) items = items.filter((l) => l.district === params.district);
+  if (params.rooms?.length) {
+    const rooms = params.rooms;
+    items = items.filter((l) => rooms.includes(l.rooms));
+  }
+  if (params.priceMin != null) {
+    const min = params.priceMin;
+    items = items.filter((l) => l.price >= min);
+  }
+  if (params.priceMax != null) {
+    const max = params.priceMax;
+    items = items.filter((l) => l.price <= max);
+  }
+
+  const page = params.page ?? 1;
+  const pageSize = params.pageSize ?? 20;
+  const start = (page - 1) * pageSize;
+  return {
+    items: items.slice(start, start + pageSize),
+    total: items.length,
+    page,
+    pageSize,
+  };
 }
