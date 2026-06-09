@@ -3771,46 +3771,122 @@
 
   /* ── Travel Times ── */
   .travel-times-grid {
-    display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-    gap: 10px;
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 12px;
   }
   .travel-empty { grid-column: 1 / -1; }
   .travel-card {
     background: var(--surface);
     border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 12px;
-    display: flex; flex-direction: column; gap: 10px;
+    border-radius: 14px;
+    padding: 14px;
+    display: flex; flex-direction: column; gap: 12px;
+    transition: border-color .15s ease, box-shadow .15s ease;
+  }
+  .travel-card:hover {
+    border-color: var(--border-strong);
+    box-shadow: 0 1px 2px rgba(0,0,0,.04);
   }
   .travel-card-head {
-    display: flex; align-items: center; gap: 8px;
+    display: flex; align-items: center; gap: 10px;
   }
   .travel-card-icon {
-    width: 30px; height: 30px; border-radius: 8px;
+    width: 36px; height: 36px; border-radius: 10px;
     display: inline-flex; align-items: center; justify-content: center;
     flex-shrink: 0;
   }
+  .travel-card-name {
+    font-size: 14px; font-weight: 600; color: var(--text);
+    line-height: 1.2;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .travel-distance {
+    display: inline-flex; align-items: center; gap: 3px;
+    margin-top: 3px;
+    font-size: 11px; color: var(--text-3);
+  }
+  .travel-distance .num { font-weight: 600; color: var(--text-2); }
+  .travel-distance-sep { opacity: .55; }
+  .travel-edit-btn {
+    width: 30px; height: 30px; border-radius: 8px;
+    display: inline-flex; align-items: center; justify-content: center;
+    color: var(--text-3); background: transparent;
+    border: 1px solid transparent;
+    transition: color .12s ease, background .12s ease, border-color .12s ease;
+    flex-shrink: 0;
+  }
+  .travel-edit-btn:hover {
+    color: var(--text);
+    background: var(--surface-2);
+    border-color: var(--border);
+  }
+  .travel-edit-btn:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 1px;
+  }
   .travel-modes {
-    display: flex; flex-direction: column; gap: 6px;
-    padding-top: 8px;
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    padding-top: 10px;
     border-top: 1px solid var(--border);
   }
   .travel-mode {
-    display: flex; align-items: center; gap: 6px;
+    display: flex; flex-direction: column; gap: 4px;
+    padding: 8px 10px;
+    border-radius: 10px;
+    background: var(--surface-2);
+    border: 1px solid transparent;
+  }
+  .travel-mode.is-faster {
+    background: var(--primary-soft, rgba(15,118,110,.08));
+    border-color: rgba(15,118,110,.20);
+  }
+  .travel-mode-label {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 11px; color: var(--text-3); font-weight: 500;
+  }
+  .travel-mode.is-faster .travel-mode-label {
+    color: var(--primary);
+  }
+  .travel-mode-value {
+    font-size: 15px; font-weight: 700; color: var(--text);
+    line-height: 1.1;
+    letter-spacing: -0.01em;
   }
   .travel-add {
     border: 1.5px dashed var(--border-strong);
-    border-radius: 12px;
+    border-radius: 14px;
     background: transparent;
     color: var(--text-2);
-    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-    min-height: 96px;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 4px;
+    min-height: 126px;
     cursor: pointer;
-    transition: all .12s;
+    transition: all .12s ease;
+  }
+  .travel-add-plus {
+    width: 28px; height: 28px; border-radius: 8px;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: var(--surface-2);
+    color: var(--text-2);
+    margin-bottom: 2px;
+    transition: all .12s ease;
   }
   .travel-add:hover {
     border-color: var(--gold-brand); color: var(--gold-brand);
     background: var(--gold-soft);
+  }
+  .travel-add:hover .travel-add-plus {
+    background: var(--gold-brand); color: #fff;
+  }
+  .travel-footnote {
+    display: inline-flex; align-items: flex-start; gap: 5px;
+    margin-top: 2px;
+    font-size: 10.5px; line-height: 1.45;
+    color: var(--text-3);
+  }
+  .travel-footnote-link {
+    color: var(--primary); font-weight: 600; text-decoration: underline;
   }
 
   /* ── Dual Range Slider ── */
