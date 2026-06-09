@@ -13,7 +13,35 @@ import { Lightbox } from "@/components/property/Lightbox";
 import { FooterShell } from "@/components/FooterShell";
 import { FloatingAIChat } from "@/components/FloatingAIChat";
 import { BrandLogoSymbol } from "@/components/BrandLogo";
+import { JsonLd } from "@/components/JsonLd";
 import { cn } from "@/lib/utils";
+
+const SITE_URL = "https://hdlh.vercel.app";
+
+// Site-wide identity for the Knowledge Graph + sitelinks search box.
+const orgJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  name: "NEOMAP",
+  url: SITE_URL,
+  logo: `${SITE_URL}/images/logo/mark-dark.jpg`,
+  description:
+    "Улаанбаатарын орон сууц, төсөл, түрээсийг газрын зураг, AI зөвлөмж, баталгаатай мэдээллээр хайх платформ.",
+  areaServed: { "@type": "City", name: "Улаанбаатар" },
+};
+
+const siteJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  name: "NEOMAP",
+  url: SITE_URL,
+  inLanguage: "mn-MN",
+  potentialAction: {
+    "@type": "SearchAction",
+    target: { "@type": "EntryPoint", urlTemplate: `${SITE_URL}/results?q={search_term_string}` },
+    "query-input": "required name=search_term_string",
+  },
+};
 
 const inter = Inter({
   subsets: ["latin", "cyrillic"],
@@ -91,6 +119,8 @@ export default function RootLayout({
       className={cn(inter.variable, manrope.variable, notoSans.variable)}
     >
       <body className="font-sans">
+        <JsonLd data={orgJsonLd} />
+        <JsonLd data={siteJsonLd} />
         <ThemeProvider>
           <Splash />
           <BrandLogoSymbol />
