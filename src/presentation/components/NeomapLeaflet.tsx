@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { MapContainer, Marker, Popup, TileLayer, useMap } from "react-leaflet";
 import L from "leaflet";
-import "leaflet/dist/leaflet.css";
 import { fmtMapPinPrice } from "@/infrastructure/data/formatters";
 import { baseListingsForMode } from "@/application/filters";
 import { useStore } from "@/infrastructure/store";
@@ -26,8 +25,8 @@ function buildPriceIcon(listing: Listing): L.DivIcon {
   return L.divIcon({
     className: `neo-pin ${tone}`,
     html: `<span class="neo-pin-bubble">${label}</span>`,
-    iconSize: [56, 28],
-    iconAnchor: [28, 28],
+    iconSize: [148, 28],
+    iconAnchor: [74, 28],
   });
 }
 

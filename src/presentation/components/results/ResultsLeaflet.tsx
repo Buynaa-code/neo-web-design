@@ -13,7 +13,6 @@ import {
   useMapEvents,
 } from "react-leaflet";
 import L from "leaflet";
-import "leaflet/dist/leaflet.css";
 import type { Listing } from "@/domain/types";
 import { fmtMapPinPrice } from "@/infrastructure/data/formatters";
 import { useStore, type MyPlace } from "@/infrastructure/store";
@@ -54,8 +53,8 @@ function buildPriceIcon(listing: Listing, highlighted: boolean): L.DivIcon {
   return L.divIcon({
     className: `neo-pin ${tone} ${highlighted ? "highlighted" : ""}`,
     html: `<span class="neo-pin-bubble"><span class="pin-price">${price}</span><span class="pin-area">${area}</span></span>`,
-    iconSize: [72, 44],
-    iconAnchor: [36, 44],
+    iconSize: [148, 44],
+    iconAnchor: [74, 44],
   });
 }
 
