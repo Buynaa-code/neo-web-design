@@ -186,6 +186,17 @@ export function getListing(id: number): Listing | undefined {
   return LISTINGS.find((l) => l.id === id);
 }
 
+/**
+ * Replaces the seed dataset in place with real API data. We mutate the
+ * existing `LISTINGS` array (rather than reassign) so every module that
+ * imported it keeps a valid reference; screens subscribe to the store's
+ * `listingsVersion` to re-render once this runs. Called once on app boot by
+ * <ListingsBootstrap>.
+ */
+export function replaceListings(next: Listing[]): void {
+  LISTINGS.splice(0, LISTINGS.length, ...next);
+}
+
 export function photoUrl(listing: Listing, n = 0, size = "800/600"): string {
   if (listing.photoSeeds && listing.photoSeeds.length) {
     const seed = listing.photoSeeds[n % listing.photoSeeds.length];

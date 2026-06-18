@@ -10,7 +10,8 @@
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:e2e": "NEOMAP_E2E=1 vitest run tests/api/lifecycle.e2e.test.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.5.0",

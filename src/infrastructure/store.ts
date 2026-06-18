@@ -132,6 +132,9 @@ interface StoreState {
   myPlaces: MyPlace[];
   placePicker: { editId?: string; kind: MyPlace["kind"]; label: string } | null;
 
+  // Listings dataset (bumped when real API data replaces the seed)
+  listingsVersion: number;
+
   // Auth
   isLoggedIn: boolean;
   currentUser: User | null;
@@ -218,6 +221,9 @@ interface StoreActions {
   pushAIChat: (m: AIChatMessage) => void;
   setHomeAIChatCollapsed: (v: boolean) => void;
   clearAIChat: () => void;
+
+  // Listings dataset
+  bumpListingsVersion: () => void;
 
   // Auth
   signIn: (user: User) => void;
@@ -326,6 +332,8 @@ const initialState: StoreState = {
 
   myPlaces: [],
   placePicker: null,
+
+  listingsVersion: 0,
 
   isLoggedIn: false,
   currentUser: null,
@@ -443,6 +451,9 @@ export const useStore = create<StoreState & StoreActions>()(
       pushAIChat: (m) => set((s) => ({ homeAIChat: [...s.homeAIChat, m] })),
       setHomeAIChatCollapsed: (homeAIChatCollapsed) => set({ homeAIChatCollapsed }),
       clearAIChat: () => set({ homeAIChat: [] }),
+
+      bumpListingsVersion: () =>
+        set((s) => ({ listingsVersion: s.listingsVersion + 1 })),
 
       signIn: (currentUser) => set({ isLoggedIn: true, currentUser }),
       signOut: () => {

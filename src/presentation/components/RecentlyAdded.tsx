@@ -7,13 +7,14 @@ import { ListingCard } from "./ListingCard";
 
 export function RecentlyAdded() {
   const mode = useStore((s) => s.mode);
+  const listingsVersion = useStore((s) => s.listingsVersion);
   const listings = useMemo(
     () =>
       baseListingsForMode(mode)
         .slice()
         .sort((a, b) => a.listedDays - b.listedDays)
         .slice(0, 6),
-    [mode]
+    [mode, listingsVersion]
   );
 
   return (

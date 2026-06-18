@@ -1,24 +1,38 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
-import { getListing, LISTINGS, photoUrl } from "@/infrastructure/data/listings";
+import type { Listing } from "@/domain/types";
+import { getListing as getMockListing, photoUrl } from "@/infrastructure/data/listings";
+import { getListing as getRealListing, toListing } from "@/infrastructure/api/listings";
 import { fmtFullPrice } from "@/infrastructure/data/formatters";
 import { PropertyDetail } from "@/components/property/PropertyDetail";
 import { JsonLd } from "@/components/JsonLd";
 
 const BASE_URL = "https://hdlh.vercel.app";
 
+// Listing data is dynamic (real API); render on demand rather than prebuild.
+export const dynamic = "force-dynamic";
+
 type PropertyPageProps = {
   params: Promise<{ id: string }>;
 };
 
-export function generateStaticParams() {
-  return LISTINGS.map((listing) => ({ id: String(listing.id) }));
+/**
+ * Resolves a listing server-side: tries the real API first, falling back to
+ * the seed dataset if the API is unavailable or the id is unknown there.
+ */
+async function resolveListing(id: number): Promise<Listing | undefined> {
+  if (!Number.isFinite(id)) return undefined;
+  try {
+    return toListing(await getRealListing(id));
+  } catch {
+    return getMockListing(id);
+  }
 }
 
 export async function generateMetadata({ params }: PropertyPageProps): Promise<Metadata> {
   const { id } = await params;
-  const listing = getListing(Number(id));
+  const listing = await resolveListing(Number(id));
   if (!listing) {
     return { title: "Зар олдсонгүй — NEOMAP" };
   }
@@ -52,7 +66,7 @@ export async function generateMetadata({ params }: PropertyPageProps): Promise<M
 
 export default async function PropertyPage({ params }: PropertyPageProps) {
   const { id } = await params;
-  const listing = getListing(Number(id));
+  const listing = await resolveListing(Number(id));
   if (!listing) notFound();
 
   // schema.org RealEstateListing — lets Google surface price, location, size as rich results.

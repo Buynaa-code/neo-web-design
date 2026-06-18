@@ -11,3 +11,17 @@ export const AGENTS: Agent[] = [
 export function getAgent(id: number): Agent | undefined {
   return AGENTS.find((a) => a.id === id);
 }
+
+/** Neutral placeholder for real listings whose agent isn't in the seed set. */
+export const FALLBACK_AGENT: Agent = {
+  id: 0,
+  name: "NEOMAP зар",
+  initials: "NM",
+  agency: "NEOMAP",
+  verified: false,
+  phone: "",
+  activity: "",
+  listings: 0,
+  rating: 0,
+  reviewCount: 0,
+};

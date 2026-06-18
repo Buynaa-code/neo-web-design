@@ -57,6 +57,8 @@ export function ResultsScreen() {
       filterPropertyKind: s.filterPropertyKind,
       drawnPolygon: s.drawnPolygon,
       sortBy: s.sortBy,
+      // Re-run filtering when real listings replace the seed dataset.
+      listingsVersion: s.listingsVersion,
     }))
   );
 

@@ -43,7 +43,8 @@ export const customerSchema = z.object({
   email: z.string(),
   phone: nullableString,
   emailVerified: z.boolean(),
-  emailVerifiedAt: z.string(),
+  // Null for users who have not verified their email yet (doc says string).
+  emailVerifiedAt: nullableString,
   createdAt: z.string(),
 });
 export type Customer = z.infer<typeof customerSchema>;

@@ -47,8 +47,12 @@ export function NeomapLeaflet() {
   const mode = useStore((s) => s.mode);
   const highlightedId = useStore((s) => s.highlightedId);
   const setHighlightedId = useStore((s) => s.setHighlightedId);
+  const listingsVersion = useStore((s) => s.listingsVersion);
 
-  const listings = useMemo(() => baseListingsForMode(mode), [mode]);
+  const listings = useMemo(
+    () => baseListingsForMode(mode),
+    [mode, listingsVersion]
+  );
 
   return (
     <MapContainer

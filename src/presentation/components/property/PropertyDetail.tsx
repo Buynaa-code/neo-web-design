@@ -41,7 +41,7 @@ import {
 
 import { BANKS, getBank } from "@/infrastructure/data/banks";
 import { BUS_STOPS } from "@/infrastructure/data/bus-stops";
-import { getAgent } from "@/infrastructure/data/agents";
+import { getAgent, FALLBACK_AGENT } from "@/infrastructure/data/agents";
 import { getListing, LISTINGS, photoUrl } from "@/infrastructure/data/listings";
 import {
   fmtCompact,
@@ -170,7 +170,7 @@ function travelText(km: number): string {
 export function PropertyDetail({ listing }: { listing: Listing }) {
   const router = useRouter();
   const detail = getListingDetail(listing);
-  const agent = getAgent(listing.agentId);
+  const agent = getAgent(listing.agentId) ?? FALLBACK_AGENT;
   const verified = isListingVerified(listing);
   const isSaved = useStore((s) => s.savedListingIds.includes(listing.id));
   const toggleSaved = useStore((s) => s.toggleSavedListing);
@@ -195,7 +195,7 @@ export function PropertyDetail({ listing }: { listing: Listing }) {
     markViewed(listing.id);
   }, [listing.id, markViewed, setCurrentListingId]);
 
-  if (!detail || !agent) {
+  if (!detail) {
     return (
       <div className="max-w-7xl mx-auto px-4 lg:px-8 py-10">
         <div className="card p-8">Зарын дэлгэрэнгүй мэдээлэл олдсонгүй.</div>

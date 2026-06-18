@@ -120,8 +120,87 @@ import {
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-import { submitListingDraft } from "@/infrastructure/api/listings";
+import { createListing, submitListingDraft } from "@/infrastructure/api/listings";
+import { ApiError } from "@/infrastructure/api/http";
+import { useFormOptions } from "@/application/queries/metadata";
+import {
+  useCountries,
+  useCities,
+  useDistricts,
+  useKhoroos,
+} from "@/application/queries/address";
 import { useStore } from "@/infrastructure/store";
+
+/** Maps the wizard's PropertyKey to the API's `property_category` enum. */
+const CATEGORY_API: Record<PropertyKey, string> = {
+  apartment: "apartment",
+  house: "private_house",
+  office: "office",
+  retail: "commercial_service",
+  industrial: "industrial_object",
+  parking: "indoor_parking",
+  warehouse: "storage_unit",
+  fence_house: "fenced_house_with_land",
+  summer_land: "summer_house_with_land",
+  summer_no_land: "summer_house_without_land",
+  land: "land",
+  other: "other",
+};
+
+type ClassificationLike = {
+  categories?: Record<string, { subtypes?: Record<string, { label?: string }> }>;
+};
+
+/**
+ * Resolves the API `property_subtype` *key* from the wizard's human-readable
+ * subtype label, using the live form-options metadata. Falls back to the first
+ * available subtype key for the category (the backend requires a valid one).
+ */
+function resolveSubtypeKey(
+  category: string,
+  subtypeLabel: string,
+  classification: ClassificationLike | undefined
+): string | undefined {
+  const subs = classification?.categories?.[category]?.subtypes;
+  if (!subs) return undefined;
+  const keys = Object.keys(subs);
+  return keys.find((k) => subs[k]?.label === subtypeLabel) ?? keys[0];
+}
+
+/** Builds a StoreListingRequest body from the wizard draft + metadata. */
+function buildCreateRequest(
+  draft: SmartDraft,
+  classification: ClassificationLike | undefined
+): Record<string, unknown> {
+  const mode = modeOf(draft.goal);
+  const category = CATEGORY_API[draft.propertyType];
+  const area = parseFloat(draft.specs.areaCert) || 1;
+  return {
+    transaction_type: mode,
+    mode,
+    property_category: category,
+    property_subtype: resolveSubtypeKey(category, draft.subtype, classification),
+    country_id: draft.address.countryId ?? undefined,
+    city_id: draft.address.cityId ?? undefined,
+    district_id: draft.address.districtId ?? undefined,
+    khoroo_id: draft.address.khorooId ?? undefined,
+    district: draft.address.district || "—",
+    khotkhon: draft.address.khotkhon || draft.address.district || "—",
+    khoroo: draft.address.khoroo || undefined,
+    area,
+    total_area_m2: area,
+    price: priceOf(draft) || 0,
+    rooms: parseInt(draft.specs.rooms, 10) || undefined,
+    bedroom_count: parseInt(draft.specs.bedrooms, 10) || undefined,
+    bathroom_count: parseInt(draft.specs.bathrooms, 10) || undefined,
+    floor: draft.address.selectedFloor || undefined,
+    year: parseInt(draft.state.commissionYear, 10) || undefined,
+    deposit: parseInt(draft.pricing.deposit, 10) || undefined,
+    vat_included: draft.pricing.vatIncluded,
+    provides_vat_ebarimt: draft.pricing.ebarimt,
+    desc: draft.desc || undefined,
+  };
+}
 
 const SMART_LIST_PROP_DRAFT_KEY = "neomap.smartListPropertyDraft.v1";
 const SMART_LIST_PROP_SUBMISSIONS_KEY = "neomap.smartListPropertySubmissions.v1";
@@ -180,6 +259,11 @@ type SmartDraft = {
     city: string;
     district: string;
     khoroo: string;
+    // Master ids resolved from the cascading address API (for the create payload).
+    countryId: number | null;
+    cityId: number | null;
+    districtId: number | null;
+    khorooId: number | null;
     zip: string;
     street: string;
     streetNumber: string;
@@ -802,6 +886,10 @@ function createDefaultDraft(): SmartDraft {
       city: "Улаанбаатар",
       district,
       khoroo: "",
+      countryId: null,
+      cityId: null,
+      districtId: null,
+      khorooId: null,
       zip: "",
       street: "",
       streetNumber: "",
@@ -1622,6 +1710,115 @@ function StepHeader({ step }: { step: number }) {
   );
 }
 
+type AddressDraft = SmartDraft["address"];
+
+/**
+ * Cascading Улс → Хот → Дүүрэг → Хороо selectors backed by the live address
+ * API. Stores both the display name and the master id on the draft so the
+ * create payload carries real ids. Each level is fetched lazily (only when its
+ * parent is chosen) and cached.
+ */
+function AddressCascade({
+  address,
+  setPath,
+}: {
+  address: AddressDraft;
+  setPath: (path: string, value: unknown) => void;
+}) {
+  const countries = useCountries();
+  const cities = useCities(address.countryId ?? undefined);
+  const districts = useDistricts(address.cityId ?? undefined);
+  const khoroos = useKhoroos(address.districtId ?? undefined);
+
+  // Auto-select when there is exactly one option (e.g. Монгол / Улаанбаатар).
+  useEffect(() => {
+    if (address.countryId == null && countries.data?.length === 1) {
+      const c = countries.data[0];
+      setPath("address.countryId", Number(c.id));
+      setPath("address.country", c.name_mn ?? c.name_en ?? "");
+    }
+  }, [address.countryId, countries.data, setPath]);
+
+  useEffect(() => {
+    if (address.countryId != null && address.cityId == null && cities.data?.length === 1) {
+      const c = cities.data[0];
+      setPath("address.cityId", Number(c.id));
+      setPath("address.city", c.name_mn ?? c.name_en ?? "");
+    }
+  }, [address.countryId, address.cityId, cities.data, setPath]);
+
+  const toOptions = (
+    items: { id: string | number; name_mn: string | null; name_en: string | null }[] | undefined
+  ) => [
+    { label: "— сонгох —", value: "" },
+    ...(items ?? []).map((i) => ({
+      value: String(i.id),
+      label: i.name_mn ?? i.name_en ?? String(i.id),
+    })),
+  ];
+
+  const pick = (
+    items: { id: string | number; name_mn: string | null; name_en: string | null }[] | undefined,
+    value: string
+  ) => (items ?? []).find((i) => String(i.id) === value);
+
+  return (
+    <div className="grid gap-3 sm:grid-cols-2">
+      <Field label="Улс">
+        <NativeSelect
+          value={address.countryId != null ? String(address.countryId) : ""}
+          options={toOptions(countries.data)}
+          onChange={(value) => {
+            const item = pick(countries.data, value);
+            setPath("address.countryId", item ? Number(item.id) : null);
+            setPath("address.country", item?.name_mn ?? item?.name_en ?? "");
+            setPath("address.cityId", null);
+            setPath("address.districtId", null);
+            setPath("address.khorooId", null);
+          }}
+        />
+      </Field>
+      <Field label="Хот / Аймаг">
+        <NativeSelect
+          value={address.cityId != null ? String(address.cityId) : ""}
+          options={toOptions(cities.data)}
+          onChange={(value) => {
+            const item = pick(cities.data, value);
+            setPath("address.cityId", item ? Number(item.id) : null);
+            setPath("address.city", item?.name_mn ?? item?.name_en ?? "");
+            setPath("address.districtId", null);
+            setPath("address.khorooId", null);
+          }}
+        />
+      </Field>
+      <Field label="Дүүрэг / Сум" required>
+        <NativeSelect
+          value={address.districtId != null ? String(address.districtId) : ""}
+          options={toOptions(districts.data)}
+          onChange={(value) => {
+            const item = pick(districts.data, value);
+            setPath("address.districtId", item ? Number(item.id) : null);
+            setPath("address.district", item?.name_mn ?? item?.name_en ?? "");
+            setPath("address.khorooId", null);
+            setPath("address.khoroo", "");
+          }}
+        />
+      </Field>
+      <Field label="Хороо / Баг" required>
+        <NativeSelect
+          value={address.khorooId != null ? String(address.khorooId) : ""}
+          options={toOptions(khoroos.data)}
+          onChange={(value) => {
+            const item = pick(khoroos.data, value);
+            setPath("address.khorooId", item ? Number(item.id) : null);
+            setPath("address.khoroo", item?.name_mn ?? item?.name_en ?? "");
+          }}
+        />
+      </Field>
+    </div>
+  );
+}
+
 export function ListPropertyWizard() {
   const [step, setStep] = useState(1);
   const [draft, setDraft] = useState<SmartDraft>(() => loadInitialDraft());
@@ -1630,6 +1827,8 @@ export function ListPropertyWizard() {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const pushToast = useStore((s) => s.pushToast);
+  const isLoggedIn = useStore((s) => s.isLoggedIn);
+  const formOptions = useFormOptions();
 
   useEffect(() => {
     const handle = window.setTimeout(() => {
@@ -1724,10 +1923,24 @@ export function ListPropertyWizard() {
     setSubmitError(null);
     setSubmitting(true);
     try {
-      await submitListingDraft(payload);
+      if (isLoggedIn) {
+        // Logged-in users create a real listing via the API, mapping the
+        // wizard draft to a StoreListingRequest (subtype keys resolved from
+        // the live form-options metadata).
+        const body = buildCreateRequest(draft, formOptions.data?.classification);
+        await createListing(body);
+      } else {
+        await submitListingDraft(payload);
+      }
       pushToast("Зар амжилттай илгээгдлээ", "success");
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Илгээх үед алдаа гарлаа";
+      const message =
+        err instanceof ApiError
+          ? Object.values(err.validationErrors ?? {})[0]?.[0] ??
+            "Серверийн алдаа гарлаа"
+          : err instanceof Error
+            ? err.message
+            : "Илгээх үед алдаа гарлаа";
       setSubmitError(message);
       pushToast("Зар илгээхэд алдаа гарлаа — дахин оролдоно уу", "danger");
     } finally {
@@ -2098,21 +2311,8 @@ function StepTwo({
                 <Navigation className="size-4 text-accent" />
                 Үндсэн байршил
               </div>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <Field label="Дүүрэг / Сум" required>
-                  <NativeSelect
-                    value={draft.address.district}
-                    onChange={(value) => actions.setPath("address.district", value)}
-                    options={[...DISTRICTS]}
-                  />
-                </Field>
-                <Field label="Хороо / Баг" required>
-                  <Input
-                    value={draft.address.khoroo}
-                    onChange={(event) => actions.setPath("address.khoroo", event.target.value)}
-                    placeholder="15"
-                  />
-                </Field>
+              <AddressCascade address={draft.address} setPath={actions.setPath} />
+              <div className="mt-3 grid gap-3 sm:grid-cols-2">
                 <Field label="Хотхон, хороолол" required hint="Гудамжтай бол хоосон үлдээж болно.">
                   <Input
                     value={draft.address.khotkhon}

@@ -101,6 +101,7 @@ export function HomeSplitScreen() {
   const clearAllFilters = useStore((s) => s.clearAllFilters);
   const openPlacePicker = useStore((s) => s.openPlacePicker);
   const myPlaces = useStore((s) => s.myPlaces);
+  const listingsVersion = useStore((s) => s.listingsVersion);
 
   const snapshot = useMemo<FilterSnapshot>(
     () => ({
@@ -125,6 +126,7 @@ export function HomeSplitScreen() {
       sortBy,
     }),
     [
+      listingsVersion,
       mode,
       filterDistrict,
       filterRooms,
@@ -147,7 +149,10 @@ export function HomeSplitScreen() {
   );
 
   const listings = useMemo(() => filteredListings(snapshot), [snapshot]);
-  const baseListings = useMemo(() => baseListingsForMode(mode), [mode]);
+  const baseListings = useMemo(
+    () => baseListingsForMode(mode),
+    [mode, listingsVersion]
+  );
 
   const activeFilterCount = [
     filterPropertyKind,
