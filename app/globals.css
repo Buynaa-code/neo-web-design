@@ -3463,7 +3463,7 @@
 
   /* ── Home AI Chat companion ── */
   .home-ai-chat {
-    position: absolute; bottom: 16px; right: 16px; z-index: 35;
+    position: absolute; bottom: 16px; right: 16px; z-index: 1100;
     width: 340px; max-width: calc(100vw - 32px);
     background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
     box-shadow: 0 12px 40px rgba(0,0,0,.24);
@@ -3558,7 +3558,7 @@
   .home-ai-chat-send:disabled { opacity: 0.4; cursor: not-allowed; }
   .home-ai-chat-clear:hover { color: var(--danger); background: var(--surface); }
 
-  @media (max-width: 1024px) {
+  @media (max-width: 720px) {
     .home-ai-chat { display: none; }
   }
 
