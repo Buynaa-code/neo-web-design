@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -63,8 +64,12 @@ export function CompareScreen() {
   const toggleCompare = useStore((s) => s.toggleCompare);
   const clearCompare = useStore((s) => s.clearCompare);
   const pushToast = useStore((s) => s.pushToast);
+  const listingsVersion = useStore((s) => s.listingsVersion);
 
-  const items = compareIds.map((id) => getListing(id)).filter(Boolean) as Listing[];
+  const items = useMemo(
+    () => compareIds.map((id) => getListing(id)).filter(Boolean) as Listing[],
+    [compareIds, listingsVersion]
+  );
 
   if (items.length === 0) {
     return (

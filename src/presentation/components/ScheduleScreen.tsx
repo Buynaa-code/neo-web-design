@@ -28,9 +28,13 @@ export function ScheduleScreen() {
   const setScheduleDate = useStore((s) => s.setScheduleDate);
   const setScheduleTime = useStore((s) => s.setScheduleTime);
   const pushToast = useStore((s) => s.pushToast);
+  const listingsVersion = useStore((s) => s.listingsVersion);
 
   const dates = useMemo(() => buildDates(), []);
-  const listing = listingId ? getListing(listingId) : undefined;
+  const listing = useMemo(
+    () => (listingId ? getListing(listingId) : undefined),
+    [listingId, listingsVersion]
+  );
 
   useEffect(() => {
     if (!scheduleDate || !dates.includes(scheduleDate)) {

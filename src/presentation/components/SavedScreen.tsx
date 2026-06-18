@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -33,12 +33,16 @@ export function SavedScreen({ initialTab }: { initialTab?: "listings" | "searche
   const toggleSaved = useStore((s) => s.toggleSavedListing);
   const pushToast = useStore((s) => s.pushToast);
   const openModal = useStore((s) => s.openModal);
+  const listingsVersion = useStore((s) => s.listingsVersion);
 
   useEffect(() => {
     if (initialTab && initialTab !== tab) setSavedTab(initialTab);
   }, [initialTab, tab, setSavedTab]);
 
-  const list = LISTINGS.filter((l) => savedIds.includes(l.id));
+  const list = useMemo(
+    () => LISTINGS.filter((l) => savedIds.includes(l.id)),
+    [savedIds, listingsVersion]
+  );
 
   return (
     <div className="max-w-6xl mx-auto px-4 lg:px-6 py-6">

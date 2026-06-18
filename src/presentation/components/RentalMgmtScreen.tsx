@@ -47,6 +47,8 @@ const TABS: { key: Tab; label: string; icon: LucideIcon }[] = [
 export function RentalMgmtScreen() {
   const router = useRouter();
   const tab = useStore((s) => s.rentalMgmtTab);
+  // Subscribe so child tabs re-render (re-running LISTINGS/getListing) when real data arrives.
+  useStore((s) => s.listingsVersion);
   const setRentalTab = (k: Tab) => useStore.setState({ rentalMgmtTab: k });
 
   return (

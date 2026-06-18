@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
+import { useStore } from "@/infrastructure/store";
 import { VIEWINGS, PAST_VIEWINGS } from "@/infrastructure/data/saved";
 import { getListing, photoUrl } from "@/infrastructure/data/listings";
 import type { Viewing } from "@/domain/types";
@@ -36,6 +37,8 @@ function ViewingRow({ v, past = false }: { v: Viewing; past?: boolean }) {
 }
 
 export function ActivityScreen() {
+  // Subscribe so rows re-render (and re-run getListing) when real data arrives.
+  useStore((s) => s.listingsVersion);
   return (
     <div className="max-w-4xl mx-auto px-4 lg:px-6 py-6">
       <h1 className="text-2xl font-semibold mb-1">Үзэлтүүд</h1>

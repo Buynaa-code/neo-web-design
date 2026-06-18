@@ -16,14 +16,25 @@ import {
   Newspaper,
   Pencil,
   Phone,
+  Trash2,
   User as UserIcon,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { useStore, type User } from "@/infrastructure/store";
+import { useStore } from "@/infrastructure/store";
 import { VIEWINGS } from "@/infrastructure/data/saved";
+import {
+  useCurrentUser,
+  useLogout,
+  useUpdatePassword,
+  useUpdateProfile,
+} from "@/application/queries/auth";
+import { useDeleteListing, useMyListings } from "@/application/queries/listings";
+import { ApiError } from "@/infrastructure/api/http";
+import { ListingCard } from "./ListingCard";
 
 type MenuKey =
   | "profile"
+  | "my-listings"
   | "activity"
   | "saved"
   | "alerts"
@@ -34,50 +45,83 @@ type MenuKey =
 
 const MENU: { key: MenuKey; icon: LucideIcon; label: string; href?: string; toast?: string }[] = [
   { key: "profile", icon: UserIcon, label: "Хувийн мэдээлэл" },
+  { key: "my-listings", icon: Megaphone, label: "Миний зар" },
   { key: "activity", icon: CalendarCheck, label: "Үзэлтүүд", href: "/activity" },
   { key: "saved", icon: Heart, label: "Хадгалсан зарууд", href: "/saved" },
   { key: "alerts", icon: Bell, label: "Мэдэгдэл", href: "/alerts" },
-  { key: "list-property", icon: Megaphone, label: "Миний зар", href: "/list-property" },
+  { key: "list-property", icon: Megaphone, label: "Зар нэмэх", href: "/list-property" },
   { key: "rental-mgmt", icon: LayoutDashboard, label: "Менежмент", href: "/rental-mgmt" },
   { key: "news", icon: Newspaper, label: "Мэдээ, зөвлөгөө", href: "/news" },
   { key: "help", icon: HelpCircle, label: "Тусламж", toast: "Тусламжийн төв удахгүй" },
 ];
 
+function initialsOf(name: string): string {
+  return (
+    name
+      .split(/\s+/)
+      .map((s) => s[0])
+      .filter(Boolean)
+      .join("")
+      .slice(0, 2)
+      .toUpperCase() || "?"
+  );
+}
+
 export function ProfileScreen() {
   const router = useRouter();
-  const user = useStore((s) => s.currentUser);
+  const storeUser = useStore((s) => s.currentUser);
   const isLoggedIn = useStore((s) => s.isLoggedIn);
   const signOut = useStore((s) => s.signOut);
-  const signIn = useStore((s) => s.signIn);
   const savedCount = useStore((s) => s.savedListingIds.length);
   const openModal = useStore((s) => s.openModal);
   const closeModal = useStore((s) => s.closeModal);
   const pushToast = useStore((s) => s.pushToast);
 
-  const u: User =
-    user ?? { name: "Зочин", phone: "", initials: "?" };
-  const email = (u as User & { email?: string }).email ?? "";
+  const { data: currentUser, isLoading: userLoading } = useCurrentUser();
+  const logout = useLogout();
+
+  const [tab, setTab] = useState<"profile" | "my-listings">("profile");
+
+  // Prefer the live customer; fall back to the locally stored user while it loads.
+  const name = currentUser?.name ?? storeUser?.name ?? "Зочин";
+  const email = currentUser?.email ?? (storeUser as { email?: string } | null)?.email ?? "";
+  const phone = currentUser?.phone ?? storeUser?.phone ?? "";
+  const initials = initialsOf(name);
   const viewingsCount = VIEWINGS.length;
 
   const openEdit = () => {
+    if (!isLoggedIn) {
+      router.push("/auth");
+      return;
+    }
     openModal(
       <ProfileEditForm
-        user={u}
-        email={email}
-        onSave={(next) => {
-          signIn(next);
-          pushToast("Мэдээлэл хадгалагдлаа", "success");
-          closeModal();
-        }}
+        initialName={name}
+        initialEmail={email}
+        initialPhone={phone}
       />,
       "md"
     );
   };
 
+  const openPassword = () => {
+    if (!isLoggedIn) {
+      router.push("/auth");
+      return;
+    }
+    openModal(<PasswordChangeForm />, "md");
+  };
+
   const confirmSignOut = () => {
     openModal(
       <SignOutConfirm
-        onConfirm={() => {
+        loading={logout.isPending}
+        onConfirm={async () => {
+          try {
+            await logout.mutateAsync(undefined);
+          } catch {
+            // Ignore network errors — we still clear local auth below.
+          }
           signOut();
           closeModal();
           pushToast("Системээс гарлаа", "info");
@@ -90,9 +134,10 @@ export function ProfileScreen() {
 
   const cards: { icon: LucideIcon; title: string; sub: string; action: () => void }[] = [
     { icon: UserIcon, title: "Хувийн мэдээлэл", sub: "Мэдээлэл засах", action: openEdit },
-    { icon: Lock, title: "Нууц үг", sub: "Шинэчлэх", action: () => pushToast("Нууц үг шинэчлэх удахгүй", "info") },
-    { icon: Phone, title: "Гар утас", sub: u.phone || "Баталгаажуулаагүй", action: () => pushToast("Утас баталгаажуулах удахгүй", "info") },
-    { icon: Mail, title: "Цахим хаяг", sub: email || "Баталгаажуулаагүй", action: () => pushToast("И-мэйл баталгаажуулах удахгүй", "info") },
+    { icon: Lock, title: "Нууц үг", sub: "Шинэчлэх", action: openPassword },
+    { icon: Megaphone, title: "Миний зар", sub: "Зарын жагсаалт", action: () => setTab("my-listings") },
+    { icon: Phone, title: "Гар утас", sub: phone || "Баталгаажуулаагүй", action: openEdit },
+    { icon: Mail, title: "Цахим хаяг", sub: email || "Баталгаажуулаагүй", action: openEdit },
     { icon: Heart, title: "Хадгалсан", sub: `${savedCount} зар`, action: () => router.push("/saved") },
     { icon: CalendarCheck, title: "Үзэлтүүд", sub: `${viewingsCount} уулзалт`, action: () => router.push("/activity") },
   ];
@@ -106,9 +151,14 @@ export function ProfileScreen() {
               <SidebarBtn
                 key={m.key}
                 icon={<m.icon className="w-[18px] h-[18px]" />}
-                active={m.key === "profile"}
+                active={
+                  (m.key === "profile" && tab === "profile") ||
+                  (m.key === "my-listings" && tab === "my-listings")
+                }
                 onClick={() => {
-                  if (m.toast) pushToast(m.toast, "info");
+                  if (m.key === "profile") setTab("profile");
+                  else if (m.key === "my-listings") setTab("my-listings");
+                  else if (m.toast) pushToast(m.toast, "info");
                   else if (m.href) router.push(m.href);
                 }}
               >
@@ -140,7 +190,7 @@ export function ProfileScreen() {
                 boxShadow: "0 8px 24px rgba(18,60,105,.18)",
               }}
             >
-              {u.initials || "?"}
+              {initials}
             </div>
             <button
               type="button"
@@ -157,10 +207,10 @@ export function ProfileScreen() {
             </button>
           </div>
           <div className="font-semibold text-base text-[var(--text)] truncate max-w-full">
-            {u.name || "Зочин"}
+            {userLoading && !storeUser ? "Уншиж байна…" : name}
           </div>
           <div className="text-xs text-[var(--text-3)] mt-1 truncate max-w-full">
-            {email || u.phone || "Холбоо барих мэдээлэл алга"}
+            {email || phone || "Холбоо барих мэдээлэл алга"}
           </div>
 
           {!isLoggedIn && (
@@ -170,26 +220,120 @@ export function ProfileScreen() {
           )}
         </div>
 
-        <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {cards.map((c) => (
-            <button
-              key={c.title}
-              type="button"
-              onClick={c.action}
-              className="card p-5 text-left hover:border-[var(--primary)] hover:shadow-md transition group"
-            >
-              <div
-                className="w-10 h-10 rounded-lg flex items-center justify-center mb-3"
-                style={{ background: "var(--primary-soft)", color: "var(--primary)" }}
-              >
-                <c.icon className="w-5 h-5" />
-              </div>
-              <div className="font-semibold text-sm text-[var(--text)]">{c.title}</div>
-              <div className="text-xs text-[var(--text-3)] mt-0.5 truncate">{c.sub}</div>
-            </button>
-          ))}
+        <div className="lg:col-span-2">
+          {tab === "profile" ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {cards.map((c) => (
+                <button
+                  key={c.title}
+                  type="button"
+                  onClick={c.action}
+                  className="card p-5 text-left hover:border-[var(--primary)] hover:shadow-md transition group"
+                >
+                  <div
+                    className="w-10 h-10 rounded-lg flex items-center justify-center mb-3"
+                    style={{ background: "var(--primary-soft)", color: "var(--primary)" }}
+                  >
+                    <c.icon className="w-5 h-5" />
+                  </div>
+                  <div className="font-semibold text-sm text-[var(--text)]">{c.title}</div>
+                  <div className="text-xs text-[var(--text-3)] mt-0.5 truncate">{c.sub}</div>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <MyListings isLoggedIn={isLoggedIn} />
+          )}
         </div>
       </div>
+    </div>
+  );
+}
+
+function MyListings({ isLoggedIn }: { isLoggedIn: boolean }) {
+  const { data, isLoading } = useMyListings();
+  const deleteListing = useDeleteListing();
+  const openModal = useStore((s) => s.openModal);
+  const closeModal = useStore((s) => s.closeModal);
+  const pushToast = useStore((s) => s.pushToast);
+
+  const listings = data?.listings ?? [];
+
+  const onDelete = (id: number, title: string) => {
+    openModal(
+      <ConfirmDelete
+        title={title}
+        loading={deleteListing.isPending}
+        onConfirm={async () => {
+          try {
+            await deleteListing.mutateAsync(id);
+            pushToast("Зар устгагдлаа", "success");
+            closeModal();
+          } catch (err) {
+            const msg =
+              err instanceof ApiError ? err.message : "Устгахад алдаа гарлаа";
+            pushToast(msg, "danger");
+          }
+        }}
+      />,
+      "sm"
+    );
+  };
+
+  if (!isLoggedIn) {
+    return (
+      <div className="card p-8 text-center">
+        <p className="text-sm text-[var(--text-3)] mb-4">
+          Зараа харахын тулд нэвтэрнэ үү.
+        </p>
+        <Link href="/auth" className="btn btn-cta">
+          Нэвтрэх
+        </Link>
+      </div>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className="card p-8 text-center text-sm text-[var(--text-3)]">
+        Уншиж байна…
+      </div>
+    );
+  }
+
+  if (listings.length === 0) {
+    return (
+      <div className="card p-8 text-center">
+        <p className="text-sm text-[var(--text-3)] mb-4">Та одоогоор зар оруулаагүй байна.</p>
+        <Link href="/list-property" className="btn btn-cta">
+          Зар нэмэх
+        </Link>
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      {listings.map((listing) => (
+        <div key={listing.id} className="relative">
+          <ListingCard listing={listing} />
+          <button
+            type="button"
+            onClick={() =>
+              onDelete(listing.id, listing.khotkhon || listing.district || "Зар")
+            }
+            className="absolute top-2 left-2 z-10 w-8 h-8 rounded-full flex items-center justify-center"
+            style={{
+              background: "var(--surface)",
+              border: "1px solid var(--border-strong)",
+              color: "var(--danger)",
+            }}
+            aria-label="Устгах"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </div>
+      ))}
     </div>
   );
 }
@@ -226,38 +370,47 @@ function SidebarBtn({
   );
 }
 
+function fieldErrors(err: unknown): Record<string, string[]> | null {
+  return err instanceof ApiError ? err.validationErrors : null;
+}
+
 function ProfileEditForm({
-  user,
-  email,
-  onSave,
+  initialName,
+  initialEmail,
+  initialPhone,
 }: {
-  user: User;
-  email: string;
-  onSave: (next: User) => void;
+  initialName: string;
+  initialEmail: string;
+  initialPhone: string;
 }) {
   const closeModal = useStore((s) => s.closeModal);
-  const [name, setName] = useState(user.name);
-  const [emailDraft, setEmailDraft] = useState(email);
-  const [phone, setPhone] = useState(user.phone);
+  const pushToast = useStore((s) => s.pushToast);
+  const updateProfile = useUpdateProfile();
 
-  const save = () => {
-    const trimmedName = name.trim() || user.name || "Зочин";
-    const initials =
-      trimmedName
-        .split(/\s+/)
-        .map((s) => s[0])
-        .filter(Boolean)
-        .join("")
-        .slice(0, 2)
-        .toUpperCase() || "?";
-    const next: User = {
-      ...user,
-      name: trimmedName,
-      phone: phone.trim() || user.phone,
-      initials,
-    };
-    (next as User & { email?: string }).email = emailDraft.trim();
-    onSave(next);
+  const [name, setName] = useState(initialName === "Зочин" ? "" : initialName);
+  const [email, setEmail] = useState(initialEmail);
+  const [phone, setPhone] = useState(initialPhone);
+  const [errors, setErrors] = useState<Record<string, string[]>>({});
+
+  const save = async () => {
+    setErrors({});
+    try {
+      await updateProfile.mutateAsync({
+        name: name.trim() || undefined,
+        email: email.trim() || undefined,
+        phone: phone.trim() ? phone.trim() : null,
+      });
+      pushToast("Мэдээлэл хадгалагдлаа", "success");
+      closeModal();
+    } catch (err) {
+      const v = fieldErrors(err);
+      if (v) setErrors(v);
+      else
+        pushToast(
+          err instanceof ApiError ? err.message : "Хадгалахад алдаа гарлаа",
+          "danger"
+        );
+    }
   };
 
   return (
@@ -266,47 +419,202 @@ function ProfileEditForm({
         <h3 className="font-semibold text-lg">Хувийн мэдээлэл засах</h3>
       </div>
       <div className="p-5 space-y-3">
-        <label className="block">
-          <div className="text-xs font-semibold text-[var(--text-2)] mb-1">Нэр</div>
+        <Field label="Нэр" error={errors.name?.[0]}>
           <input
             className="input"
             placeholder="Таны нэр"
             value={name}
             onChange={(e) => setName(e.target.value)}
           />
-        </label>
-        <label className="block">
-          <div className="text-xs font-semibold text-[var(--text-2)] mb-1">Цахим хаяг</div>
+        </Field>
+        <Field label="Цахим хаяг" error={errors.email?.[0]}>
           <input
             className="input"
             placeholder="name@example.com"
-            value={emailDraft}
-            onChange={(e) => setEmailDraft(e.target.value)}
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
           />
-        </label>
-        <label className="block">
-          <div className="text-xs font-semibold text-[var(--text-2)] mb-1">Гар утас</div>
+        </Field>
+        <Field label="Гар утас" error={errors.phone?.[0]}>
           <input
             className="input"
             placeholder="+976 ..."
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
           />
-        </label>
+        </Field>
       </div>
       <div className="p-4 flex gap-2 justify-end" style={{ borderTop: "1px solid var(--border)" }}>
         <button type="button" onClick={closeModal} className="btn btn-secondary">
           Болих
         </button>
-        <button type="button" onClick={save} className="btn btn-primary">
-          Хадгалах
+        <button
+          type="button"
+          onClick={save}
+          disabled={updateProfile.isPending}
+          className="btn btn-primary"
+        >
+          {updateProfile.isPending ? "Хадгалж байна…" : "Хадгалах"}
         </button>
       </div>
     </div>
   );
 }
 
-function SignOutConfirm({ onConfirm }: { onConfirm: () => void }) {
+function PasswordChangeForm() {
+  const closeModal = useStore((s) => s.closeModal);
+  const pushToast = useStore((s) => s.pushToast);
+  const updatePassword = useUpdatePassword();
+
+  const [current, setCurrent] = useState("");
+  const [next, setNext] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [errors, setErrors] = useState<Record<string, string[]>>({});
+  const [mismatch, setMismatch] = useState(false);
+
+  const save = async () => {
+    setErrors({});
+    setMismatch(false);
+    if (next !== confirm) {
+      setMismatch(true);
+      return;
+    }
+    try {
+      await updatePassword.mutateAsync({
+        current_password: current,
+        password: next,
+        password_confirmation: confirm,
+      });
+      pushToast("Нууц үг шинэчлэгдлээ", "success");
+      closeModal();
+    } catch (err) {
+      const v = fieldErrors(err);
+      if (v) setErrors(v);
+      else
+        pushToast(
+          err instanceof ApiError ? err.message : "Шинэчлэхэд алдаа гарлаа",
+          "danger"
+        );
+    }
+  };
+
+  return (
+    <div className="-m-6">
+      <div className="p-5 flex items-center justify-between" style={{ borderBottom: "1px solid var(--border)" }}>
+        <h3 className="font-semibold text-lg">Нууц үг солих</h3>
+      </div>
+      <div className="p-5 space-y-3">
+        <Field label="Одоогийн нууц үг" error={errors.current_password?.[0]}>
+          <input
+            type="password"
+            className="input"
+            value={current}
+            onChange={(e) => setCurrent(e.target.value)}
+          />
+        </Field>
+        <Field label="Шинэ нууц үг" error={errors.password?.[0]}>
+          <input
+            type="password"
+            className="input"
+            placeholder="Дор хаяж 8 тэмдэгт"
+            value={next}
+            onChange={(e) => setNext(e.target.value)}
+          />
+        </Field>
+        <Field
+          label="Шинэ нууц үг давтах"
+          error={mismatch ? "Нууц үг таарахгүй байна" : errors.password_confirmation?.[0]}
+        >
+          <input
+            type="password"
+            className="input"
+            value={confirm}
+            onChange={(e) => setConfirm(e.target.value)}
+          />
+        </Field>
+      </div>
+      <div className="p-4 flex gap-2 justify-end" style={{ borderTop: "1px solid var(--border)" }}>
+        <button type="button" onClick={closeModal} className="btn btn-secondary">
+          Болих
+        </button>
+        <button
+          type="button"
+          onClick={save}
+          disabled={updatePassword.isPending}
+          className="btn btn-primary"
+        >
+          {updatePassword.isPending ? "Шинэчилж байна…" : "Шинэчлэх"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function Field({
+  label,
+  error,
+  children,
+}: {
+  label: string;
+  error?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <label className="block">
+      <div className="text-xs font-semibold text-[var(--text-2)] mb-1">{label}</div>
+      {children}
+      {error && (
+        <div className="text-xs mt-1" style={{ color: "var(--danger)" }}>
+          {error}
+        </div>
+      )}
+    </label>
+  );
+}
+
+function ConfirmDelete({
+  title,
+  loading,
+  onConfirm,
+}: {
+  title: string;
+  loading: boolean;
+  onConfirm: () => void;
+}) {
+  const closeModal = useStore((s) => s.closeModal);
+  return (
+    <div className="-m-6">
+      <div className="p-5">
+        <h3 className="font-semibold text-lg mb-1">Зар устгах уу?</h3>
+        <p className="text-sm text-[var(--text-3)]">
+          &ldquo;{title}&rdquo; зарыг устгахдаа итгэлтэй байна уу? Энэ үйлдлийг буцаах боломжгүй.
+        </p>
+      </div>
+      <div className="p-4 flex gap-2 justify-end" style={{ borderTop: "1px solid var(--border)" }}>
+        <button type="button" onClick={closeModal} className="btn btn-secondary">
+          Болих
+        </button>
+        <button
+          type="button"
+          onClick={onConfirm}
+          disabled={loading}
+          className="btn btn-primary"
+          style={{ background: "var(--danger)" }}
+        >
+          {loading ? "Устгаж байна…" : "Устгах"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function SignOutConfirm({
+  loading,
+  onConfirm,
+}: {
+  loading: boolean;
+  onConfirm: () => void;
+}) {
   const closeModal = useStore((s) => s.closeModal);
   return (
     <div className="-m-6">
@@ -323,10 +631,11 @@ function SignOutConfirm({ onConfirm }: { onConfirm: () => void }) {
         <button
           type="button"
           onClick={onConfirm}
+          disabled={loading}
           className="btn btn-primary"
           style={{ background: "var(--danger)" }}
         >
-          Гарах
+          {loading ? "Гарч байна…" : "Гарах"}
         </button>
       </div>
     </div>

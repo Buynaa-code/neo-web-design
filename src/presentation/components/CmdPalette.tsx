@@ -39,6 +39,7 @@ export function CmdPalette() {
   const setMode = useStore((s) => s.setMode);
   const setFilterDistrict = useStore((s) => s.setFilterDistrict);
   const pushToast = useStore((s) => s.pushToast);
+  const listingsVersion = useStore((s) => s.listingsVersion);
 
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
@@ -146,7 +147,7 @@ export function CmdPalette() {
     if (listings.length) out.push({ title: "Зарууд", items: listings });
     if (districts.length) out.push({ title: "Дүүрэг", items: districts });
     return out;
-  }, [q, pushToast, router, setMode]);
+  }, [q, pushToast, router, setMode, listingsVersion]);
 
   const flat = useMemo(() => groups.flatMap((g) => g.items), [groups]);
 

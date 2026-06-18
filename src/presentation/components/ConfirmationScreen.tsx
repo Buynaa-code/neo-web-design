@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Check } from "lucide-react";
@@ -12,7 +12,11 @@ export function ConfirmationScreen() {
   const listingId = useStore((s) => s.scheduleListingId ?? s.currentListingId);
   const date = useStore((s) => s.scheduleDate);
   const time = useStore((s) => s.scheduleTime);
-  const listing = listingId ? getListing(listingId) : undefined;
+  const listingsVersion = useStore((s) => s.listingsVersion);
+  const listing = useMemo(
+    () => (listingId ? getListing(listingId) : undefined),
+    [listingId, listingsVersion]
+  );
 
   useEffect(() => {
     if (!listingId || !date || !time) router.replace("/");

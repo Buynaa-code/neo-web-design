@@ -128,6 +128,10 @@ import {
   useCities,
   useDistricts,
   useKhoroos,
+  useStreets,
+  useZipcodes,
+  useComplexes,
+  useBuildingBlocks,
 } from "@/application/queries/address";
 import { useStore } from "@/infrastructure/store";
 
@@ -167,15 +171,121 @@ function resolveSubtypeKey(
   return keys.find((k) => subs[k]?.label === subtypeLabel) ?? keys[0];
 }
 
+type EnumOptions = Record<string, unknown>;
+
+/**
+ * Reverse-looks-up an API enum *key* from a (possibly Mongolian) label, using
+ * the live form-options `enumOptions[field]` map (shaped `{ key: label }`).
+ * Falls back to the raw value if no exact label match is found (so already-key
+ * values pass straight through). Returns undefined for empty input.
+ */
+function resolveEnumKey(
+  field: string,
+  label: string | undefined,
+  enumOptions: EnumOptions | undefined
+): string | undefined {
+  const value = (label ?? "").trim();
+  if (!value) return undefined;
+  const map = enumOptions?.[field];
+  if (map && typeof map === "object") {
+    const entries = Object.entries(map as Record<string, unknown>);
+    // If the value is already a valid key, keep it.
+    if (entries.some(([key]) => key === value)) return value;
+    const hit = entries.find(([, lbl]) => String(lbl) === value);
+    if (hit) return hit[0];
+  }
+  return value;
+}
+
+/** Wizard-label → API-key maps for the enum selects (labels come from the UI). */
+const USAGE_KEY: Record<string, string> = {
+  "Цоо шинэ, ашиглаж байгаагүй": "brand_new_unused",
+  "Ашиглагдаж байсан": "used",
+};
+const INTERIOR_KEY: Record<string, string> = {
+  "Сүүлийн 1 жилийн хугацаанд засал хийсэн": "renovated_within_1_year",
+  "1-3 жилийн өмнө засал хийсэн": "renovated_1_to_3_years",
+  "3-с дээш жилийн өмнө засал хийсэн / Анхны заслаараа байгаа": "old_or_original_finish",
+};
+const CERT_KEY: Record<string, string> = {
+  "Бэлэн гэрчилгээтэй": "certificate_ready",
+  "Дуусаагүй барилгын гэрчилгээтэй": "unfinished_building_certificate",
+  "Гэрчилгээгүй - Гэрчилгээ гарахад бэлэн": "certificate_pending_ready",
+  "Гэрчилгээгүй - Баригдаж байгаа, захиалгын гэрээтэй": "under_construction",
+};
+const CURRENT_KEY: Record<string, string> = {
+  "Түрээсийн эсхүл хөлслүүлэх гэрээтэй байгаа": "has_lease_contract",
+  "Амьдарч, ашиглаж байгаа": "occupied_or_in_use",
+  "Сул, чөлөөтэй байгаа": "vacant",
+  "Бусад": "other",
+};
+const COLLATERAL_KEY: Record<string, string> = {
+  "Ямар нэг барьцаанд байхгүй": "no_collateral",
+  "Банк, ББСБ, санхүүгийн байгууллагын зээлийн барьцаанд байгаа": "financial_institution_collateral",
+  "Гуравдагч этгээдийн барьцаанд байгаа": "third_party_collateral",
+};
+const RELATION_KEY: Record<string, string> = {
+  "Өмчлөгч": "owner",
+  "Эрх эзэмшигч": "right_holder",
+  "Гэрээний эрх эзэмшигч": "contract_right_holder",
+  "Өмчлөгч, эрх эзэмшигч хуулийн этгээдийн ажилтан": "employee_of_owner_entity",
+  "Хууль ёсны итгэмжлэгдсэн төлөөлөгч": "legal_representative",
+};
+const RENT_FREQ_KEY: Record<string, string> = {
+  "1 сар тутам": "monthly",
+  "2 сар тутам": "bimonthly",
+  "3 сар тутам": "quarterly",
+  "4 сар тутам": "four_monthly",
+  "6 сар тутам": "semiannual",
+  "12 сар тутам": "annual",
+};
+
+/**
+ * Resolves a wizard label to an API enum key: prefers the static label→key map,
+ * then the live enumOptions reverse-lookup, then the raw value.
+ */
+function mapEnum(
+  field: string,
+  label: string | undefined,
+  staticMap: Record<string, string>,
+  enumOptions: EnumOptions | undefined
+): string | undefined {
+  const value = (label ?? "").trim();
+  if (!value) return undefined;
+  return staticMap[value] ?? resolveEnumKey(field, value, enumOptions);
+}
+
+/** Parses a numeric string to a positive number, or undefined when empty/zero. */
+function numOrUndef(value: unknown): number | undefined {
+  const n = parseFloat(String(value ?? ""));
+  return Number.isFinite(n) && n > 0 ? n : undefined;
+}
+
+/** Drops keys whose value is undefined, null, or an empty string. */
+function pruneEmpty(obj: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(obj)) {
+    if (value === undefined || value === null || value === "") continue;
+    out[key] = value;
+  }
+  return out;
+}
+
 /** Builds a StoreListingRequest body from the wizard draft + metadata. */
 function buildCreateRequest(
   draft: SmartDraft,
-  classification: ClassificationLike | undefined
+  classification: ClassificationLike | undefined,
+  enumOptions: EnumOptions | undefined
 ): Record<string, unknown> {
   const mode = modeOf(draft.goal);
   const category = CATEGORY_API[draft.propertyType];
   const area = parseFloat(draft.specs.areaCert) || 1;
-  return {
+  const price = priceOf(draft) || 0;
+  const totalFloor =
+    (clampInt(draft.address.floorBasement, 0, 99) || 0) +
+    (clampInt(draft.address.floorAbove, 0, 99) || 0);
+
+  const base: Record<string, unknown> = {
     transaction_type: mode,
     mode,
     property_category: category,
@@ -184,22 +294,73 @@ function buildCreateRequest(
     city_id: draft.address.cityId ?? undefined,
     district_id: draft.address.districtId ?? undefined,
     khoroo_id: draft.address.khorooId ?? undefined,
+    // New cascading address ids (optional).
+    zipcode_id: draft.address.zipcodeId ?? undefined,
+    street_id: draft.address.streetId ?? undefined,
+    complex_id: draft.address.complexId ?? undefined,
+    building_block_id: draft.address.buildingBlockId ?? undefined,
     district: draft.address.district || "—",
     khotkhon: draft.address.khotkhon || draft.address.district || "—",
     khoroo: draft.address.khoroo || undefined,
     area,
     total_area_m2: area,
-    price: priceOf(draft) || 0,
+    // Detailed area breakdown.
+    net_internal_area_m2: numOrUndef(draft.specs.areaInterior),
+    balcony_terrace_veranda_loggia_area_m2: numOrUndef(draft.specs.areaBalcony),
+    indoor_parking_area_m2: numOrUndef(draft.specs.areaGarage),
+    storage_technical_room_area_m2: numOrUndef(draft.specs.areaStorage),
+    price,
     rooms: parseInt(draft.specs.rooms, 10) || undefined,
     bedroom_count: parseInt(draft.specs.bedrooms, 10) || undefined,
     bathroom_count: parseInt(draft.specs.bathrooms, 10) || undefined,
+    // Floor info (floor_type intentionally omitted — not required by POST /listings).
     floor: draft.address.selectedFloor || undefined,
+    selected_floor: draft.address.selectedFloor || undefined,
+    main_floor_count: clampInt(draft.address.floorAbove, 0, 99) || undefined,
+    basement_floor_count: clampInt(draft.address.floorBasement, 0, 99) || undefined,
+    total_floor_count: totalFloor || undefined,
+    unit_number: draft.address.unit || undefined,
+    street_number: draft.address.streetNumber || undefined,
+    building_block_number: draft.address.buildingNumber || undefined,
+    google_map_link: draft.address.googleMapLink || undefined,
+    address_description: draft.address.note || undefined,
     year: parseInt(draft.state.commissionYear, 10) || undefined,
-    deposit: parseInt(draft.pricing.deposit, 10) || undefined,
+    commissioned_year: parseInt(draft.state.commissionYear, 10) || undefined,
+    // State enums (wizard stores Mongolian labels → API keys).
+    usage_condition: mapEnum("usage_condition", draft.state.condition, USAGE_KEY, enumOptions),
+    interior_condition: mapEnum("interior_condition", draft.state.interior, INTERIOR_KEY, enumOptions),
+    certificate_status: mapEnum("certificate_status", draft.state.certStatus, CERT_KEY, enumOptions),
+    current_availability_status: mapEnum("current_availability_status", draft.state.current, CURRENT_KEY, enumOptions),
+    collateral_status: mapEnum("collateral_status", draft.state.collateral, COLLATERAL_KEY, enumOptions),
+    relationship_to_property: mapEnum("relationship_to_property", draft.services.relation, RELATION_KEY, enumOptions),
     vat_included: draft.pricing.vatIncluded,
     provides_vat_ebarimt: draft.pricing.ebarimt,
     desc: draft.desc || undefined,
+    // Optional paid services + declarations.
+    wants_verified: draft.services.verified,
+    wants_brokerage: draft.services.brokerage,
+    wants_sponsored: draft.services.sponsored,
+    confirms_information_is_true: draft.declarations.truth,
+    confirms_authorized_to_publish: draft.declarations.authority,
+    accepts_terms: draft.declarations.terms,
   };
+
+  if (mode === "rent") {
+    base.monthly_total_price = numOrUndef(draft.pricing.monthlyPrice) ?? price;
+    base.rent_payment_frequency = mapEnum(
+      "rent_payment_frequency",
+      draft.pricing.rentFrequency,
+      RENT_FREQ_KEY,
+      enumOptions
+    );
+    base.rent_deposit_amount = parseInt(draft.pricing.deposit, 10) || undefined;
+  } else {
+    base.total_price = numOrUndef(draft.pricing.totalPrice) ?? price;
+    base.unit_price_m2 = area ? Math.round((numOrUndef(draft.pricing.totalPrice) ?? price) / area) : undefined;
+    base.deposit = parseInt(draft.pricing.deposit, 10) || undefined;
+  }
+
+  return pruneEmpty(base);
 }
 
 const SMART_LIST_PROP_DRAFT_KEY = "neomap.smartListPropertyDraft.v1";
@@ -264,6 +425,10 @@ type SmartDraft = {
     cityId: number | null;
     districtId: number | null;
     khorooId: number | null;
+    zipcodeId: number | null;
+    streetId: number | null;
+    complexId: number | null;
+    buildingBlockId: number | null;
     zip: string;
     street: string;
     streetNumber: string;
@@ -890,6 +1055,10 @@ function createDefaultDraft(): SmartDraft {
       cityId: null,
       districtId: null,
       khorooId: null,
+      zipcodeId: null,
+      streetId: null,
+      complexId: null,
+      buildingBlockId: null,
       zip: "",
       street: "",
       streetNumber: "",
@@ -1729,6 +1898,13 @@ function AddressCascade({
   const cities = useCities(address.countryId ?? undefined);
   const districts = useDistricts(address.cityId ?? undefined);
   const khoroos = useKhoroos(address.districtId ?? undefined);
+  const streets = useStreets(address.khorooId ?? undefined);
+  const zipcodes = useZipcodes(address.khorooId ?? undefined);
+  const complexes = useComplexes(
+    address.khorooId ?? undefined,
+    address.streetId ?? undefined
+  );
+  const buildingBlocks = useBuildingBlocks(address.complexId ?? undefined);
 
   // Auto-select when there is exactly one option (e.g. Монгол / Улаанбаатар).
   useEffect(() => {
@@ -1812,6 +1988,57 @@ function AddressCascade({
             const item = pick(khoroos.data, value);
             setPath("address.khorooId", item ? Number(item.id) : null);
             setPath("address.khoroo", item?.name_mn ?? item?.name_en ?? "");
+            setPath("address.zipcodeId", null);
+            setPath("address.streetId", null);
+            setPath("address.complexId", null);
+            setPath("address.buildingBlockId", null);
+          }}
+        />
+      </Field>
+      <Field label="Гудамж" hint="Заавал биш">
+        <NativeSelect
+          value={address.streetId != null ? String(address.streetId) : ""}
+          options={toOptions(streets.data)}
+          onChange={(value) => {
+            const item = pick(streets.data, value);
+            setPath("address.streetId", item ? Number(item.id) : null);
+            if (item) setPath("address.street", item.name_mn ?? item.name_en ?? "");
+            setPath("address.complexId", null);
+            setPath("address.buildingBlockId", null);
+          }}
+        />
+      </Field>
+      <Field label="Зип / шуудангийн код" hint="Заавал биш">
+        <NativeSelect
+          value={address.zipcodeId != null ? String(address.zipcodeId) : ""}
+          options={toOptions(zipcodes.data)}
+          onChange={(value) => {
+            const item = pick(zipcodes.data, value);
+            setPath("address.zipcodeId", item ? Number(item.id) : null);
+            if (item) setPath("address.zip", item.name_mn ?? item.name_en ?? "");
+          }}
+        />
+      </Field>
+      <Field label="Хотхон / цогцолбор" hint="Заавал биш">
+        <NativeSelect
+          value={address.complexId != null ? String(address.complexId) : ""}
+          options={toOptions(complexes.data)}
+          onChange={(value) => {
+            const item = pick(complexes.data, value);
+            setPath("address.complexId", item ? Number(item.id) : null);
+            if (item) setPath("address.khotkhon", item.name_mn ?? item.name_en ?? "");
+            setPath("address.buildingBlockId", null);
+          }}
+        />
+      </Field>
+      <Field label="Барилгын блок" hint="Заавал биш">
+        <NativeSelect
+          value={address.buildingBlockId != null ? String(address.buildingBlockId) : ""}
+          options={toOptions(buildingBlocks.data)}
+          onChange={(value) => {
+            const item = pick(buildingBlocks.data, value);
+            setPath("address.buildingBlockId", item ? Number(item.id) : null);
+            if (item) setPath("address.buildingNumber", item.name_mn ?? item.name_en ?? "");
           }}
         />
       </Field>
@@ -1927,7 +2154,11 @@ export function ListPropertyWizard() {
         // Logged-in users create a real listing via the API, mapping the
         // wizard draft to a StoreListingRequest (subtype keys resolved from
         // the live form-options metadata).
-        const body = buildCreateRequest(draft, formOptions.data?.classification);
+        const body = buildCreateRequest(
+          draft,
+          formOptions.data?.classification,
+          formOptions.data?.enumOptions
+        );
         await createListing(body);
       } else {
         await submitListingDraft(payload);
