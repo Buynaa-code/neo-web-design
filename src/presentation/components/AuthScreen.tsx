@@ -1,17 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useStore } from "@/infrastructure/store";
+import { useStore, type User } from "@/infrastructure/store";
 import { useStoreHydrated } from "@/infrastructure/useStoreHydrated";
-
-function normalizePhone(raw: string): { ok: boolean; normalized?: string; error?: string } {
-  if (!raw.trim()) return { ok: false, error: "Утасны дугаараа оруулна уу" };
-  const digits = raw.replace(/[^\d]/g, "");
-  const okMN = /^976\d{8}$/.test(digits) || /^\d{8}$/.test(digits);
-  if (!okMN) return { ok: false, error: "Зөв формат: +976 XXXX XXXX эсвэл 8 оронтой дугаар" };
-  return { ok: true, normalized: digits.startsWith("976") ? "+" + digits : "+976" + digits };
-}
+import { useLogin, useRegister } from "@/application/queries/auth";
+import { ApiError } from "@/infrastructure/api/http";
+import type { Customer } from "@/domain/schemas/api";
 
 function safeNextPath(next: string | null, defaultPath = "/profile") {
   if (!next || !next.startsWith("/") || next.startsWith("//") || next.startsWith("/auth")) {
@@ -20,181 +15,97 @@ function safeNextPath(next: string | null, defaultPath = "/profile") {
   return next;
 }
 
-function OtpModal({ phone, onVerified }: { phone: string; onVerified: () => void }) {
-  const closeModal = useStore((s) => s.closeModal);
-  const pushToast = useStore((s) => s.pushToast);
-  const [otp, setOtp] = useState<string[]>(["", "", "", "", "", ""]);
-  const [otpError, setOtpError] = useState<string | null>(null);
-  const [resendLeft, setResendLeft] = useState(30);
-  const inputsRef = useRef<(HTMLInputElement | null)[]>([]);
-
-  useEffect(() => {
-    inputsRef.current[0]?.focus();
-    const id = setInterval(() => {
-      setResendLeft((v) => (v <= 1 ? 0 : v - 1));
-    }, 1000);
-    return () => clearInterval(id);
-  }, []);
-
-  const verify = () => {
-    const code = otp.join("");
-    if (code.length !== 6 || /\D/.test(code)) {
-      setOtpError("6 оронтой кодоо бүрэн оруулна уу");
-      return;
-    }
-    setOtpError(null);
-    onVerified();
-    closeModal();
-  };
-
-  const onOtpChange = (i: number, value: string) => {
-    const digits = value.replace(/[^\d]/g, "");
-    setOtpError(null);
-    if (!digits) {
-      setOtp((prev) => {
-        const next = prev.slice();
-        next[i] = "";
-        return next;
-      });
-      return;
-    }
-    setOtp((prev) => {
-      const next = prev.slice();
-      for (let k = 0; k < digits.length && i + k < 6; k++) {
-        next[i + k] = digits[k];
-      }
-      return next;
-    });
-    const lastFilled = Math.min(i + digits.length - 1, 5);
-    const nextFocus = Math.min(lastFilled + 1, 5);
-    inputsRef.current[nextFocus]?.focus();
-  };
-
-  const onOtpPaste = (i: number, e: React.ClipboardEvent<HTMLInputElement>) => {
-    const text = e.clipboardData.getData("text");
-    if (!/\d/.test(text)) return;
-    e.preventDefault();
-    onOtpChange(i, text);
-  };
-
-  const onOtpKey = (i: number, e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Backspace" && !otp[i] && i > 0) {
-      inputsRef.current[i - 1]?.focus();
-      setOtp((prev) => {
-        const n = prev.slice();
-        n[i - 1] = "";
-        return n;
-      });
-    } else if (e.key === "Enter") {
-      verify();
-    }
-  };
-
-  return (
-    <div className="-m-6">
-      <div
-        className="p-5 flex items-center justify-between"
-        style={{ borderBottom: "1px solid var(--border)" }}
-      >
-        <div>
-          <h3 className="font-semibold text-lg">SMS код оруулах</h3>
-          <p className="text-xs text-[var(--text-3)] mt-0.5">
-            {phone} руу 6 оронтой код илгээсэн
-          </p>
-        </div>
-      </div>
-      <div className="p-5">
-        <div className="flex justify-between gap-2 mb-2">
-          {otp.map((v, i) => (
-            <input
-              key={i}
-              ref={(el) => {
-                inputsRef.current[i] = el;
-              }}
-              className="otp-box"
-              inputMode="numeric"
-              maxLength={6}
-              value={v}
-              onChange={(e) => onOtpChange(i, e.target.value)}
-              onKeyDown={(e) => onOtpKey(i, e)}
-              onPaste={(e) => onOtpPaste(i, e)}
-            />
-          ))}
-        </div>
-        <div className="text-xs text-[var(--danger,#9B2C2C)] mb-2 min-h-[16px]">
-          {otpError}
-        </div>
-        <button
-          type="button"
-          onClick={() => {
-            if (resendLeft === 0) {
-              pushToast("Шинэ код илгээлээ", "info");
-              setResendLeft(30);
-            }
-          }}
-          disabled={resendLeft > 0}
-          className="text-xs font-medium hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
-          style={{ color: "var(--primary)" }}
-        >
-          {resendLeft > 0 ? `Дахин илгээх (${resendLeft}с)` : "Дахин илгээх"}
-        </button>
-      </div>
-      <div
-        className="p-4 flex gap-2 justify-end"
-        style={{ borderTop: "1px solid var(--border)", background: "var(--surface-2)" }}
-      >
-        <button type="button" onClick={closeModal} className="btn btn-secondary">
-          Буцах
-        </button>
-        <button type="button" onClick={verify} className="btn btn-primary">
-          Баталгаажуулах
-        </button>
-      </div>
-    </div>
-  );
+function initialsOf(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "?";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[1][0]).toUpperCase();
 }
+
+function customerToUser(c: Customer): User {
+  return {
+    id: c.id,
+    name: c.name,
+    email: c.email,
+    phone: c.phone ?? "",
+    initials: initialsOf(c.name),
+  };
+}
+
+/** Pulls a human-readable message out of an ApiError (validation or generic). */
+function errorMessage(err: unknown): string {
+  if (err instanceof ApiError) {
+    const fields = err.validationErrors;
+    if (fields) {
+      const first = Object.values(fields)[0];
+      if (first?.[0]) return first[0];
+    }
+    if (err.status === 401) return "Имэйл эсвэл нууц үг буруу байна.";
+    if (err.body && typeof err.body === "object" && "message" in err.body) {
+      return String((err.body as { message: unknown }).message);
+    }
+  }
+  return "Алдаа гарлаа. Дахин оролдоно уу.";
+}
+
+type Mode = "login" | "register";
 
 export function AuthScreen() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const phoneDraft = useStore((s) => s.authPhoneDraft);
-  const setAuthPhoneDraft = useStore((s) => s.setAuthPhoneDraft);
   const signIn = useStore((s) => s.signIn);
   const isLoggedIn = useStore((s) => s.isLoggedIn);
   const pushToast = useStore((s) => s.pushToast);
-  const openModal = useStore((s) => s.openModal);
   const hydrated = useStoreHydrated();
+
+  const login = useLogin();
+  const register = useRegister();
 
   const nextPath = useMemo(
     () => safeNextPath(searchParams.get("next")),
     [searchParams]
   );
 
-  const [phone, setPhone] = useState(phoneDraft || "");
-  const [phoneError, setPhoneError] = useState<string | null>(null);
+  const [mode, setMode] = useState<Mode>("login");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [password, setPassword] = useState("");
+  const [passwordConfirm, setPasswordConfirm] = useState("");
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (hydrated && isLoggedIn) router.replace(nextPath);
   }, [hydrated, isLoggedIn, nextPath, router]);
 
-  const requestOtp = () => {
-    const r = normalizePhone(phone);
-    if (!r.ok) {
-      setPhoneError(r.error ?? "Алдаатай дугаар");
-      return;
+  const pending = login.isPending || register.isPending;
+
+  const submit = async () => {
+    setError(null);
+    try {
+      if (mode === "register") {
+        if (password !== passwordConfirm) {
+          setError("Нууц үг таарахгүй байна.");
+          return;
+        }
+        const res = await register.mutateAsync({
+          name,
+          email,
+          phone: phone || undefined,
+          password,
+          password_confirmation: passwordConfirm,
+        });
+        signIn(customerToUser(res.customer));
+        pushToast(`Тавтай морил, ${res.customer.name}`, "success");
+      } else {
+        const res = await login.mutateAsync({ email, password });
+        signIn(customerToUser(res.customer));
+        pushToast(`Тавтай морил, ${res.customer.name}`, "success");
+      }
+      router.replace(nextPath);
+    } catch (err) {
+      setError(errorMessage(err));
     }
-    setPhoneError(null);
-    const normalized = r.normalized!;
-    setAuthPhoneDraft(normalized);
-    openModal(
-      <OtpModal
-        phone={normalized}
-        onVerified={() => {
-          signIn({ name: "Энхтуяа", phone: normalized, initials: "ЭТ" });
-          pushToast("Тавтай морил, Энхтуяа", "success");
-        }}
-      />
-    );
   };
 
   if (!hydrated || isLoggedIn) {
@@ -209,36 +120,135 @@ export function AuthScreen() {
 
   return (
     <div className="max-w-md mx-auto px-4 py-12">
-      <h1 className="text-2xl font-semibold mb-1 text-center">Нэвтрэх</h1>
-      <p className="text-sm text-[var(--text-3)] mb-6 text-center">Утасны дугаараараа</p>
+      <h1 className="text-2xl font-semibold mb-1 text-center">
+        {mode === "login" ? "Нэвтрэх" : "Бүртгүүлэх"}
+      </h1>
+      <p className="text-sm text-[var(--text-3)] mb-6 text-center">
+        Имэйл хаягаараа
+      </p>
       <div className="card p-6">
+        {mode === "register" && (
+          <>
+            <label className="text-xs font-medium text-[var(--text-2)] mb-1.5 block">
+              Нэр
+            </label>
+            <input
+              className="input mb-3"
+              placeholder="Таны нэр"
+              value={name}
+              onChange={(e) => {
+                setName(e.target.value);
+                setError(null);
+              }}
+              autoComplete="name"
+            />
+          </>
+        )}
+
         <label className="text-xs font-medium text-[var(--text-2)] mb-1.5 block">
-          Утасны дугаар
+          Имэйл
         </label>
         <input
-          id="auth-phone-input"
-          className="input mb-1"
-          placeholder="+976 9911 5544"
-          value={phone}
+          className="input mb-3"
+          type="email"
+          placeholder="name@example.com"
+          value={email}
           onChange={(e) => {
-            setPhone(e.target.value);
-            setAuthPhoneDraft(e.target.value);
-            setPhoneError(null);
+            setEmail(e.target.value);
+            setError(null);
+          }}
+          autoComplete="email"
+        />
+
+        {mode === "register" && (
+          <>
+            <label className="text-xs font-medium text-[var(--text-2)] mb-1.5 block">
+              Утас (заавал биш)
+            </label>
+            <input
+              className="input mb-3"
+              placeholder="+976 9911 5544"
+              value={phone}
+              onChange={(e) => {
+                setPhone(e.target.value);
+                setError(null);
+              }}
+              inputMode="tel"
+              autoComplete="tel"
+            />
+          </>
+        )}
+
+        <label className="text-xs font-medium text-[var(--text-2)] mb-1.5 block">
+          Нууц үг
+        </label>
+        <input
+          className="input mb-3"
+          type="password"
+          placeholder="••••••••"
+          value={password}
+          onChange={(e) => {
+            setPassword(e.target.value);
+            setError(null);
           }}
           onKeyDown={(e) => {
-            if (e.key === "Enter") requestOtp();
+            if (e.key === "Enter" && mode === "login") submit();
           }}
-          inputMode="tel"
+          autoComplete={mode === "login" ? "current-password" : "new-password"}
         />
+
+        {mode === "register" && (
+          <>
+            <label className="text-xs font-medium text-[var(--text-2)] mb-1.5 block">
+              Нууц үг давтах
+            </label>
+            <input
+              className="input mb-3"
+              type="password"
+              placeholder="••••••••"
+              value={passwordConfirm}
+              onChange={(e) => {
+                setPasswordConfirm(e.target.value);
+                setError(null);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") submit();
+              }}
+              autoComplete="new-password"
+            />
+          </>
+        )}
+
         <div className="text-xs text-[var(--danger,#9B2C2C)] mb-3 min-h-[16px]">
-          {phoneError}
+          {error}
         </div>
-        <button type="button" onClick={requestOtp} className="btn btn-cta w-full">
-          SMS код илгээх
+
+        <button
+          type="button"
+          onClick={submit}
+          disabled={pending}
+          className="btn btn-cta w-full disabled:opacity-60"
+        >
+          {pending
+            ? "Уншиж байна…"
+            : mode === "login"
+              ? "Нэвтрэх"
+              : "Бүртгүүлэх"}
         </button>
-        <p className="text-[11px] text-[var(--text-3)] mt-3 text-center">
-          Жишээ: +976 9911 5544
-        </p>
+
+        <button
+          type="button"
+          onClick={() => {
+            setMode(mode === "login" ? "register" : "login");
+            setError(null);
+          }}
+          className="text-xs font-medium hover:underline mt-4 block mx-auto"
+          style={{ color: "var(--primary)" }}
+        >
+          {mode === "login"
+            ? "Шинэ хэрэглэгч үү? Бүртгүүлэх"
+            : "Бүртгэлтэй юу? Нэвтрэх"}
+        </button>
       </div>
     </div>
   );

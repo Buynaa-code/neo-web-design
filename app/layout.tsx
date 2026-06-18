@@ -14,6 +14,7 @@ import { FooterShell } from "@/components/FooterShell";
 import { FloatingAIChat } from "@/components/FloatingAIChat";
 import { BrandLogoSymbol } from "@/components/BrandLogo";
 import { JsonLd } from "@/components/JsonLd";
+import { QueryProvider } from "@/presentation/providers/QueryProvider";
 import { cn } from "@/lib/utils";
 
 const SITE_URL = "https://hdlh.vercel.app";
@@ -121,6 +122,7 @@ export default function RootLayout({
       <body className="font-sans">
         <JsonLd data={orgJsonLd} />
         <JsonLd data={siteJsonLd} />
+        <QueryProvider>
         <ThemeProvider>
           <Splash />
           <BrandLogoSymbol />
@@ -139,6 +141,7 @@ export default function RootLayout({
           <Lightbox />
           <FloatingAIChat />
         </ThemeProvider>
+        </QueryProvider>
       </body>
     </html>
   );

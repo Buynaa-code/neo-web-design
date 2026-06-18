@@ -1,126 +1,227 @@
-import type { Listing, ListingCreateInput } from "@/domain/schemas/listing";
-import { listingSchema } from "@/domain/schemas/listing";
+import type { Listing, ListingStatus } from "@/domain/types";
 import type { ListingDraftSubmission } from "@/domain/schemas/listing-draft";
-import { LISTINGS } from "@/infrastructure/data/listings";
-import { getPropertyKind } from "@/application/filters";
+import {
+  listingEnvelopeSchema,
+  listingPaginatedSchema,
+  type ListingResource,
+  type PaginatorMeta,
+} from "@/domain/schemas/api";
 import { apiFetch } from "./http";
 
-const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK_API === "true";
+/* -------------------------------------------------------------------------- */
+/* Public listing browsing                                                    */
+/* -------------------------------------------------------------------------- */
 
 export interface ListListingsParams {
-  mode?: "sale" | "rent";
+  mode?: "rent" | "sale";
   district?: string;
-  rooms?: number[];
+  rooms?: number;
+  status?: string;
   priceMin?: number;
   priceMax?: number;
+  areaMin?: number;
+  areaMax?: number;
+  q?: string;
+  perPage?: number;
   page?: number;
-  pageSize?: number;
 }
 
-export interface ListListingsResponse {
-  items: Listing[];
-  total: number;
-  page: number;
-  pageSize: number;
+export interface PaginatedListings {
+  items: ListingResource[];
+  meta: PaginatorMeta;
 }
 
+function toQuery(params: ListListingsParams): Record<string, string | number | undefined> {
+  return {
+    mode: params.mode,
+    district: params.district,
+    rooms: params.rooms,
+    status: params.status,
+    price_min: params.priceMin,
+    price_max: params.priceMax,
+    area_min: params.areaMin,
+    area_max: params.areaMax,
+    q: params.q,
+    per_page: params.perPage,
+    page: params.page,
+  };
+}
+
+/** GET /listings — public, filtered, paginated. */
 export async function listListings(
   params: ListListingsParams = {}
-): Promise<ListListingsResponse> {
-  if (USE_MOCK) return listListingsMock(params);
-  return apiFetch<ListListingsResponse>("/listings", {
-    query: {
-      mode: params.mode,
-      district: params.district,
-      rooms: params.rooms?.length ? params.rooms.join(",") : undefined,
-      priceMin: params.priceMin,
-      priceMax: params.priceMax,
-      page: params.page,
-      pageSize: params.pageSize,
-    },
-  });
+): Promise<PaginatedListings> {
+  const res = listingPaginatedSchema.parse(
+    await apiFetch("/listings", { query: toQuery(params), skipAuth: true })
+  );
+  return { items: res.data, meta: res.meta };
 }
 
-export async function getListing(id: number): Promise<Listing> {
-  if (USE_MOCK) {
-    const found = getMockStore().find((l) => l.id === id);
-    if (!found) throw new Error(`Listing ${id} not found`);
-    return found;
-  }
-  const data = await apiFetch<unknown>(`/listings/${id}`);
-  return listingSchema.parse(data);
+/** GET /listings/{id} — public detail. */
+export async function getListing(id: number): Promise<ListingResource> {
+  const res = listingEnvelopeSchema.parse(
+    await apiFetch(`/listings/${id}`, { skipAuth: true })
+  );
+  return res.data;
 }
 
+/** GET /my/listings — the authenticated user's own listings. */
+export async function listMyListings(
+  params: Pick<ListListingsParams, "mode" | "status" | "perPage" | "page"> = {}
+): Promise<PaginatedListings> {
+  const res = listingPaginatedSchema.parse(
+    await apiFetch("/my/listings", { query: toQuery(params) })
+  );
+  return { items: res.data, meta: res.meta };
+}
+
+/* -------------------------------------------------------------------------- */
+/* Listing creation / editing (authenticated)                                 */
+/* -------------------------------------------------------------------------- */
+
+/** POST /listings */
 export async function createListing(
-  input: ListingCreateInput
-): Promise<Listing> {
-  if (USE_MOCK) {
-    const store = getMockStore();
-    const nextId = store.reduce((m, l) => Math.max(m, l.id), 0) + 1;
-    const created = listingSchema.parse({
-      ...input,
-      id: nextId,
-      photos: input.photoSeeds?.length ?? 0,
-      listedDays: 0,
-      viewCount: 0,
-      viewingCount: 0,
-    });
-    store.unshift(created);
-    return created;
-  }
-  const data = await apiFetch<unknown>("/listings", {
-    method: "POST",
-    body: input,
-  });
-  return listingSchema.parse(data);
+  body: Record<string, unknown>
+): Promise<ListingResource> {
+  return listingEnvelopeSchema.parse(
+    await apiFetch("/listings", { method: "POST", body })
+  ).data;
 }
 
+/** PUT /listings/{id} */
+export async function updateListing(
+  id: number,
+  body: Record<string, unknown>
+): Promise<ListingResource> {
+  return listingEnvelopeSchema.parse(
+    await apiFetch(`/listings/${id}`, { method: "PUT", body })
+  ).data;
+}
+
+/** DELETE /listings/{id} */
+export async function deleteListing(id: number): Promise<void> {
+  await apiFetch(`/listings/${id}`, { method: "DELETE" });
+}
+
+/** PATCH /listings/{id}/draft — partial wizard-step save. */
+export async function saveListingDraft(
+  id: number,
+  body: Record<string, unknown>
+): Promise<ListingResource> {
+  return listingEnvelopeSchema.parse(
+    await apiFetch(`/listings/${id}/draft`, { method: "PATCH", body })
+  ).data;
+}
+
+/** POST /listings/{id}/submit — finalise a draft for moderation. */
+export async function submitListing(
+  id: number,
+  body: Record<string, unknown>
+): Promise<ListingResource> {
+  const res = (await apiFetch(`/listings/${id}/submit`, {
+    method: "POST",
+    body,
+  })) as { listing: unknown };
+  return listingEnvelopeSchema.parse({ data: res.listing }).data;
+}
+
+/** POST /listings/register — multi-step wizard endpoint (step 1..5). */
+export async function registerListingStep(
+  body: Record<string, unknown>
+): Promise<{ listing_id: string | number; step: number }> {
+  return apiFetch("/listings/register", { method: "POST", body });
+}
+
+/**
+ * @deprecated Legacy wizard entry point. The real backend has no
+ * `/listing-drafts`; the multi-step flow uses `/listings/register` and
+ * `/listings/{id}/draft` + `/listings/{id}/submit`. Kept so the existing
+ * wizard keeps compiling until it is migrated (Stage 5). Posts the collected
+ * payload to the register endpoint as a single best-effort step.
+ */
 export async function submitListingDraft(
   payload: ListingDraftSubmission
-): Promise<ListingDraftSubmission> {
-  if (USE_MOCK) {
-    console.info("[mock] submitListingDraft", payload);
-    return payload;
-  }
-  return apiFetch<ListingDraftSubmission>("/listing-drafts", {
-    method: "POST",
-    body: payload,
-  });
+): Promise<{ listing_id: string | number; step: number }> {
+  return registerListingStep(payload as unknown as Record<string, unknown>);
 }
 
-let mockStore: Listing[] | null = null;
-function getMockStore(): Listing[] {
-  if (!mockStore) mockStore = [...LISTINGS];
-  return mockStore;
+/* -------------------------------------------------------------------------- */
+/* Adapter: ListingResource (wire) -> Listing (UI)                            */
+/* -------------------------------------------------------------------------- */
+
+const UI_STATUSES: ReadonlySet<ListingStatus> = new Set([
+  "new",
+  "active",
+  "hot",
+  "drop",
+  "reserved",
+  "sold",
+]);
+
+function toUiStatus(status: string): ListingStatus {
+  return UI_STATUSES.has(status as ListingStatus)
+    ? (status as ListingStatus)
+    : "active";
 }
 
-function listListingsMock(params: ListListingsParams): ListListingsResponse {
-  let items = getMockStore();
-  if (params.mode) {
-    items = items.filter((l) => l.mode === params.mode);
-    if (params.mode === "sale") items = items.filter((l) => getPropertyKind(l) === "apartment");
-  }
-  if (params.district) items = items.filter((l) => l.district === params.district);
-  if (params.rooms?.length) {
-    const rooms = params.rooms;
-    items = items.filter((l) => rooms.includes(l.rooms));
-  }
-  if (params.priceMin != null) {
-    const min = params.priceMin;
-    items = items.filter((l) => l.price >= min);
-  }
-  if (params.priceMax != null) {
-    const max = params.priceMax;
-    items = items.filter((l) => l.price <= max);
-  }
+function toStringArray(value: unknown): string[] {
+  return Array.isArray(value) ? value.filter((v): v is string => typeof v === "string") : [];
+}
 
-  const page = params.page ?? 1;
-  const pageSize = params.pageSize ?? 20;
-  const start = (page - 1) * pageSize;
+/** Photos can be a flat array or a grouped object ({ cover, plan, ... }). */
+function countPhotos(photos: ListingResource["photos"], seeds: unknown[]): number {
+  if (Array.isArray(photos)) return photos.length;
+  if (photos && typeof photos === "object") {
+    return Object.values(photos).reduce<number>(
+      (sum, group) => sum + (Array.isArray(group) ? group.length : 0),
+      0
+    );
+  }
+  return seeds.length;
+}
+
+/**
+ * Maps the rich API `ListingResource` down to the simple `Listing` shape the
+ * existing UI consumes, filling safe defaults for nullable fields. This lets us
+ * swap mock data for real data without touching presentation components.
+ */
+export function toListing(r: ListingResource): Listing {
+  const priceHistory = Array.isArray(r.priceHistory)
+    ? r.priceHistory
+        .filter(
+          (p): p is { d: string; p: number } =>
+            !!p &&
+            typeof p === "object" &&
+            typeof (p as { d?: unknown }).d === "string" &&
+            typeof (p as { p?: unknown }).p === "number"
+        )
+        .map((p) => ({ d: p.d, p: p.p }))
+    : undefined;
+
   return {
-    items: items.slice(start, start + pageSize),
-    total: items.length,
-    page,
-    pageSize,
+    id: r.id,
+    mode: r.mode === "rent" ? "rent" : "sale",
+    district: r.district ?? r.khotkhon ?? r.khoroo ?? "—",
+    khoroo: r.khoroo ?? "",
+    khotkhon: r.khotkhon ?? "",
+    rooms: r.rooms ?? 0,
+    area: r.area ?? 0,
+    floor: r.floor ?? "",
+    year: r.year ?? 0,
+    price: r.price,
+    photos: countPhotos(r.photos, r.photoSeeds),
+    status: toUiStatus(r.status),
+    listedDays: r.listedDays,
+    viewCount: r.viewCount,
+    viewingCount: r.viewingCount,
+    features: toStringArray(r.features),
+    agentId: r.agentId ?? 0,
+    lat: r.lat ?? 0,
+    lng: r.lng ?? 0,
+    desc: r.desc ?? undefined,
+    priceHistory: priceHistory?.length ? priceHistory : undefined,
+    photoSeeds: r.photoSeeds.filter(
+      (s): s is string | number => typeof s === "string" || typeof s === "number"
+    ),
   };
 }

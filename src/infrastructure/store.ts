@@ -10,11 +10,14 @@ import type {
   Screen,
 } from "@/domain/types";
 import { DEFAULT_SAVED_IDS, SAVED_LISTS, SAVED_SEARCHES } from "@/infrastructure/data/saved";
+import { clearToken } from "@/infrastructure/api/token";
 
 export interface User {
   name: string;
   phone: string;
   initials: string;
+  id?: number;
+  email?: string;
 }
 
 export interface MyPlace {
@@ -442,7 +445,8 @@ export const useStore = create<StoreState & StoreActions>()(
       clearAIChat: () => set({ homeAIChat: [] }),
 
       signIn: (currentUser) => set({ isLoggedIn: true, currentUser }),
-      signOut: () =>
+      signOut: () => {
+        clearToken();
         set({
           isLoggedIn: false,
           currentUser: null,
@@ -464,7 +468,8 @@ export const useStore = create<StoreState & StoreActions>()(
           scheduleDate: null,
           scheduleTime: null,
           scheduleListingId: null,
-        }),
+        });
+      },
       setAuthPhoneDraft: (authPhoneDraft) => set({ authPhoneDraft }),
       setAuthResendLeft: (authResendLeft) => set({ authResendLeft }),
 

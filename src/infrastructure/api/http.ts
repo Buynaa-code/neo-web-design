@@ -1,31 +1,6 @@
+import { getToken, notifyUnauthorized } from "./token";
+
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "";
-const SANCTUM_BASE = process.env.NEXT_PUBLIC_SANCTUM_URL ?? "";
-
-let csrfPromise: Promise<void> | null = null;
-
-async function ensureCsrf(): Promise<void> {
-  if (!SANCTUM_BASE) return;
-  if (!csrfPromise) {
-    csrfPromise = fetch(`${SANCTUM_BASE}/sanctum/csrf-cookie`, {
-      credentials: "include",
-    })
-      .then(() => undefined)
-      .catch((err) => {
-        csrfPromise = null;
-        throw err;
-      });
-  }
-  await csrfPromise;
-}
-
-function readCookie(name: string): string | null {
-  if (typeof document === "undefined") return null;
-  const escaped = name.replace(/([.$?*|{}()[\]\\/+^])/g, "\\$1");
-  const match = document.cookie.match(
-    new RegExp(`(?:^|; )${escaped}=([^;]*)`)
-  );
-  return match ? decodeURIComponent(match[1]) : null;
-}
 
 export class ApiError extends Error {
   constructor(
@@ -36,6 +11,19 @@ export class ApiError extends Error {
     super(message ?? `API ${status}`);
     this.name = "ApiError";
   }
+
+  /** Laravel validation errors: `{ message, errors: { field: string[] } }`. */
+  get validationErrors(): Record<string, string[]> | null {
+    if (
+      this.status === 422 &&
+      this.body &&
+      typeof this.body === "object" &&
+      "errors" in this.body
+    ) {
+      return (this.body as { errors: Record<string, string[]> }).errors;
+    }
+    return null;
+  }
 }
 
 type QueryValue = string | number | boolean | null | undefined;
@@ -44,6 +32,8 @@ export interface ApiRequestOptions extends Omit<RequestInit, "body" | "method"> 
   method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   body?: unknown;
   query?: Record<string, QueryValue>;
+  /** Skip attaching the bearer token (e.g. public endpoints). Default false. */
+  skipAuth?: boolean;
 }
 
 function buildUrl(path: string, query?: Record<string, QueryValue>): string {
@@ -66,31 +56,28 @@ export async function apiFetch<T = unknown>(
   path: string,
   options: ApiRequestOptions = {}
 ): Promise<T> {
-  const { body, query, headers, method = "GET", ...rest } = options;
-  const isMutation = method !== "GET";
-
-  if (isMutation) await ensureCsrf();
-
-  const xsrf = readCookie("XSRF-TOKEN");
+  const { body, query, headers, method = "GET", skipAuth = false, ...rest } =
+    options;
   const hasBody = body !== undefined;
+  const token = skipAuth ? null : getToken();
 
   const res = await fetch(buildUrl(path, query), {
     ...rest,
     method,
-    credentials: "include",
     headers: {
       Accept: "application/json",
       ...(hasBody ? { "Content-Type": "application/json" } : {}),
-      ...(xsrf ? { "X-XSRF-TOKEN": xsrf } : {}),
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...headers,
     },
     body: hasBody ? JSON.stringify(body) : undefined,
   });
 
   if (!res.ok) {
-    const errBody = await res
-      .json()
-      .catch(() => res.text().catch(() => null));
+    const errBody = await res.json().catch(() => res.text().catch(() => null));
+    // A 401 means the token is gone/expired — clear it and notify the app so
+    // it can drop to a signed-out state instead of looping on failed calls.
+    if (res.status === 401 && !skipAuth) notifyUnauthorized();
     throw new ApiError(res.status, errBody);
   }
 
