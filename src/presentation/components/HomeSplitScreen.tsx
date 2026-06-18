@@ -35,6 +35,7 @@ import { photoUrl } from "@/infrastructure/data/listings";
 import type { Listing } from "@/domain/types";
 import { ResultsMap } from "@/components/results/ResultsMap";
 import { DualRangeSlider } from "@/components/DualRangeSlider";
+import { HomeAIChat } from "@/components/HomeAIChat";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -315,6 +316,7 @@ export function HomeSplitScreen() {
             </span>
           </div>
         </div>
+        <HomeAIChat />
       </div>
     </section>
   );

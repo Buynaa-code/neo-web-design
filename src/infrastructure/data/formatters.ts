@@ -84,21 +84,8 @@ export function fmtPinPrice(n: number, mode?: "sale" | "rent"): string {
 
 export function fmtMapPinPrice(l: Listing): string {
   const n = Number(l.price) || 0;
-  if (l.mode === "rent") {
-    if (n >= 1_000_000)
-      return "₮" + (n / 1_000_000).toFixed(1).replace(/\.0$/, "") + "M/сар";
-    return "₮" + Math.round(n / 1000) + "K/сар";
-  }
-  if (n >= 1_000_000_000)
-    return (
-      "₮" +
-      (n / 1_000_000_000)
-        .toFixed(2)
-        .replace(/0$/, "")
-        .replace(/\.0$/, "") +
-      "тэр"
-    );
-  return "₮" + Math.round(n / 1_000_000) + "M";
+  const full = "₮" + Math.round(n).toLocaleString("en-US");
+  return l.mode === "rent" ? full + "/сар" : full;
 }
 
 export function fmtListingArea(area: number): string {

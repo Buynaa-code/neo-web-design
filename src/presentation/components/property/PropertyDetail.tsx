@@ -502,9 +502,12 @@ export function PropertyDetail({ listing }: { listing: Listing }) {
           )}
 
           <section>
-            <h2 className="mb-3 text-base font-semibold">
-              Хүрэх хугацаа (миний байршлуудаас)
-            </h2>
+            <div className="mb-3 flex items-baseline justify-between gap-3">
+              <h2 className="text-base font-semibold">Хүрэх хугацаа</h2>
+              <span className="text-[11px]" style={{ color: "var(--text-3)" }}>
+                Миний байршлаас → энэ зар хүртэл
+              </span>
+            </div>
             <TravelTimes listing={listing} />
           </section>
 

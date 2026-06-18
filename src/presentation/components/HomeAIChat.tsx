@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import {
   ChevronDown,
   ChevronUp,
@@ -17,6 +16,7 @@ import {
 } from "lucide-react";
 import { AI_ASSISTANT_QUESTIONS } from "@/infrastructure/data/constants";
 import { AI_EXAMPLES, parseAIQuery, extractedToChips } from "@/application/ai-search";
+import { filteredListings } from "@/application/filters";
 import { useStore } from "@/infrastructure/store";
 
 const ICONS: Record<string, LucideIcon> = {
@@ -26,7 +26,7 @@ const ICONS: Record<string, LucideIcon> = {
   users: Users,
 };
 
-function botReply(userText: string): string {
+function botReply(userText: string, count: number): string {
   const ex = parseAIQuery(userText);
   const chips = extractedToChips(ex);
   if (chips.length === 1 && chips[0].label === "Чөлөөт хайлт") {
@@ -43,18 +43,19 @@ function botReply(userText: string): string {
     );
   }
   const summary = parts.length ? parts.join(", ") : "таны нөхцөлд тохирох";
-  return `Ойлголоо. ${summary}-ийн зарын жагсаалт руу шилжүүлж байна — тохирох сонголтыг хажуу талд нь харах болно.`;
+  if (count === 0) {
+    return `${summary}-д тохирох зар олдсонгүй. Шүүлтүүрээ багасгаж эсвэл өөр асуулт оруулна уу.`;
+  }
+  return `${summary}-д ${count} зар оллоо. Жагсаалт зүүн талд шинэчлэгдлээ.`;
 }
 
 export function HomeAIChat() {
-  const router = useRouter();
   const messages = useStore((s) => s.homeAIChat);
   const collapsed = useStore((s) => s.homeAIChatCollapsed);
   const setCollapsed = useStore((s) => s.setHomeAIChatCollapsed);
   const pushChat = useStore((s) => s.pushAIChat);
   const clearChat = useStore((s) => s.clearAIChat);
   const setAiQuery = useStore((s) => s.setAiQuery);
-  const pushToast = useStore((s) => s.pushToast);
   const [value, setValue] = useState("");
   const [mounted, setMounted] = useState(false);
   const bodyRef = useRef<HTMLDivElement | null>(null);
@@ -73,14 +74,6 @@ export function HomeAIChat() {
     pushChat({ role: "user", text: q });
     setValue("");
 
-    setTimeout(() => {
-      pushChat({
-        role: "bot",
-        text: botReply(q),
-        suggestions: AI_EXAMPLES.slice(0, 3).map((e) => e.text),
-      });
-    }, 200);
-
     const ex = parseAIQuery(q);
     const store = useStore.getState();
     if (ex.mode) store.setMode(ex.mode);
@@ -91,9 +84,34 @@ export function HomeAIChat() {
     setAiQuery(q, extractedToChips(ex).map((c) => `${c.icon}|${c.label}`));
 
     setTimeout(() => {
-      pushToast("Хайлтын үр дүн рүү шилжиж байна...", "info");
-      router.push("/results");
-    }, 900);
+      const s = useStore.getState();
+      const count = filteredListings({
+        mode: s.mode,
+        filterPropertyKind: s.filterPropertyKind,
+        filterDistrict: s.filterDistrict,
+        filterRooms: s.filterRooms,
+        filterBusStop: null,
+        filterLifestyle: s.filterLifestyle,
+        filterVerified: s.filterVerified,
+        filterIpoteh: s.filterIpoteh,
+        filterNewProject: s.filterNewProject,
+        filterSchool: s.filterSchool,
+        filterIncome: s.filterIncome,
+        filterPriceMin: s.filterPriceMin,
+        filterPriceMax: s.filterPriceMax,
+        filterPpmMin: s.filterPpmMin,
+        filterPpmMax: s.filterPpmMax,
+        filterAreaMin: s.filterAreaMin,
+        filterAreaMax: s.filterAreaMax,
+        drawnPolygon: s.drawnPolygon,
+        sortBy: s.sortBy,
+      }).length;
+      pushChat({
+        role: "bot",
+        text: botReply(q, count),
+        suggestions: AI_EXAMPLES.slice(0, 3).map((e) => e.text),
+      });
+    }, 200);
   };
 
   if (!mounted) return null;
