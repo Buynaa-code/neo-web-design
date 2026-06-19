@@ -2240,9 +2240,11 @@ export function ListPropertyWizard() {
               <CardContent className="grid gap-1 px-2">
                 {groups.map((group) => {
                   const Icon = group.icon;
-                  const done = required
-                    .filter((item) => item.step === group.step)
-                    .every((item) => item.ok);
+                  const groupReqs = required.filter((item) => item.step === group.step);
+                  // A section is "done" only when it HAS required items and all
+                  // are satisfied — `[].every()` is true, which previously
+                  // marked requirement-free sections as complete by mistake.
+                  const done = groupReqs.length > 0 && groupReqs.every((item) => item.ok);
                   const active = step === group.step;
                   return (
                     <Button
