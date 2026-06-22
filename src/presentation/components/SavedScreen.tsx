@@ -15,34 +15,88 @@ import {
   Trash2,
 } from "lucide-react";
 import { useStore } from "@/infrastructure/store";
-import { LISTINGS, photoUrl } from "@/infrastructure/data/listings";
+import { photoUrl } from "@/infrastructure/data/listings";
 import { listingPriceShort } from "@/infrastructure/data/formatters";
 import { cn } from "@/lib/utils";
-import type { Listing, SavedSearch } from "@/domain/types";
+import type { Listing, ListingMode, SavedSearch } from "@/domain/types";
+import type { SavedSearch as ApiSavedSearch } from "@/domain/schemas/api";
+import { useFavorites, useToggleFavorite, useSavedSearches } from "@/application/queries/saved";
 import {
   DeleteSearchConfirm,
   EditSearchModal,
   SaveSearchModal,
 } from "@/components/results/SavedSearchModals";
 
+/**
+ * Maps the backend `SavedSearch` wire shape onto the UI domain `SavedSearch`
+ * type that the existing row markup + edit modal expect. Fields the API does
+ * not carry (districts/rooms/priceRange) are derived from the free-form
+ * `filters` object with sensible fallbacks.
+ */
+function toUiSavedSearch(s: ApiSavedSearch): SavedSearch {
+  const f = (s.filters ?? {}) as Record<string, unknown>;
+
+  const asStringArray = (v: unknown): string[] => {
+    if (Array.isArray(v)) return v.map((x) => String(x));
+    if (typeof v === "string" && v.trim()) return [v];
+    return [];
+  };
+  const asNumberArray = (v: unknown): number[] => {
+    if (Array.isArray(v)) return v.map((x) => Number(x)).filter((n) => Number.isFinite(n));
+    if (typeof v === "number") return [v];
+    return [];
+  };
+  const asNumber = (v: unknown, fallback: number): number => {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : fallback;
+  };
+
+  const mode: ListingMode = s.mode === "sale" ? "sale" : "rent";
+  const freq = s.alertFreq;
+  const alertFreq: SavedSearch["alertFreq"] =
+    freq === "instant" || freq === "daily" || freq === "weekly" ? freq : "daily";
+
+  return {
+    id: s.id,
+    mode,
+    name: s.name,
+    districts: asStringArray(f.districts ?? f.district),
+    rooms: asNumberArray(f.rooms ?? f.room),
+    priceRange: [
+      asNumber(f.priceMin ?? f.price_min, 0),
+      asNumber(f.priceMax ?? f.price_max, 0),
+    ],
+    newMatches: s.newMatches ?? 0,
+    alertFreq,
+    sms: Boolean(s.channels?.sms),
+    email: Boolean(s.channels?.email),
+    push: Boolean(s.channels?.push),
+    lastAlert: s.lastAlertAt ?? "Шинэ зар алга",
+  };
+}
+
 export function SavedScreen({ initialTab }: { initialTab?: "listings" | "searches" }) {
   const tab = useStore((s) => s.savedTab);
   const setSavedTab = useStore((s) => s.setSavedTab);
-  const savedIds = useStore((s) => s.savedListingIds);
-  const savedSearches = useStore((s) => s.savedSearches);
-  const toggleSaved = useStore((s) => s.toggleSavedListing);
   const pushToast = useStore((s) => s.pushToast);
   const openModal = useStore((s) => s.openModal);
-  const listingsVersion = useStore((s) => s.listingsVersion);
+
+  const { data: favData, isLoading: favLoading } = useFavorites();
+  const toggleFavorite = useToggleFavorite();
+  const { data: searchData, isLoading: searchLoading } = useSavedSearches();
 
   useEffect(() => {
     if (initialTab && initialTab !== tab) setSavedTab(initialTab);
   }, [initialTab, tab, setSavedTab]);
 
-  const list = useMemo(
-    () => LISTINGS.filter((l) => savedIds.includes(l.id)),
-    [savedIds, listingsVersion]
+  const list: Listing[] = useMemo(() => favData?.listings ?? [], [favData]);
+  const savedSearches: SavedSearch[] = useMemo(
+    () => (searchData ?? []).map(toUiSavedSearch),
+    [searchData]
   );
+
+  const toggleSaved = (listingId: number) =>
+    toggleFavorite.mutate({ listingId, favorited: true });
 
   return (
     <div className="max-w-6xl mx-auto px-4 lg:px-6 py-6">
@@ -75,7 +129,11 @@ export function SavedScreen({ initialTab }: { initialTab?: "listings" | "searche
           <p className="text-sm text-[var(--text-3)] mb-4">
             {list.length} хадгалсан зар · Үнэ/төлөв өөрчлөгдөхөд мэдэгдэл авах боломжтой
           </p>
-          {list.length === 0 ? (
+          {favLoading ? (
+            <div className="card p-10 text-center text-sm text-[var(--text-3)]">
+              Ачааллаж байна…
+            </div>
+          ) : list.length === 0 ? (
             <div className="card p-10 text-center text-sm text-[var(--text-3)]">
               Одоогоор хадгалсан зар алга.{" "}
               <Link href="/results" className="text-[var(--primary)] font-medium">
@@ -96,6 +154,11 @@ export function SavedScreen({ initialTab }: { initialTab?: "listings" | "searche
             {savedSearches.length} хадгалсан хайлт · Шинэ зар орох тутамд мэдэгдэл авна
           </p>
           <div className="space-y-2">
+            {searchLoading && savedSearches.length === 0 && (
+              <div className="card p-10 text-center text-sm text-[var(--text-3)]">
+                Ачааллаж байна…
+              </div>
+            )}
             {savedSearches.map((s) => (
               <SavedSearchRow
                 key={s.id}

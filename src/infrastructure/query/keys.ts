@@ -28,6 +28,24 @@ export const queryKeys = {
   listing: (id: number) => ["listings", "detail", id] as const,
   myListings: (params: unknown) => ["my-listings", params] as const,
   currentUser: ["auth", "user"] as const,
+
+  // Engagement (per-user, dynamic, not persisted)
+  favorites: ["favorites"] as const,
+  savedLists: ["saved-lists"] as const,
+  savedSearches: ["saved-searches"] as const,
+  alerts: (unread?: boolean) => ["alerts", unread ?? null] as const,
+  appointments: (status?: string) => ["appointments", status ?? null] as const,
+  views: ["views"] as const,
+  conversations: ["conversations"] as const,
+  messages: (conversationId: number) => ["conversations", conversationId, "messages"] as const,
+  preferences: ["preferences"] as const,
+  rentalTenants: ["rental", "tenants"] as const,
+  rentalContracts: ["rental", "contracts"] as const,
+  rentalIncome: (year?: number) => ["rental", "income", year ?? null] as const,
+
+  // Articles / news (public, slow-changing — persisted as reference)
+  articles: (params: unknown) => ["articles", params] as const,
+  article: (slug: string) => ["articles", "detail", slug] as const,
 };
 
 /** Key domains whose data is slow-changing and safe to persist offline. */
@@ -36,6 +54,7 @@ export const REFERENCE_DOMAINS = new Set([
   "listing-flow",
   "property-categories",
   "address",
+  "articles",
 ]);
 
 export function isReferenceKey(queryKey: readonly unknown[]): boolean {

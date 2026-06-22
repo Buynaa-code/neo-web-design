@@ -281,3 +281,161 @@ export const updatePasswordRequestSchema = z.object({
   password_confirmation: z.string().min(8),
 });
 export type UpdatePasswordRequest = z.infer<typeof updatePasswordRequestSchema>;
+
+/* -------------------------------------------------------------------------- */
+/* Engagement resources (added 2026-06-22 — favorites, saved, alerts,         */
+/* appointments, views, conversations, preferences, rental, articles)         */
+/* Resources are camelCase; request bodies are snake_case (matches backend).  */
+/* -------------------------------------------------------------------------- */
+
+/* --- Saved lists --- */
+export const savedListSchema = z.object({
+  id: z.number().int(),
+  name: z.string(),
+  icon: nullableString,
+  // Doc types this `object`; the server returns an array of listing ids.
+  listingIds: z.array(z.number().int()).default([]),
+  listingsCount: z.number().int().default(0),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+export type SavedList = z.infer<typeof savedListSchema>;
+export const savedListListSchema = z.object({ data: z.array(savedListSchema) });
+export const savedListEnvelopeSchema = z.object({ data: savedListSchema });
+
+/* --- Saved searches --- */
+export const savedSearchChannelsSchema = z
+  .object({ sms: z.boolean(), email: z.boolean(), push: z.boolean() })
+  .partial();
+export const savedSearchSchema = z.object({
+  id: z.number().int(),
+  mode: nullableString,
+  name: z.string(),
+  filters: z.record(z.string(), z.unknown()).default({}),
+  alertFreq: z.string(),
+  channels: savedSearchChannelsSchema.default({}),
+  newMatches: z.number().int().default(0),
+  lastAlertAt: nullableString,
+  createdAt: z.string(),
+});
+export type SavedSearch = z.infer<typeof savedSearchSchema>;
+export const savedSearchListSchema = z.object({ data: z.array(savedSearchSchema) });
+export const savedSearchEnvelopeSchema = z.object({ data: savedSearchSchema });
+
+/* --- Alerts --- */
+export const alertSchema = z.object({
+  id: z.number().int(),
+  savedSearchId: z.number().int(),
+  listingId: z.number().int(),
+  listing: listingResourceSchema.nullable().optional(),
+  readAt: nullableString,
+  createdAt: z.string(),
+});
+export type Alert = z.infer<typeof alertSchema>;
+export const alertListSchema = z.object({ data: z.array(alertSchema) });
+
+/* --- Appointments --- */
+export const appointmentSchema = z.object({
+  id: z.number().int(),
+  listingId: z.number().int(),
+  listing: listingResourceSchema.nullable().optional(),
+  agentId: nullableInt,
+  date: z.string(),
+  time: z.string(),
+  status: z.string(),
+  note: nullableString,
+  outcome: nullableString.optional(),
+  createdAt: z.string(),
+});
+export type Appointment = z.infer<typeof appointmentSchema>;
+export const appointmentListSchema = z.object({ data: z.array(appointmentSchema) });
+export const appointmentEnvelopeSchema = z.object({ data: appointmentSchema });
+
+/* --- Conversations / messages --- */
+export const conversationSchema = z.object({
+  id: z.number().int(),
+  agentId: z.number().int(),
+  agent: agentSchema.optional(),
+  listingId: nullableInt,
+  lastMessage: z.string(),
+  lastMessageAt: z.string(),
+  unreadCount: z.number().int().default(0),
+  createdAt: z.string(),
+});
+export type Conversation = z.infer<typeof conversationSchema>;
+export const conversationListSchema = z.object({ data: z.array(conversationSchema) });
+export const conversationEnvelopeSchema = z.object({ data: conversationSchema });
+
+export const messageSchema = z.object({
+  id: z.number().int(),
+  conversationId: z.number().int(),
+  sender: z.string(),
+  body: z.string(),
+  readAt: nullableString,
+  createdAt: z.string(),
+});
+export type Message = z.infer<typeof messageSchema>;
+export const messageListSchema = z.object({ data: z.array(messageSchema) });
+export const messageEnvelopeSchema = z.object({ data: messageSchema });
+
+/* --- Preferences --- */
+export const preferenceSchema = z.object({
+  lifestyle: nullableString,
+  vibes: z.array(z.string()).default([]),
+  bedrooms: z.array(z.number().int()).default([]),
+  bathroomsMin: nullableInt,
+  needsOffice: z.boolean().default(false),
+  mustHaves: z.array(z.string()).default([]),
+  purpose: nullableString,
+  conditions: z.array(z.string()).default([]),
+  notificationChannels: z.array(z.string()).default([]),
+});
+export type Preference = z.infer<typeof preferenceSchema>;
+export const preferenceEnvelopeSchema = z.object({ data: preferenceSchema });
+
+/* --- Rental management --- */
+export const rentalTenantSchema = z.object({
+  id: z.number().int(),
+  name: z.string(),
+  listingId: nullableInt,
+  phone: nullableString,
+  leaseStart: nullableString,
+  leaseEnd: nullableString,
+  rentAmount: nullableInt,
+  status: z.string(),
+  createdAt: z.string(),
+});
+export type RentalTenant = z.infer<typeof rentalTenantSchema>;
+export const rentalTenantListSchema = z.object({ data: z.array(rentalTenantSchema) });
+export const rentalTenantEnvelopeSchema = z.object({ data: rentalTenantSchema });
+
+export const rentalContractSchema = z.object({
+  id: z.number().int(),
+  tenantId: z.number().int(),
+  listingId: nullableInt,
+  start: nullableString,
+  end: nullableString,
+  amount: nullableInt,
+  status: z.string(),
+  createdAt: z.string(),
+});
+export type RentalContract = z.infer<typeof rentalContractSchema>;
+export const rentalContractListSchema = z.object({ data: z.array(rentalContractSchema) });
+export const rentalContractEnvelopeSchema = z.object({ data: rentalContractSchema });
+
+/* /rental/income returns a free-form aggregate keyed by month — kept lenient. */
+export const rentalIncomeEnvelopeSchema = z.object({ data: z.unknown() });
+
+/* --- Articles --- */
+export const articleSchema = z.object({
+  id: z.number().int(),
+  slug: z.string(),
+  title: z.string(),
+  excerpt: nullableString,
+  body: nullableString,
+  coverImage: nullableString,
+  category: nullableString,
+  publishedAt: z.string(),
+});
+export type Article = z.infer<typeof articleSchema>;
+export const articleEnvelopeSchema = z.object({ data: articleSchema });

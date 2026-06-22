@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -73,6 +73,9 @@ import {
   INTEREST_PURPOSES,
   INTEREST_VIBES,
 } from "@/infrastructure/data/interests";
+import { usePreferences, useUpdatePreferences } from "@/application/queries/preferences";
+import { getToken } from "@/infrastructure/api/token";
+import type { PreferenceInput } from "@/infrastructure/api/preferences";
 import { inferInterestsFromBehavior, matchedListings, type MatchReason } from "@/application/interests";
 import { fmtCompact } from "@/infrastructure/data/formatters";
 import { DISTRICTS } from "@/infrastructure/data/constants";
@@ -147,6 +150,62 @@ export function InterestsScreen() {
   const isSaved = useStore((s) => s.isSaved);
   const toggleSaved = useStore((s) => s.toggleSavedListing);
 
+  // --- Backend sync (only when authenticated) ---
+  // `/interests` is not behind ProtectedRoute, so the user may be unauthenticated.
+  // When there is no token, the screen runs purely on the local Zustand store
+  // (existing offline/optimistic behaviour). When authenticated, we hydrate the
+  // local store from saved server preferences and push wizard saves back up.
+  const isAuthed = useStore((s) => s.isLoggedIn) && !!getToken();
+  const { data: serverPrefs } = usePreferences(isAuthed);
+  const updatePrefs = useUpdatePreferences();
+  const hydratedRef = useRef(false);
+
+  useEffect(() => {
+    if (!isAuthed || hydratedRef.current || !serverPrefs) return;
+    // Only hydrate when there is something meaningful saved server-side, and
+    // never clobber a profile the user already has locally.
+    const hasServerData =
+      !!serverPrefs.lifestyle ||
+      serverPrefs.vibes.length > 0 ||
+      serverPrefs.bedrooms.length > 0 ||
+      serverPrefs.mustHaves.length > 0 ||
+      serverPrefs.conditions.length > 0 ||
+      serverPrefs.notificationChannels.length > 0 ||
+      serverPrefs.bathroomsMin != null ||
+      serverPrefs.needsOffice;
+    if (!hasServerData) return;
+    hydratedRef.current = true;
+    if (useStore.getState().userInterests) return;
+
+    const baseLifestyle = INTEREST_LIFESTYLES[0];
+    const lifestyle = serverPrefs.lifestyle ?? baseLifestyle.key;
+    const preset =
+      INTEREST_LIFESTYLES.find((x) => x.key === lifestyle) ?? baseLifestyle;
+    const profile: InterestsProfile = {
+      id: Date.now(),
+      name: "Миний хүсэл",
+      lifestyle,
+      mode: "sale",
+      budgetMin: null,
+      budgetMax: null,
+      budgetAny: false,
+      bedrooms: serverPrefs.bedrooms.length ? serverPrefs.bedrooms : preset.presetBedrooms,
+      bathroomsMin: serverPrefs.bathroomsMin ?? preset.presetBathroomsMin,
+      office: serverPrefs.needsOffice,
+      districts: [],
+      mustHaves: serverPrefs.mustHaves.length ? serverPrefs.mustHaves : preset.presetMustHaves,
+      conditions: serverPrefs.conditions,
+      vibe: serverPrefs.vibes[0],
+      purpose: "any",
+      subTypes: [],
+      notifChannels: serverPrefs.notificationChannels.length
+        ? serverPrefs.notificationChannels
+        : ["app"],
+      updatedAt: Date.now(),
+    };
+    upsertInterestProfile(profile);
+  }, [isAuthed, serverPrefs, upsertInterestProfile]);
+
   const isPro = userTier === "pro";
   const canAdd = isPro || userInterestsList.length < 1;
 
@@ -166,6 +225,22 @@ export function InterestsScreen() {
         initial={initial}
         onSave={(profile) => {
           upsertInterestProfile(profile);
+          if (isAuthed) {
+            const lifestyleEnum = (["family", "young-pro", "student", "investor"] as const).find(
+              (k) => k === profile.lifestyle
+            );
+            const input: PreferenceInput = {
+              ...(lifestyleEnum ? { lifestyle: lifestyleEnum } : {}),
+              bathrooms_min: profile.bathroomsMin,
+              needs_office: profile.office,
+              vibes: profile.vibe ? [profile.vibe] : [],
+              bedrooms: profile.bedrooms,
+              must_haves: profile.mustHaves,
+              conditions: profile.conditions ?? [],
+              notification_channels: profile.notifChannels ?? [],
+            };
+            updatePrefs.mutate(input);
+          }
           pushToast("Бэлэн! Танд тохирох зарууд олдлоо", "success");
           closeModal();
         }}

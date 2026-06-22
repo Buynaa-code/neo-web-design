@@ -1,11 +1,26 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Check } from "lucide-react";
 import { useStore } from "@/infrastructure/store";
 import { getListing } from "@/infrastructure/data/listings";
+import { useAppointmentMutations } from "@/application/queries/appointments";
+
+/** Convert the picker's `M/D` (current/next year) into an ISO `YYYY-MM-DD`. */
+function toIsoDate(label: string): string {
+  const parts = label.split("/").map((n) => Number(n));
+  if (parts.length !== 2 || parts.some((n) => Number.isNaN(n))) return label;
+  const [month, day] = parts;
+  const now = new Date();
+  let year = now.getFullYear();
+  // If the picked month/day is in the past, it must refer to next year.
+  if (month - 1 < now.getMonth() || (month - 1 === now.getMonth() && day < now.getDate())) {
+    year += 1;
+  }
+  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
 
 export function ConfirmationScreen() {
   const router = useRouter();
@@ -13,14 +28,24 @@ export function ConfirmationScreen() {
   const date = useStore((s) => s.scheduleDate);
   const time = useStore((s) => s.scheduleTime);
   const listingsVersion = useStore((s) => s.listingsVersion);
+  const { create } = useAppointmentMutations();
+  const bookedRef = useRef(false);
   const listing = useMemo(
     () => (listingId ? getListing(listingId) : undefined),
     [listingId, listingsVersion]
   );
 
   useEffect(() => {
-    if (!listingId || !date || !time) router.replace("/");
-  }, [listingId, date, time, router]);
+    if (!listingId || !date || !time) {
+      router.replace("/");
+      return;
+    }
+    // Persist the booking exactly once per confirmation mount.
+    if (!bookedRef.current) {
+      bookedRef.current = true;
+      create.mutate({ listing_id: listingId, date: toIsoDate(date), time });
+    }
+  }, [listingId, date, time, router, create]);
 
   if (!listingId || !date || !time) return null;
 

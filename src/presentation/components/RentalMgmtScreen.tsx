@@ -25,14 +25,83 @@ import {
 import type { LucideIcon } from "lucide-react";
 import { useStore } from "@/infrastructure/store";
 import { LISTINGS, getListing, photoUrl } from "@/infrastructure/data/listings";
-import { listingPriceShort, fmtCompact } from "@/infrastructure/data/formatters";
+import { listingPriceShort } from "@/infrastructure/data/formatters";
+import { RM_INCOME_MONTHS } from "@/infrastructure/data/rental-mgmt";
 import {
-  RM_CONTRACTS,
-  RM_INCOME_MONTHS,
-  RM_TENANTS,
-  type RmTenant,
-} from "@/infrastructure/data/rental-mgmt";
+  useRentalContracts,
+  useRentalIncome,
+  useRentalTenants,
+} from "@/application/queries/rental";
+import type {
+  RentalContract,
+  RentalTenant,
+} from "@/domain/schemas/api";
 import { cn } from "@/lib/utils";
+
+type TenantTone = "success" | "warning" | "danger";
+
+/** Map free-form API tenant status onto the existing UI tone + label. */
+function tenantTone(status: string): TenantTone {
+  const s = status.toLowerCase();
+  if (s === "active" || s === "good" || s === "paid") return "success";
+  if (s === "pending") return "warning";
+  return "danger";
+}
+function tenantLabel(status: string): string {
+  switch (tenantTone(status)) {
+    case "success":
+      return "Идэвхтэй";
+    case "warning":
+      return "Төлбөр хүлээж буй";
+    default:
+      return "Хугацаа хэтэрсэн";
+  }
+}
+function tenantPayLabel(status: string): string {
+  switch (tenantTone(status)) {
+    case "success":
+      return "Төлсөн";
+    case "warning":
+      return "Хүлээгдэж буй";
+    default:
+      return "Хугацаа хэтэрсэн";
+  }
+}
+const fmtMnt = (n: number | null | undefined) =>
+  (n ?? 0).toLocaleString("en-US") + "₮";
+const fmtDate = (d: string | null | undefined) => d ?? "—";
+
+/**
+ * Coerce the free-form income aggregate into the chart's
+ * { month, amount }[] shape; fall back to the seed if unusable.
+ */
+function toIncomeMonths(
+  raw: unknown
+): { month: string; amount: number }[] {
+  const out: { month: string; amount: number }[] = [];
+  const push = (month: unknown, amount: unknown) => {
+    const a =
+      typeof amount === "number"
+        ? amount
+        : typeof amount === "string"
+          ? Number(amount)
+          : NaN;
+    if (Number.isFinite(a)) out.push({ month: String(month), amount: a });
+  };
+  if (Array.isArray(raw)) {
+    for (const item of raw) {
+      if (item && typeof item === "object") {
+        const o = item as Record<string, unknown>;
+        push(o.month ?? o.label ?? o.name, o.amount ?? o.total ?? o.value);
+      }
+    }
+  } else if (raw && typeof raw === "object") {
+    for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
+      push(k, typeof v === "object" && v ? (v as Record<string, unknown>).amount ?? (v as Record<string, unknown>).total : v);
+    }
+  }
+  return out.length ? out : RM_INCOME_MONTHS;
+}
 
 type Tab = "overview" | "properties" | "tenants" | "contracts" | "income";
 
@@ -150,6 +219,7 @@ function StatCard({
 
 function Overview({ onTab }: { onTab: (t: Tab) => void }) {
   const pushToast = useStore((s) => s.pushToast);
+  const { data: tenants = [] } = useRentalTenants();
   const events: { icon: LucideIcon; t: string; sub: string; d: string; col: string }[] = [
     { icon: Banknote, t: "Бат-Эрдэнэ — 5-р сарын түрээс төлсөн", sub: "+1,800,000₮", d: "өнөөдөр", col: "success" },
     { icon: UserPlus, t: "Сараа — гэрээ шинэчиллээ", sub: "12 сар", d: "өчигдөр", col: "primary" },
@@ -220,17 +290,15 @@ function Overview({ onTab }: { onTab: (t: Tab) => void }) {
         <div className="card p-5">
           <div className="font-semibold mb-3">Төлбөрийн төлөв</div>
           <div className="space-y-3">
-            {RM_TENANTS.map((t) => {
-              const l = getListing(t.listingId);
-              if (!l) return null;
-              const col =
-                t.status === "good" ? "success" : t.status === "pending" ? "warning" : "danger";
-              const label =
-                t.status === "good"
-                  ? "Төлсөн"
-                  : t.status === "pending"
-                    ? "Хүлээгдэж буй"
-                    : "Хугацаа хэтэрсэн";
+            {tenants.length === 0 && (
+              <div className="text-xs" style={{ color: "var(--text-3)" }}>
+                Түрээслэгч алга
+              </div>
+            )}
+            {tenants.map((t) => {
+              const l = t.listingId != null ? getListing(t.listingId) : undefined;
+              const col = tenantTone(t.status);
+              const label = tenantPayLabel(t.status);
               return (
                 <div key={t.id} className="flex items-start gap-2 text-sm">
                   <span
@@ -238,9 +306,9 @@ function Overview({ onTab }: { onTab: (t: Tab) => void }) {
                     style={{ background: `var(--${col})` }}
                   />
                   <div className="flex-1">
-                    <div className="font-medium text-xs">{l.khotkhon}</div>
+                    <div className="font-medium text-xs">{l?.khotkhon ?? t.name}</div>
                     <div className="text-[11px]" style={{ color: "var(--text-3)" }}>
-                      {label} · {t.paidUntil}
+                      {label} · {fmtDate(t.leaseEnd)}
                     </div>
                   </div>
                 </div>
@@ -271,11 +339,12 @@ function Overview({ onTab }: { onTab: (t: Tab) => void }) {
 }
 
 function Properties() {
+  const { data: tenants = [] } = useRentalTenants();
   const my = LISTINGS.filter((l) => l.mode === "rent").slice(0, 5);
   return (
     <div className="grid lg:grid-cols-3 gap-4">
       {my.map((l) => {
-        const tenant = RM_TENANTS.find((t) => t.listingId === l.id);
+        const tenant = tenants.find((t) => t.listingId === l.id);
         return (
           <div key={l.id} className="card overflow-hidden">
             <div
@@ -328,6 +397,7 @@ function Properties() {
 }
 
 function Tenants() {
+  const { data: tenants = [], isLoading } = useRentalTenants();
   return (
     <div className="card overflow-hidden">
       <table className="w-full text-sm">
@@ -342,19 +412,27 @@ function Tenants() {
           </tr>
         </thead>
         <tbody>
-          {RM_TENANTS.map((t) => {
-            const l = getListing(t.listingId);
-            if (!l) return null;
-            const col: "success" | "warning" | "danger" =
-              t.status === "good" ? "success" : t.status === "pending" ? "warning" : "danger";
-            const label =
-              t.status === "good"
-                ? "Идэвхтэй"
-                : t.status === "pending"
-                  ? "Төлбөр хүлээж буй"
-                  : "Хугацаа хэтэрсэн";
-            return <TenantRow key={t.id} t={t} listingName={l.khotkhon} col={col} label={label} />;
+          {tenants.map((t) => {
+            const l = t.listingId != null ? getListing(t.listingId) : undefined;
+            const col = tenantTone(t.status);
+            const label = tenantLabel(t.status);
+            return (
+              <TenantRow
+                key={t.id}
+                t={t}
+                listingName={l?.khotkhon ?? "—"}
+                col={col}
+                label={label}
+              />
+            );
           })}
+          {!isLoading && tenants.length === 0 && (
+            <tr style={{ borderTop: "1px solid var(--border)" }}>
+              <td className="p-4 text-xs" style={{ color: "var(--text-3)" }} colSpan={6}>
+                Түрээслэгч алга
+              </td>
+            </tr>
+          )}
         </tbody>
       </table>
     </div>
@@ -378,9 +456,9 @@ function TenantRow({
   col,
   label,
 }: {
-  t: RmTenant;
+  t: RentalTenant;
   listingName: string;
-  col: "success" | "warning" | "danger";
+  col: TenantTone;
   label: string;
 }) {
   return (
@@ -402,9 +480,9 @@ function TenantRow({
         </div>
       </td>
       <td className="p-3 text-xs">{listingName}</td>
-      <td className="p-3 text-xs">{t.since}</td>
+      <td className="p-3 text-xs">{fmtDate(t.leaseStart)}</td>
       <td className="p-3 text-right num text-xs font-semibold">
-        {t.monthly.toLocaleString("en-US")}₮
+        {fmtMnt(t.rentAmount)}
       </td>
       <td className="p-3">
         <span
@@ -424,12 +502,15 @@ function TenantRow({
 }
 
 function Contracts() {
+  const { data: contracts = [] } = useRentalContracts();
+  const { data: tenants = [] } = useRentalTenants();
+  const tenantName = (id: number) =>
+    tenants.find((t) => t.id === id)?.name ?? `#${id}`;
   return (
     <div className="space-y-3">
-      {RM_CONTRACTS.map((c) => {
-        const l = getListing(c.listingId);
-        if (!l) return null;
-        const expiring = c.status === "expiring";
+      {contracts.map((c: RentalContract) => {
+        const l = c.listingId != null ? getListing(c.listingId) : undefined;
+        const expiring = c.status.toLowerCase() !== "active";
         return (
           <div
             key={c.id}
@@ -444,17 +525,17 @@ function Contracts() {
             </div>
             <div className="flex-1 min-w-0">
               <div className="font-semibold text-sm">
-                {l.khotkhon} — {c.tenant}
+                {(l?.khotkhon ?? "—")} — {tenantName(c.tenantId)}
               </div>
               <div className="text-xs mt-0.5" style={{ color: "var(--text-3)" }}>
-                {c.from} → {c.to} · Депозит {fmtCompact(c.deposit)}
+                {fmtDate(c.start)} → {fmtDate(c.end)}
               </div>
               <div className="flex items-center gap-2 mt-1.5">
                 <span className={cn("pill", expiring ? "pill-hot" : "pill-new")}>
                   {expiring ? "Хугацаа дуусахад ойртсон" : "Идэвхтэй"}
                 </span>
                 <span className="num text-[11px]" style={{ color: "var(--text-2)" }}>
-                  {c.monthly.toLocaleString("en-US")}₮/сар
+                  {fmtMnt(c.amount)}/сар
                 </span>
               </div>
             </div>
@@ -481,8 +562,11 @@ function Contracts() {
 }
 
 function Income() {
-  const max = Math.max(...RM_INCOME_MONTHS.map((m) => m.amount));
-  const total = RM_INCOME_MONTHS.reduce((s, m) => s + m.amount, 0);
+  const { data: incomeRaw } = useRentalIncome();
+  const { data: tenants = [] } = useRentalTenants();
+  const months = toIncomeMonths(incomeRaw);
+  const max = Math.max(1, ...months.map((m) => m.amount));
+  const total = months.reduce((s, m) => s + m.amount, 0);
   return (
     <>
       <div className="card p-5 mb-4">
@@ -505,7 +589,7 @@ function Income() {
           </div>
         </div>
         <div className="flex items-end gap-2 h-32">
-          {RM_INCOME_MONTHS.map((m) => {
+          {months.map((m) => {
             const h = (m.amount / max) * 100;
             return (
               <div key={m.month} className="flex-1 flex flex-col items-center gap-1.5">
@@ -531,11 +615,14 @@ function Income() {
       <div className="card p-5">
         <div className="font-semibold mb-3">Сүүлийн төлбөрүүд</div>
         <div className="space-y-2">
-          {RM_TENANTS.map((t) => {
-            const l = getListing(t.listingId);
-            if (!l) return null;
-            const col =
-              t.status === "good" ? "success" : t.status === "pending" ? "warning" : "danger";
+          {tenants.length === 0 && (
+            <div className="text-xs" style={{ color: "var(--text-3)" }}>
+              Төлбөр алга
+            </div>
+          )}
+          {tenants.map((t) => {
+            const l = t.listingId != null ? getListing(t.listingId) : undefined;
+            const col = tenantTone(t.status);
             return (
               <div
                 key={t.id}
@@ -552,14 +639,14 @@ function Income() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-medium truncate">
-                    {l.khotkhon} — {t.name}
+                    {(l?.khotkhon ?? "—")} — {t.name}
                   </div>
                   <div className="text-[11px]" style={{ color: "var(--text-3)" }}>
-                    {t.paidUntil} хүртэл
+                    {fmtDate(t.leaseEnd)} хүртэл
                   </div>
                 </div>
                 <div className="num text-sm font-semibold">
-                  {t.monthly.toLocaleString("en-US")}₮
+                  {fmtMnt(t.rentAmount)}
                 </div>
               </div>
             );

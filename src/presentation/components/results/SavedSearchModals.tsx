@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useStore } from "@/infrastructure/store";
+import { useSavedSearchMutations } from "@/application/queries/saved";
 import { fmtCompact } from "@/infrastructure/data/formatters";
 import { cn } from "@/lib/utils";
 import type { SavedSearch } from "@/domain/types";
@@ -46,6 +47,7 @@ export function SaveSearchModal() {
   const closeModal = useStore((s) => s.closeModal);
   const addSavedSearch = useStore((s) => s.addSavedSearch);
   const pushToast = useStore((s) => s.pushToast);
+  const { create } = useSavedSearchMutations();
 
   const draft = buildDraft();
   const [name, setName] = useState(draft.name);
@@ -62,9 +64,10 @@ export function SaveSearchModal() {
       pushToast("Мэдэгдэл авах дор хаяж нэг сувгийг сонгоно уу", "danger");
       return;
     }
+    const finalName = name.trim() || draft.name;
     addSavedSearch({
       mode: draft.mode,
-      name: name.trim() || draft.name,
+      name: finalName,
       districts: draft.districts,
       rooms: draft.rooms,
       priceRange: draft.priceRange,
@@ -74,6 +77,18 @@ export function SaveSearchModal() {
       email,
       push,
       lastAlert: "Дөнгөж хадгалсан",
+    });
+    create.mutate({
+      name: finalName,
+      alert_freq: freq,
+      mode: draft.mode,
+      filters: {
+        districts: draft.districts,
+        rooms: draft.rooms,
+        priceMin: draft.priceRange[0],
+        priceMax: draft.priceRange[1],
+      },
+      channels: { sms, email, push },
     });
     closeModal();
     pushToast("Хайлт хадгалагдлаа · Шинэ зар орвол мэдэгдэнэ", "success");
@@ -188,6 +203,7 @@ export function EditSearchModal({ search }: { search: SavedSearch }) {
   const closeModal = useStore((s) => s.closeModal);
   const updateSavedSearch = useStore((s) => s.updateSavedSearch);
   const pushToast = useStore((s) => s.pushToast);
+  const { update } = useSavedSearchMutations();
 
   const [name, setName] = useState(search.name);
   const [minP, setMinP] = useState(String(search.priceRange[0]));
@@ -196,12 +212,27 @@ export function EditSearchModal({ search }: { search: SavedSearch }) {
   const save = () => {
     const lo = parseFloat(minP);
     const hi = parseFloat(maxP);
+    const finalName = name.trim() || search.name;
+    const priceMin = Number.isFinite(lo) && lo >= 0 ? lo : search.priceRange[0];
+    const priceMax = Number.isFinite(hi) && hi >= 0 ? hi : search.priceRange[1];
     updateSavedSearch(search.id, {
-      name: name.trim() || search.name,
-      priceRange: [
-        Number.isFinite(lo) && lo >= 0 ? lo : search.priceRange[0],
-        Number.isFinite(hi) && hi >= 0 ? hi : search.priceRange[1],
-      ],
+      name: finalName,
+      priceRange: [priceMin, priceMax],
+    });
+    update.mutate({
+      id: search.id,
+      input: {
+        name: finalName,
+        mode: search.mode,
+        alert_freq: search.alertFreq,
+        filters: {
+          districts: search.districts,
+          rooms: search.rooms,
+          priceMin,
+          priceMax,
+        },
+        channels: { sms: search.sms, email: search.email, push: search.push },
+      },
     });
     closeModal();
     pushToast("Хайлт шинэчлэгдлээ", "success");
@@ -262,6 +293,7 @@ export function DeleteSearchConfirm({ id }: { id: number }) {
   const closeModal = useStore((s) => s.closeModal);
   const removeSavedSearch = useStore((s) => s.removeSavedSearch);
   const pushToast = useStore((s) => s.pushToast);
+  const { remove } = useSavedSearchMutations();
   return (
     <div className="-m-6">
       <div className="p-5" style={{ borderBottom: "1px solid var(--border)" }}>
@@ -281,6 +313,7 @@ export function DeleteSearchConfirm({ id }: { id: number }) {
           type="button"
           onClick={() => {
             removeSavedSearch(id);
+            remove.mutate(id);
             closeModal();
             pushToast("Хайлт устгагдлаа", "info");
           }}

@@ -24,7 +24,7 @@ export default defineConfig({
     testTimeout: 20_000,
     env: {
       NEXT_PUBLIC_API_URL:
-        process.env.NEXT_PUBLIC_API_URL ?? "http://core.neomap.mn/api",
+        process.env.NEXT_PUBLIC_API_URL ?? "https://core.neomap.mn/api",
     },
   },
 });

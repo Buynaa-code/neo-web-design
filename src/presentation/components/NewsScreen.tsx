@@ -1,12 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Clock, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useStore } from "@/infrastructure/store";
+import { useArticle, useArticles } from "@/application/queries/articles";
+import type { Article } from "@/domain/schemas/api";
 
 interface NewsItem {
-  id: number;
+  id: number | string;
+  slug?: string;
   cat: string;
   title: string;
   summary: string;
@@ -14,6 +17,34 @@ interface NewsItem {
   readMin: number;
   hot?: boolean;
   img: string;
+  /** Background image URL; when absent we derive a picsum seed from `img`. */
+  imgUrl?: string;
+}
+
+/** Roughly estimate reading time (minutes) from body/excerpt length. */
+function estimateReadMin(text: string | null): number {
+  const words = text ? text.trim().split(/\s+/).filter(Boolean).length : 0;
+  return Math.max(2, Math.round(words / 200) || 2);
+}
+
+/** Map a backend Article onto the existing NewsItem card view-model. */
+function articleToNewsItem(a: Article): NewsItem {
+  return {
+    id: a.id,
+    slug: a.slug,
+    cat: a.category ?? "Мэдээ",
+    title: a.title,
+    summary: a.excerpt ?? a.body ?? "",
+    date: a.publishedAt ? a.publishedAt.slice(0, 10) : "",
+    readMin: estimateReadMin(a.body ?? a.excerpt),
+    img: a.slug,
+    imgUrl: a.coverImage ?? undefined,
+  };
+}
+
+/** Resolve a card/background image URL for a given NewsItem + size. */
+function newsImgUrl(item: NewsItem, w: number, h: number): string {
+  return item.imgUrl ?? `https://picsum.photos/seed/${item.img}/${w}/${h}`;
 }
 
 const NEWS_ITEMS: NewsItem[] = [
@@ -73,8 +104,26 @@ const CATEGORIES = ["Бүгд", "Зах зээл", "Ипотек", "Шинэ т�
 
 export function NewsScreen() {
   const [cat, setCat] = useState<string>("Бүгд");
-  const filtered =
-    cat === "Бүгд" ? NEWS_ITEMS : NEWS_ITEMS.filter((n) => n.cat === cat);
+
+  // Live articles from the backend. "Бүгд" (All) → no category filter.
+  const { data, isLoading } = useArticles({
+    category: cat === "Бүгд" ? undefined : cat,
+  });
+
+  // Prefer API items when present; otherwise fall back to mock content so the
+  // screen never renders blank (backend may have no seeded articles yet).
+  const apiItems = useMemo(
+    () => (data?.items ?? []).map(articleToNewsItem),
+    [data?.items]
+  );
+
+  const filtered = useMemo(() => {
+    if (apiItems.length > 0) return apiItems;
+    return cat === "Бүгд"
+      ? NEWS_ITEMS
+      : NEWS_ITEMS.filter((n) => n.cat === cat);
+  }, [apiItems, cat]);
+
   const featured = filtered[0];
   const rest = filtered.slice(1);
   const openModal = useStore((s) => s.openModal);
@@ -113,7 +162,7 @@ export function NewsScreen() {
             <div
               className="aspect-[16/10] md:aspect-auto bg-cover bg-center"
               style={{
-                backgroundImage: `url('https://picsum.photos/seed/${featured.img}/1200/800')`,
+                backgroundImage: `url('${newsImgUrl(featured, 1200, 800)}')`,
               }}
             />
             <div className="p-6 flex flex-col justify-center">
@@ -133,7 +182,7 @@ export function NewsScreen() {
         </button>
       ) : (
         <div className="card p-10 text-center text-sm text-[var(--text-3)] mb-6">
-          Сонгосон ангилалд мэдээ алга
+          {isLoading ? "Уншиж байна…" : "Сонгосон ангилалд мэдээ алга"}
         </div>
       )}
 
@@ -147,7 +196,7 @@ export function NewsScreen() {
           >
             <div
               className="aspect-[16/10] bg-cover bg-center"
-              style={{ backgroundImage: `url('https://picsum.photos/seed/${n.img}/800/500')` }}
+              style={{ backgroundImage: `url('${newsImgUrl(n, 800, 500)}')` }}
             />
             <div className="p-4">
               <div className="flex items-center gap-2 mb-2">
@@ -168,11 +217,14 @@ export function NewsScreen() {
 
 function ArticleModal({ item }: { item: NewsItem }) {
   const closeModal = useStore((s) => s.closeModal);
+  // Fetch the full body for API-backed articles (mock items have no slug match).
+  const { data: full } = useArticle(item.slug);
+  const body = full?.body ?? null;
   return (
     <div className="-m-6">
       <div
         className="relative aspect-[16/9] bg-cover bg-center"
-        style={{ backgroundImage: `url('https://picsum.photos/seed/${item.img}/1600/900')` }}
+        style={{ backgroundImage: `url('${newsImgUrl(item, 1600, 900)}')` }}
       >
         <button
           type="button"
@@ -198,11 +250,17 @@ function ArticleModal({ item }: { item: NewsItem }) {
         <h2 className="text-2xl font-bold leading-snug mb-2">{item.title}</h2>
         <div className="text-xs text-[var(--text-3)] mb-4">{item.date}</div>
         <p className="text-sm leading-7 text-[var(--text-2)]">{item.summary}</p>
-        <p className="text-sm leading-7 text-[var(--text-2)] mt-4">
-          Энэхүү нийтлэлийн дэлгэрэнгүй удахгүй нэмэгдэнэ. NEOMAP-ийн редакцийн
-          баг үл хөдлөхийн зах зээлийн мэдээ, ипотек, шинэ төслүүдийг
-          тогтмол бэлдэж байна.
-        </p>
+        {body ? (
+          <p className="text-sm leading-7 text-[var(--text-2)] mt-4 whitespace-pre-line">
+            {body}
+          </p>
+        ) : (
+          <p className="text-sm leading-7 text-[var(--text-2)] mt-4">
+            Энэхүү нийтлэлийн дэлгэрэнгүй удахгүй нэмэгдэнэ. NEOMAP-ийн редакцийн
+            баг үл хөдлөхийн зах зээлийн мэдээ, ипотек, шинэ төслүүдийг
+            тогтмол бэлдэж байна.
+          </p>
+        )}
       </div>
     </div>
   );

@@ -70,6 +70,9 @@ import {
 import { PriceHistory } from "@/components/property/PriceHistory";
 import { TravelTimes } from "@/components/property/TravelTimes";
 import { hasIpoteh, isListingVerified } from "@/application/filters";
+import { useRecordView } from "@/application/queries/activity";
+import { useToggleFavorite } from "@/application/queries/saved";
+import { getToken } from "@/infrastructure/api/token";
 import { useStore } from "@/infrastructure/store";
 import { cn, geoDistance } from "@/lib/utils";
 import type { Listing } from "@/domain/types";
@@ -190,10 +193,24 @@ export function PropertyDetail({ listing }: { listing: Listing }) {
   const setLoanDownPct = useStore((s) => s.setLoanDownPct);
   const setLoanYears = useStore((s) => s.setLoanYears);
 
+  const recordView = useRecordView();
+  const toggleFavorite = useToggleFavorite();
+
   useEffect(() => {
     setCurrentListingId(listing.id);
     markViewed(listing.id);
+    // Persist the view to the backend when signed in (fire-and-forget; a 401
+    // for anonymous visitors is expected and harmless).
+    if (getToken()) recordView.mutate(listing.id);
+    // recordView is stable across renders; intentionally excluded from deps.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [listing.id, markViewed, setCurrentListingId]);
+
+  // Local store drives the optimistic UI; mirror the change to the backend.
+  const handleToggleSaved = () => {
+    toggleSaved(listing.id);
+    if (getToken()) toggleFavorite.mutate({ listingId: listing.id, favorited: isSaved });
+  };
 
   if (!detail) {
     return (
@@ -396,7 +413,7 @@ export function PropertyDetail({ listing }: { listing: Listing }) {
               type="button"
               className={cn("bm-btn-outline justify-center", isSaved && "!border-[color:var(--gold-brand)] !text-[color:var(--gold-brand)]")}
               onClick={() => {
-                toggleSaved(listing.id);
+                handleToggleSaved();
                 pushToast(isSaved ? "Хадгалснаас хаслаа" : "Хадгалсан жагсаалтад нэмэгдлээ", "success");
               }}
             >
