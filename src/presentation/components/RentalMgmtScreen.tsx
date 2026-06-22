@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -14,10 +16,10 @@ import {
   Home as HomeIcon,
   LayoutDashboard,
   MessageSquare,
-  MoreHorizontal,
   Pencil,
   Plus,
   Receipt,
+  Trash2,
   UserPlus,
   Users,
   Wrench,
@@ -30,8 +32,13 @@ import { RM_INCOME_MONTHS } from "@/infrastructure/data/rental-mgmt";
 import {
   useRentalContracts,
   useRentalIncome,
+  useRentalMutations,
   useRentalTenants,
 } from "@/application/queries/rental";
+import type {
+  ContractInput,
+  TenantInput,
+} from "@/infrastructure/api/rental";
 import type {
   RentalContract,
   RentalTenant,
@@ -398,8 +405,19 @@ function Properties() {
 
 function Tenants() {
   const { data: tenants = [], isLoading } = useRentalTenants();
+  const openModal = useStore((s) => s.openModal);
   return (
-    <div className="card overflow-hidden">
+    <div className="space-y-3">
+      <div className="flex justify-end">
+        <button
+          type="button"
+          className="btn btn-primary"
+          onClick={() => openModal(<TenantFormModal />, "md")}
+        >
+          <UserPlus className="w-4 h-4" /> Түрээслэгч нэмэх
+        </button>
+      </div>
+      <div className="card overflow-hidden">
       <table className="w-full text-sm">
         <thead style={{ background: "var(--surface-2)" }}>
           <tr>
@@ -435,6 +453,7 @@ function Tenants() {
           )}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }
@@ -461,6 +480,7 @@ function TenantRow({
   col: TenantTone;
   label: string;
 }) {
+  const openModal = useStore((s) => s.openModal);
   return (
     <tr style={{ borderTop: "1px solid var(--border)" }}>
       <td className="p-3">
@@ -493,9 +513,24 @@ function TenantRow({
         </span>
       </td>
       <td className="p-3 text-right">
-        <button type="button" className="btn btn-ghost !text-xs !py-1.5" aria-label="More">
-          <MoreHorizontal className="w-3.5 h-3.5" />
-        </button>
+        <div className="flex gap-1 justify-end">
+          <button
+            type="button"
+            className="btn btn-ghost !text-xs !py-1.5"
+            aria-label="Засах"
+            onClick={() => openModal(<TenantFormModal tenant={t} />, "md")}
+          >
+            <Pencil className="w-3.5 h-3.5" />
+          </button>
+          <button
+            type="button"
+            className="btn btn-ghost !text-xs !py-1.5"
+            aria-label="Устгах"
+            onClick={() => openModal(<DeleteTenantConfirm tenant={t} />, "md")}
+          >
+            <Trash2 className="w-3.5 h-3.5" style={{ color: "var(--danger)" }} />
+          </button>
+        </div>
       </td>
     </tr>
   );
@@ -504,6 +539,7 @@ function TenantRow({
 function Contracts() {
   const { data: contracts = [] } = useRentalContracts();
   const { data: tenants = [] } = useRentalTenants();
+  const openModal = useStore((s) => s.openModal);
   const tenantName = (id: number) =>
     tenants.find((t) => t.id === id)?.name ?? `#${id}`;
   return (
@@ -543,7 +579,12 @@ function Contracts() {
               <button type="button" className="btn btn-secondary !text-xs !py-2">
                 <Download className="w-3.5 h-3.5" /> PDF
               </button>
-              <button type="button" className="btn btn-ghost !text-xs !py-2" aria-label="Edit">
+              <button
+                type="button"
+                className="btn btn-ghost !text-xs !py-2"
+                aria-label="Edit"
+                onClick={() => openModal(<ContractFormModal contract={c} />, "md")}
+              >
                 <Pencil className="w-3.5 h-3.5" />
               </button>
             </div>
@@ -554,9 +595,340 @@ function Contracts() {
         type="button"
         className="card p-4 w-full flex items-center justify-center gap-2 text-sm hover:border-[var(--gold-brand)]"
         style={{ borderStyle: "dashed" }}
+        onClick={() => openModal(<ContractFormModal />, "md")}
       >
         <Plus className="w-4 h-4" /> Шинэ гэрээ үүсгэх
       </button>
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------- *
+ * Form modals (tenant + contract create/edit)                      *
+ * ---------------------------------------------------------------- */
+
+const RENT_LISTINGS = LISTINGS.filter((l) => l.mode === "rent");
+
+function Field({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <label className="block">
+      <div className="text-xs font-medium text-[var(--text-2)] mb-1.5">{label}</div>
+      {children}
+    </label>
+  );
+}
+
+function ListingSelect({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  return (
+    <select className="input" value={value} onChange={(e) => onChange(e.target.value)}>
+      <option value="">— Сонгох —</option>
+      {RENT_LISTINGS.map((l) => (
+        <option key={l.id} value={l.id}>
+          {l.khotkhon} · {l.district}
+        </option>
+      ))}
+    </select>
+  );
+}
+
+const toIso = (v: string): string | null => (v.trim() ? v : null);
+const toInt = (v: string): number | null => {
+  const n = parseInt(v.replace(/[^\d-]/g, ""), 10);
+  return Number.isFinite(n) ? n : null;
+};
+
+function TenantFormModal({ tenant }: { tenant?: RentalTenant }) {
+  const closeModal = useStore((s) => s.closeModal);
+  const pushToast = useStore((s) => s.pushToast);
+  const { createTenant, updateTenant } = useRentalMutations();
+  const editing = tenant != null;
+
+  const [name, setName] = useState(tenant?.name ?? "");
+  const [phone, setPhone] = useState(tenant?.phone ?? "");
+  const [listingId, setListingId] = useState(
+    tenant?.listingId != null ? String(tenant.listingId) : ""
+  );
+  const [leaseStart, setLeaseStart] = useState(tenant?.leaseStart ?? "");
+  const [leaseEnd, setLeaseEnd] = useState(tenant?.leaseEnd ?? "");
+  const [rent, setRent] = useState(
+    tenant?.rentAmount != null ? String(tenant.rentAmount) : ""
+  );
+  const [status, setStatus] = useState<TenantInput["status"]>(
+    (["active", "pending", "ended"].includes(tenant?.status ?? "")
+      ? tenant!.status
+      : "active") as TenantInput["status"]
+  );
+
+  const save = () => {
+    if (!name.trim()) {
+      pushToast("Нэр оруулна уу", "danger");
+      return;
+    }
+    const input: TenantInput = {
+      name: name.trim(),
+      listing_id: listingId ? toInt(listingId) : null,
+      phone: toIso(phone),
+      lease_start: toIso(leaseStart),
+      lease_end: toIso(leaseEnd),
+      rent_amount: rent.trim() ? toInt(rent) : null,
+      status,
+    };
+    if (editing) {
+      updateTenant.mutate({ id: tenant.id, input });
+      pushToast("Түрээслэгч шинэчлэгдлээ", "success");
+    } else {
+      createTenant.mutate(input);
+      pushToast("Түрээслэгч нэмэгдлээ", "success");
+    }
+    closeModal();
+  };
+
+  return (
+    <div className="-m-6">
+      <div className="p-5" style={{ borderBottom: "1px solid var(--border)" }}>
+        <h3 className="font-semibold text-lg">
+          {editing ? "Түрээслэгч засах" : "Түрээслэгч нэмэх"}
+        </h3>
+      </div>
+      <div className="p-5 space-y-4 max-h-[60vh] overflow-y-auto">
+        <Field label="Нэр">
+          <input
+            className="input"
+            placeholder="Бат-Эрдэнэ"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
+        </Field>
+        <Field label="Утас">
+          <input
+            className="input"
+            placeholder="99112233"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+          />
+        </Field>
+        <Field label="Объект">
+          <ListingSelect value={listingId} onChange={setListingId} />
+        </Field>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Гэрээ эхэлсэн">
+            <input
+              type="date"
+              className="input"
+              value={leaseStart}
+              onChange={(e) => setLeaseStart(e.target.value)}
+            />
+          </Field>
+          <Field label="Гэрээ дуусах">
+            <input
+              type="date"
+              className="input"
+              value={leaseEnd}
+              onChange={(e) => setLeaseEnd(e.target.value)}
+            />
+          </Field>
+        </div>
+        <Field label="Сарын түрээс (₮)">
+          <input
+            type="number"
+            className="input num"
+            placeholder="1800000"
+            value={rent}
+            onChange={(e) => setRent(e.target.value)}
+          />
+        </Field>
+        <Field label="Төлөв">
+          <select
+            className="input"
+            value={status}
+            onChange={(e) => setStatus(e.target.value as TenantInput["status"])}
+          >
+            <option value="active">Идэвхтэй</option>
+            <option value="pending">Төлбөр хүлээж буй</option>
+            <option value="ended">Дууссан</option>
+          </select>
+        </Field>
+      </div>
+      <div
+        className="p-5 flex gap-2 justify-end"
+        style={{ borderTop: "1px solid var(--border)" }}
+      >
+        <button type="button" className="btn btn-secondary" onClick={closeModal}>
+          Болих
+        </button>
+        <button type="button" className="btn btn-primary" onClick={save}>
+          Хадгалах
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function DeleteTenantConfirm({ tenant }: { tenant: RentalTenant }) {
+  const closeModal = useStore((s) => s.closeModal);
+  const pushToast = useStore((s) => s.pushToast);
+  const { removeTenant } = useRentalMutations();
+  return (
+    <div className="-m-6">
+      <div className="p-5" style={{ borderBottom: "1px solid var(--border)" }}>
+        <h3 className="font-semibold text-lg">Түрээслэгч устгах уу?</h3>
+      </div>
+      <div className="p-5 text-sm text-[var(--text-2)]">
+        {tenant.name}-г устгасны дараа сэргээх боломжгүй.
+      </div>
+      <div
+        className="p-5 flex gap-2 justify-end"
+        style={{ borderTop: "1px solid var(--border)" }}
+      >
+        <button type="button" className="btn btn-secondary" onClick={closeModal}>
+          Болих
+        </button>
+        <button
+          type="button"
+          className="btn"
+          style={{ background: "var(--danger)", color: "#fff" }}
+          onClick={() => {
+            removeTenant.mutate(tenant.id);
+            closeModal();
+            pushToast("Түрээслэгч устгагдлаа", "danger");
+          }}
+        >
+          Устгах
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function ContractFormModal({ contract }: { contract?: RentalContract }) {
+  const closeModal = useStore((s) => s.closeModal);
+  const pushToast = useStore((s) => s.pushToast);
+  const { createContract, updateContract } = useRentalMutations();
+  const { data: tenants = [] } = useRentalTenants();
+  const editing = contract != null;
+
+  const [tenantId, setTenantId] = useState(
+    contract?.tenantId != null ? String(contract.tenantId) : ""
+  );
+  const [listingId, setListingId] = useState(
+    contract?.listingId != null ? String(contract.listingId) : ""
+  );
+  const [start, setStart] = useState(contract?.start ?? "");
+  const [end, setEnd] = useState(contract?.end ?? "");
+  const [amount, setAmount] = useState(
+    contract?.amount != null ? String(contract.amount) : ""
+  );
+  const [status, setStatus] = useState<ContractInput["status"]>(
+    (["draft", "active", "ended"].includes(contract?.status ?? "")
+      ? contract!.status
+      : "active") as ContractInput["status"]
+  );
+
+  const save = () => {
+    const common = {
+      listing_id: listingId ? toInt(listingId) : null,
+      start: toIso(start),
+      end: toIso(end),
+      amount: amount.trim() ? toInt(amount) : null,
+      status,
+    };
+    if (editing) {
+      updateContract.mutate({ id: contract.id, input: common });
+      pushToast("Гэрээ шинэчлэгдлээ", "success");
+    } else {
+      const tid = toInt(tenantId);
+      if (tid == null) {
+        pushToast("Түрээслэгч сонгоно уу", "danger");
+        return;
+      }
+      createContract.mutate({ tenant_id: tid, ...common });
+      pushToast("Гэрээ үүслээ", "success");
+    }
+    closeModal();
+  };
+
+  return (
+    <div className="-m-6">
+      <div className="p-5" style={{ borderBottom: "1px solid var(--border)" }}>
+        <h3 className="font-semibold text-lg">
+          {editing ? "Гэрээ засах" : "Гэрээ үүсгэх"}
+        </h3>
+      </div>
+      <div className="p-5 space-y-4 max-h-[60vh] overflow-y-auto">
+        <Field label="Түрээслэгч">
+          <select
+            className="input"
+            value={tenantId}
+            disabled={editing}
+            onChange={(e) => setTenantId(e.target.value)}
+          >
+            <option value="">— Сонгох —</option>
+            {tenants.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label="Объект">
+          <ListingSelect value={listingId} onChange={setListingId} />
+        </Field>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Эхлэх">
+            <input
+              type="date"
+              className="input"
+              value={start}
+              onChange={(e) => setStart(e.target.value)}
+            />
+          </Field>
+          <Field label="Дуусах">
+            <input
+              type="date"
+              className="input"
+              value={end}
+              onChange={(e) => setEnd(e.target.value)}
+            />
+          </Field>
+        </div>
+        <Field label="Дүн (₮/сар)">
+          <input
+            type="number"
+            className="input num"
+            placeholder="1800000"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+          />
+        </Field>
+        <Field label="Төлөв">
+          <select
+            className="input"
+            value={status}
+            onChange={(e) => setStatus(e.target.value as ContractInput["status"])}
+          >
+            <option value="draft">Ноорог</option>
+            <option value="active">Идэвхтэй</option>
+            <option value="ended">Дууссан</option>
+          </select>
+        </Field>
+      </div>
+      <div
+        className="p-5 flex gap-2 justify-end"
+        style={{ borderTop: "1px solid var(--border)" }}
+      >
+        <button type="button" className="btn btn-secondary" onClick={closeModal}>
+          Болих
+        </button>
+        <button type="button" className="btn btn-primary" onClick={save}>
+          Хадгалах
+        </button>
+      </div>
     </div>
   );
 }

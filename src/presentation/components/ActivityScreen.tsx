@@ -148,10 +148,17 @@ export function ActivityScreen() {
 
   return (
     <div className="max-w-4xl mx-auto px-4 lg:px-6 py-6">
-      <h1 className="text-2xl font-semibold mb-1">Үзэлтүүд</h1>
-      <p className="text-sm text-[var(--text-3)] mb-5">
-        Товлосон болон өнгөрсөн уулзалтууд
-      </p>
+      <div className="flex items-start justify-between gap-3 mb-5">
+        <div>
+          <h1 className="text-2xl font-semibold mb-1">Үзэлтүүд</h1>
+          <p className="text-sm text-[var(--text-3)]">
+            Товлосон болон өнгөрсөн уулзалтууд
+          </p>
+        </div>
+        <Link href="/messages" className="btn btn-secondary !text-xs !py-2 shrink-0">
+          Зурвасууд
+        </Link>
+      </div>
 
       <div className="eyebrow mb-2">Удахгүй болох</div>
       <div className="space-y-2 mb-6">
