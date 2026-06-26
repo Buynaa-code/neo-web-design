@@ -151,6 +151,49 @@ const CATEGORY_API: Record<PropertyKey, string> = {
   other: "other",
 };
 
+/** Wizard photo category labels → API `photos` group keys. */
+const PHOTO_CATEGORY_API: Record<string, string> = {
+  "Нүүрний зураг": "cover",
+  "План зураг": "plan",
+  "Дотор зураг": "interior",
+  "Гадна орчны зураг": "exterior",
+  "Мастер төлөвлөгөө, хотхоны зураг": "master_plan",
+  "Дотроос гадагшаа харагдацын зураг": "view_from_inside",
+  "Хотхоны бусад үзүүлэлтийн зураг": "other",
+  "Бичлэг": "video",
+};
+
+/** Resolve a PhotoDraft's display URL: an explicit URL, else a seed placeholder. */
+function photoDraftUrl(photo: { seed: string; url?: string }): string {
+  const url = photo.url?.trim();
+  if (url) return url;
+  return `https://picsum.photos/seed/${photo.seed}/800/600`;
+}
+
+/**
+ * Build the API photo payload from the wizard's media drafts:
+ *  - `photos`: grouped object keyed by API category (cover photo first), each a
+ *    list of URLs — the only shape the backend persists.
+ *  - `photo_seeds`: every photo's placeholder seed, cover first.
+ */
+function buildPhotoPayload(
+  photos: { seed: string; url?: string; category: string }[],
+  coverIndex: number
+): { photos?: Record<string, string[]>; photo_seeds?: string[] } {
+  if (!photos.length) return {};
+  // Reorder so the chosen cover comes first (it leads its group + the seeds).
+  const ordered =
+    coverIndex > 0 && coverIndex < photos.length
+      ? [photos[coverIndex], ...photos.filter((_, i) => i !== coverIndex)]
+      : photos;
+  const grouped: Record<string, string[]> = {};
+  for (const photo of ordered) {
+    const key = PHOTO_CATEGORY_API[photo.category] ?? "other";
+    (grouped[key] ??= []).push(photoDraftUrl(photo));
+  }
+  return { photos: grouped, photo_seeds: ordered.map((p) => p.seed) };
+}
+
 type ClassificationLike = {
   categories?: Record<string, { subtypes?: Record<string, { label?: string }> }>;
 };
@@ -343,6 +386,8 @@ function buildCreateRequest(
     confirms_information_is_true: draft.declarations.truth,
     confirms_authorized_to_publish: draft.declarations.authority,
     accepts_terms: draft.declarations.terms,
+    // ALHAM 11 — photos: grouped object + placeholder seeds (cover first).
+    ...buildPhotoPayload(draft.media.photos, draft.media.coverIndex),
   };
 
   if (mode === "rent") {
@@ -408,6 +453,8 @@ type PhotoDraft = {
   id: string;
   seed: string;
   category: string;
+  /** Optional real image URL; when set it is sent instead of a seed placeholder. */
+  url?: string;
 };
 
 type SmartDraft = {
@@ -1337,10 +1384,12 @@ function normalizePhotos(value: unknown): PhotoDraft[] {
   return value.map((item, index) => {
     const raw = toRecord(item);
     const seed = String(raw.seed || raw.id || item || `${Date.now()}-${index}`);
+    const url = typeof raw.url === "string" ? raw.url : undefined;
     return {
       id: String(raw.id || `photo-${seed}-${index}`),
       seed,
       category: categoryMap[String(raw.category)] || String(raw.category || (index ? "Дотор зураг" : "Нүүрний зураг")),
+      ...(url ? { url } : {}),
     };
   });
 }
@@ -3731,15 +3780,24 @@ function PricingSection({
 }
 
 function MediaSection({ draft, actions }: { draft: SmartDraft; actions: DraftActions }) {
-  const addPhoto = (category: string) => {
+  const [urlInput, setUrlInput] = useState("");
+  const [urlCategory, setUrlCategory] = useState(mediaCategories[0]);
+  const addPhoto = (category: string, url?: string) => {
     actions.mutate((next) => {
       next.media.photos.push({
         id: `photo-${Date.now()}-${next.media.photos.length}`,
         seed: `${category}-${Date.now()}-${next.media.photos.length}`,
         category,
+        ...(url ? { url } : {}),
       });
       if (next.media.photos.length === 1) next.media.coverIndex = 0;
     });
+  };
+  const addPhotoByUrl = () => {
+    const url = urlInput.trim();
+    if (!url) return;
+    addPhoto(urlCategory, url);
+    setUrlInput("");
   };
   const removePhoto = (index: number) => {
     actions.mutate((next) => {
@@ -3783,6 +3841,12 @@ function MediaSection({ draft, actions }: { draft: SmartDraft; actions: DraftAct
                   isCover ? "border-accent" : "border-border"
                 )}
               >
+                {photo.url ? (
+                  <div
+                    className="absolute inset-0 bg-cover bg-center"
+                    style={{ backgroundImage: `url("${photo.url}")` }}
+                  />
+                ) : null}
                 <div className="absolute inset-0 bg-black/10" />
                 <Button
                   type="button"
@@ -3818,6 +3882,36 @@ function MediaSection({ draft, actions }: { draft: SmartDraft; actions: DraftAct
             </button>
           ) : null}
         </div>
+        <Field label="Зургийн линкээр нэмэх" hint="Интернэт дэх зургийн URL-ийг ангилалтай нь оруулна. Хадгалахад зурагнууд серверт хадгалагдана.">
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <select
+              value={urlCategory}
+              onChange={(event) => setUrlCategory(event.target.value)}
+              className="h-9 shrink-0 rounded-md border border-input bg-background px-2.5 text-sm outline-none transition-colors focus:border-ring focus:ring-3 focus:ring-ring/20 sm:w-56"
+            >
+              {mediaCategories.map((category) => (
+                <option key={category} value={category}>
+                  {category}
+                </option>
+              ))}
+            </select>
+            <Input
+              value={urlInput}
+              onChange={(event) => setUrlInput(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  addPhotoByUrl();
+                }
+              }}
+              placeholder="https://...jpg"
+              className="flex-1"
+            />
+            <Button type="button" variant="secondary" onClick={addPhotoByUrl} disabled={!urlInput.trim()}>
+              Нэмэх
+            </Button>
+          </div>
+        </Field>
         <Field label="Зураг, бичлэг агуулсан линк">
           <Input
             value={draft.media.videoLink}

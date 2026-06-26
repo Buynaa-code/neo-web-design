@@ -198,6 +198,10 @@ export function replaceListings(next: Listing[]): void {
 }
 
 export function photoUrl(listing: Listing, n = 0, size = "800/600"): string {
+  // Prefer real uploaded URLs from the grouped API `photos` object.
+  if (listing.photoUrls && listing.photoUrls.length) {
+    return listing.photoUrls[n % listing.photoUrls.length];
+  }
   if (listing.photoSeeds && listing.photoSeeds.length) {
     const seed = listing.photoSeeds[n % listing.photoSeeds.length];
     return `https://picsum.photos/seed/${seed}/${size}`;

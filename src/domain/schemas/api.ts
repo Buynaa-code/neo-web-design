@@ -207,6 +207,7 @@ export const listingResourceSchema = z
       .union([z.array(z.unknown()), z.record(z.string(), z.unknown())])
       .nullable(),
     photoSeeds: z.array(z.unknown()),
+    coverImageId: nullableInt.optional(),
     priceHistory: z.array(z.unknown()),
     isUserListing: z.boolean(),
     createdAt: z.string(),

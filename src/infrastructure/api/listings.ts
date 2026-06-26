@@ -180,6 +180,46 @@ function countPhotos(photos: ListingResource["photos"], seeds: unknown[]): numbe
   return seeds.length;
 }
 
+/** Order of photo groups for display — cover first, video last. */
+const PHOTO_GROUP_ORDER = [
+  "cover",
+  "exterior",
+  "interior",
+  "view_from_inside",
+  "plan",
+  "master_plan",
+  "amenity",
+  "other",
+  "video",
+];
+
+/**
+ * Flatten the grouped `photos` object into an ordered list of real URLs
+ * (cover group first). A flat array is returned as-is; anything else yields [].
+ */
+function flattenPhotoUrls(photos: ListingResource["photos"]): string[] {
+  if (Array.isArray(photos)) {
+    return photos.filter((p): p is string => typeof p === "string");
+  }
+  if (!photos || typeof photos !== "object") return [];
+  const groups = photos as Record<string, unknown>;
+  const keys = Object.keys(groups)
+    .filter((k) => k !== "video") // video group holds a clip URL, not a photo
+    .sort((a, b) => {
+      const ia = PHOTO_GROUP_ORDER.indexOf(a);
+      const ib = PHOTO_GROUP_ORDER.indexOf(b);
+      return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+    });
+  const urls: string[] = [];
+  for (const key of keys) {
+    const group = groups[key];
+    if (Array.isArray(group)) {
+      for (const u of group) if (typeof u === "string" && u) urls.push(u);
+    }
+  }
+  return urls;
+}
+
 /**
  * Maps the rich API `ListingResource` down to the simple `Listing` shape the
  * existing UI consumes, filling safe defaults for nullable fields. This lets us
@@ -223,5 +263,6 @@ export function toListing(r: ListingResource): Listing {
     photoSeeds: r.photoSeeds.filter(
       (s): s is string | number => typeof s === "string" || typeof s === "number"
     ),
+    photoUrls: flattenPhotoUrls(r.photos),
   };
 }

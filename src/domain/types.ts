@@ -30,6 +30,8 @@ export interface Listing {
   desc?: string;
   priceHistory?: PricePoint[];
   photoSeeds?: (string | number)[];
+  /** Real photo URLs from the grouped API `photos` object, cover group first. */
+  photoUrls?: string[];
   propertyKind?: ListingPropertyKind;
 }
 
