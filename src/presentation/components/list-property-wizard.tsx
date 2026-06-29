@@ -180,11 +180,22 @@ const PHOTO_IDS_FIELD: Record<string, string> = {
 };
 
 /** Resolve a PhotoDraft's display URL: an explicit URL, else a seed placeholder. */
+/** Backend APP_URL may be misconfigured as localhost — remap to the real origin. */
+function normalizeMediaUrl(url: string): string {
+  const apiBase = process.env.NEXT_PUBLIC_API_URL ?? "";
+  const origin = apiBase ? new URL(apiBase).origin : "";
+  if (origin && url.startsWith("http://localhost/"))
+    return url.replace("http://localhost/", origin + "/");
+  if (origin && url.startsWith("http://localhost:"))
+    return url.replace(/^http:\/\/localhost:\d+\//, origin + "/");
+  return url;
+}
+
 function photoDraftUrl(photo: { seed: string; url?: string }): string {
   const url = photo.url?.trim();
   // Local object-URL / data-URL previews can't be fetched by the server — fall
   // back to a seed placeholder for the payload (they still render in the grid).
-  if (url && !url.startsWith("blob:") && !url.startsWith("data:")) return url;
+  if (url && !url.startsWith("blob:") && !url.startsWith("data:")) return normalizeMediaUrl(url);
   return `https://picsum.photos/seed/${photo.seed}/800/600`;
 }
 
@@ -239,6 +250,9 @@ function buildMediaPayload(
     if (photo.mediaId != null && idField) {
       (idFields[idField] ??= []).push(photo.mediaId);
       if (apiKey === "cover" && coverImageId == null) coverImageId = photo.mediaId;
+      // Also include the URL in the photos grouped object so the backend persists
+      // it in ListingResource.photos (backend does NOT auto-populate photos from IDs).
+      urlPhotos.push(photo);
     } else {
       urlPhotos.push(photo);
     }
@@ -2274,6 +2288,9 @@ export function ListPropertyWizard() {
         await submitListingDraft(payload);
       }
       pushToast("Зар амжилттай илгээгдлээ", "success");
+      // Clear draft so the next listing starts fresh.
+      resetDraft();
+      setStep(1);
     } catch (err) {
       const message =
         err instanceof ApiError
@@ -2451,7 +2468,10 @@ export function ListPropertyWizard() {
               <div className="flex flex-col gap-2 sm:items-end">
                 {savedAt ? <span className="text-xs text-muted-foreground">Draft: {savedAt}</span> : null}
                 {step < 5 ? (
-                  <Button onClick={goNext}>
+                  <Button
+                    onClick={goNext}
+                    disabled={missing.some((item) => item.step === step)}
+                  >
                     Дараагийнх
                     <ChevronRight className="size-4" />
                   </Button>
