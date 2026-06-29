@@ -1,8 +1,9 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "RiskSolution",
-    "version": "0.0.1"
+    "title": "Neomap API",
+    "version": "0.0.1",
+    "description": "Neomap үл хөдлөхийн API.\n\n**Нэвтрэлт:** `Authorization: Bearer <token>` header ашиглана.\n\nToken авахын тулд `POST /auth/register` эсвэл `POST /auth/login` дуудна."
   },
   "servers": [
     {
@@ -15,965 +16,11 @@
     }
   ],
   "paths": {
-    "/address/countries": {
-      "get": {
-        "operationId": "address.countries.index",
-        "description": "Идэвхтэй бүх улсыг эрэмбэлэгдсэн сонголтын утга хэлбэрээр буцаана.",
-        "summary": "Улс орнуудын жагсаалт",
-        "tags": [
-          "Address"
-        ],
-        "responses": {
-          "200": {
-            "description": "Array of `AddressOptionResource`",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "data": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/AddressOptionResource"
-                      }
-                    }
-                  },
-                  "required": [
-                    "data"
-                  ]
-                }
-              }
-            }
-          }
-        },
-        "security": []
-      }
-    },
-    "/address/cities": {
-      "get": {
-        "operationId": "address.cities.index",
-        "description": "Сонгосон улсаар шүүж болох cascading сонголт.",
-        "summary": "Хот / аймгуудын жагсаалт",
-        "tags": [
-          "Address"
-        ],
-        "parameters": [
-          {
-            "name": "country_id",
-            "in": "query",
-            "description": "Шүүх улсын ID. Хоосон бол бүх хотыг буцаана.",
-            "schema": {
-              "type": [
-                "integer",
-                "null"
-              ]
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Array of `AddressOptionResource`",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "data": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/AddressOptionResource"
-                      }
-                    }
-                  },
-                  "required": [
-                    "data"
-                  ]
-                }
-              }
-            }
-          },
-          "422": {
-            "$ref": "#/components/responses/ValidationException"
-          }
-        },
-        "security": []
-      }
-    },
-    "/address/districts": {
-      "get": {
-        "operationId": "address.districts.index",
-        "description": "Сонгосон хотоор шүүж болох cascading сонголт.",
-        "summary": "Дүүрэг / сумдын жагсаалт",
-        "tags": [
-          "Address"
-        ],
-        "parameters": [
-          {
-            "name": "city_id",
-            "in": "query",
-            "description": "Шүүх хотын ID. Хоосон бол бүх дүүргийг буцаана.",
-            "schema": {
-              "type": [
-                "integer",
-                "null"
-              ]
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Array of `AddressOptionResource`",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "data": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/AddressOptionResource"
-                      }
-                    }
-                  },
-                  "required": [
-                    "data"
-                  ]
-                }
-              }
-            }
-          },
-          "422": {
-            "$ref": "#/components/responses/ValidationException"
-          }
-        },
-        "security": []
-      }
-    },
-    "/address/khoroos": {
-      "get": {
-        "operationId": "address.khoroos.index",
-        "description": "Сонгосон дүүргээр шүүж болох cascading сонголт.",
-        "summary": "Хороо / багуудын жагсаалт",
-        "tags": [
-          "Address"
-        ],
-        "parameters": [
-          {
-            "name": "district_id",
-            "in": "query",
-            "description": "Шүүх дүүргийн ID. Хоосон бол бүх хороог буцаана.",
-            "schema": {
-              "type": [
-                "integer",
-                "null"
-              ]
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Array of `AddressOptionResource`",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "data": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/AddressOptionResource"
-                      }
-                    }
-                  },
-                  "required": [
-                    "data"
-                  ]
-                }
-              }
-            }
-          },
-          "422": {
-            "$ref": "#/components/responses/ValidationException"
-          }
-        },
-        "security": []
-      }
-    },
-    "/address/zipcodes": {
-      "get": {
-        "operationId": "address.zipcodes.index",
-        "description": "Сонгосон хороогоор шүүж болох cascading сонголт.",
-        "summary": "Зип / шуудангийн кодын жагсаалт",
-        "tags": [
-          "Address"
-        ],
-        "parameters": [
-          {
-            "name": "khoroo_id",
-            "in": "query",
-            "description": "Шүүх хорооны ID. Хоосон бол бүх зип кодыг буцаана.",
-            "schema": {
-              "type": [
-                "integer",
-                "null"
-              ]
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Array of `AddressOptionResource`",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "data": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/AddressOptionResource"
-                      }
-                    }
-                  },
-                  "required": [
-                    "data"
-                  ]
-                }
-              }
-            }
-          },
-          "422": {
-            "$ref": "#/components/responses/ValidationException"
-          }
-        },
-        "security": []
-      }
-    },
-    "/address/streets": {
-      "get": {
-        "operationId": "address.streets.index",
-        "description": "Сонгосон хороогоор шүүж болох cascading сонголт.",
-        "summary": "Гудамжны жагсаалт",
-        "tags": [
-          "Address"
-        ],
-        "parameters": [
-          {
-            "name": "khoroo_id",
-            "in": "query",
-            "description": "Шүүх хорооны ID. Хоосон бол бүх гудамжийг буцаана.",
-            "schema": {
-              "type": [
-                "integer",
-                "null"
-              ]
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Array of `AddressOptionResource`",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "data": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/AddressOptionResource"
-                      }
-                    }
-                  },
-                  "required": [
-                    "data"
-                  ]
-                }
-              }
-            }
-          },
-          "422": {
-            "$ref": "#/components/responses/ValidationException"
-          }
-        },
-        "security": []
-      }
-    },
-    "/address/complexes": {
-      "get": {
-        "operationId": "address.complexes.index",
-        "description": "Сонгосон хороо болон гудамжаар шүүж болох cascading сонголт.",
-        "summary": "Хотхон / цогцолборуудын жагсаалт",
-        "tags": [
-          "Address"
-        ],
-        "parameters": [
-          {
-            "name": "khoroo_id",
-            "in": "query",
-            "description": "Шүүх хорооны ID. Хоосон бол бүх хотхоныг буцаана.",
-            "schema": {
-              "type": [
-                "integer",
-                "null"
-              ]
-            }
-          },
-          {
-            "name": "street_id",
-            "in": "query",
-            "description": "Шүүх гудамжны ID. Хоосон бол гудамжаар шүүхгүй.",
-            "schema": {
-              "type": [
-                "integer",
-                "null"
-              ]
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Array of `AddressOptionResource`",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "data": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/AddressOptionResource"
-                      }
-                    }
-                  },
-                  "required": [
-                    "data"
-                  ]
-                }
-              }
-            }
-          },
-          "422": {
-            "$ref": "#/components/responses/ValidationException"
-          }
-        },
-        "security": []
-      }
-    },
-    "/address/building-blocks": {
-      "get": {
-        "operationId": "address.building-blocks.index",
-        "description": "Сонгосон хотхоноор шүүж болох идэвхтэй блокууд.",
-        "summary": "Барилгын блокуудын жагсаалт",
-        "tags": [
-          "Address"
-        ],
-        "parameters": [
-          {
-            "name": "complex_id",
-            "in": "query",
-            "description": "Шүүх хотхоны ID. Хоосон бол бүх блокыг буцаана.",
-            "schema": {
-              "type": [
-                "integer",
-                "null"
-              ]
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Array of `AddressOptionResource`",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "data": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/AddressOptionResource"
-                      }
-                    }
-                  },
-                  "required": [
-                    "data"
-                  ]
-                }
-              }
-            }
-          },
-          "422": {
-            "$ref": "#/components/responses/ValidationException"
-          }
-        },
-        "security": []
-      }
-    },
-    "/alerts": {
-      "get": {
-        "operationId": "alerts.index",
-        "description": "`?unread=1` дамжуулбал зөвхөн уншаагүйг буцаана. Зар бүрийг хамт ачаална.\nBearer token шаардана.",
-        "summary": "Хадгалсан хайлтуудаас үүссэн мэдэгдлүүд",
-        "tags": [
-          "Alert"
-        ],
-        "parameters": [
-          {
-            "name": "unread",
-            "in": "query",
-            "schema": {
-              "type": "boolean",
-              "default": false
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Array of `AlertResource`",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "data": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/AlertResource"
-                      }
-                    }
-                  },
-                  "required": [
-                    "data"
-                  ]
-                }
-              }
-            }
-          },
-          "401": {
-            "$ref": "#/components/responses/AuthenticationException"
-          }
-        }
-      }
-    },
-    "/alerts/{alert}/read": {
-      "patch": {
-        "operationId": "alerts.read",
-        "summary": "Нэг мэдэгдлийг уншсан гэж тэмдэглэнэ. Bearer token шаардана",
-        "tags": [
-          "Alert"
-        ],
-        "parameters": [
-          {
-            "name": "alert",
-            "in": "path",
-            "required": true,
-            "description": "The alert ID",
-            "schema": {
-              "type": "integer"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "message": {
-                      "type": "string",
-                      "const": "Мэдэгдлийг уншсан гэж тэмдэглэлээ."
-                    }
-                  },
-                  "required": [
-                    "message"
-                  ]
-                }
-              }
-            }
-          },
-          "401": {
-            "$ref": "#/components/responses/AuthenticationException"
-          },
-          "404": {
-            "$ref": "#/components/responses/ModelNotFoundException"
-          }
-        }
-      }
-    },
-    "/alerts/read-all": {
-      "post": {
-        "operationId": "alerts.read-all",
-        "summary": "Бүх мэдэгдлийг уншсан гэж тэмдэглэнэ. Bearer token шаардана",
-        "tags": [
-          "Alert"
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "message": {
-                      "type": "string",
-                      "const": "Бүх мэдэгдлийг уншсан гэж тэмдэглэлээ."
-                    }
-                  },
-                  "required": [
-                    "message"
-                  ]
-                }
-              }
-            }
-          },
-          "401": {
-            "$ref": "#/components/responses/AuthenticationException"
-          }
-        }
-      }
-    },
-    "/appointments": {
-      "get": {
-        "operationId": "appointments.index",
-        "description": "`?status=upcoming|past` шүүлттэй, хуудаслан буцаана. Bearer token шаардана.",
-        "summary": "Нэвтэрсэн хэрэглэгчийн товлосон цагууд",
-        "tags": [
-          "Appointment"
-        ],
-        "parameters": [
-          {
-            "name": "status",
-            "in": "query",
-            "schema": {
-              "type": [
-                "string",
-                "null"
-              ],
-              "enum": [
-                "upcoming",
-                "past"
-              ]
-            }
-          },
-          {
-            "name": "per_page",
-            "in": "query",
-            "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
-              "minimum": 1,
-              "maximum": 100
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Array of `AppointmentResource`",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "data": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/AppointmentResource"
-                      }
-                    }
-                  },
-                  "required": [
-                    "data"
-                  ]
-                }
-              }
-            }
-          },
-          "401": {
-            "$ref": "#/components/responses/AuthenticationException"
-          },
-          "422": {
-            "$ref": "#/components/responses/ValidationException"
-          }
-        }
-      },
-      "post": {
-        "operationId": "appointments.store",
-        "summary": "Зар үзэх цаг товлоно. Агентыг зараас автоматаар авна. Bearer token шаардана",
-        "tags": [
-          "Appointment"
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/StoreAppointmentRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "`AppointmentResource`",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "data": {
-                      "$ref": "#/components/schemas/AppointmentResource"
-                    }
-                  },
-                  "required": [
-                    "data"
-                  ]
-                }
-              }
-            }
-          },
-          "401": {
-            "$ref": "#/components/responses/AuthenticationException"
-          },
-          "404": {
-            "$ref": "#/components/responses/ModelNotFoundException"
-          },
-          "422": {
-            "$ref": "#/components/responses/ValidationException"
-          }
-        }
-      }
-    },
-    "/appointments/{appointment}": {
-      "patch": {
-        "operationId": "appointments.update",
-        "summary": "Товлосон цагийн огноо / цаг / төлөв / тэмдэглэлийг шинэчилнэ. Bearer token шаардана",
-        "tags": [
-          "Appointment"
-        ],
-        "parameters": [
-          {
-            "name": "appointment",
-            "in": "path",
-            "required": true,
-            "description": "The appointment ID",
-            "schema": {
-              "type": "integer"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateAppointmentRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "`AppointmentResource`",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "data": {
-                      "$ref": "#/components/schemas/AppointmentResource"
-                    }
-                  },
-                  "required": [
-                    "data"
-                  ]
-                }
-              }
-            }
-          },
-          "401": {
-            "$ref": "#/components/responses/AuthenticationException"
-          },
-          "404": {
-            "$ref": "#/components/responses/ModelNotFoundException"
-          },
-          "422": {
-            "$ref": "#/components/responses/ValidationException"
-          }
-        }
-      },
-      "delete": {
-        "operationId": "appointments.destroy",
-        "summary": "Товлосон цагийг цуцалж устгана. Bearer token шаардана",
-        "tags": [
-          "Appointment"
-        ],
-        "parameters": [
-          {
-            "name": "appointment",
-            "in": "path",
-            "required": true,
-            "description": "The appointment ID",
-            "schema": {
-              "type": "integer"
-            }
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": "No content"
-          },
-          "401": {
-            "$ref": "#/components/responses/AuthenticationException"
-          },
-          "404": {
-            "$ref": "#/components/responses/ModelNotFoundException"
-          }
-        }
-      }
-    },
-    "/articles": {
-      "get": {
-        "operationId": "articles.index",
-        "description": "Ангилал, чөлөөт текстээр шүүж, шинэ нийтлэлээр эрэмбэлэн хуудаслана.\nНийтэд нээлттэй — нэвтрэх шаардлагагүй.",
-        "summary": "Нийтлэгдсэн мэдээний жагсаалт",
-        "tags": [
-          "Article"
-        ],
-        "parameters": [
-          {
-            "name": "category",
-            "in": "query",
-            "description": "Ангиллаар шүүх.",
-            "schema": {
-              "type": [
-                "string",
-                "null"
-              ],
-              "maxLength": 255
-            }
-          },
-          {
-            "name": "q",
-            "in": "query",
-            "description": "Гарчиг / хэсэгчилсэн агуулгаар хайх.",
-            "schema": {
-              "type": [
-                "string",
-                "null"
-              ],
-              "maxLength": 255
-            }
-          },
-          {
-            "name": "per_page",
-            "in": "query",
-            "description": "Нэг хуудсанд харуулах тоо (1–100, default 15).",
-            "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
-              "minimum": 1,
-              "maximum": 100
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Paginated set of `ArticleResource`",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "data": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/ArticleResource"
-                      }
-                    },
-                    "links": {
-                      "type": "object",
-                      "properties": {
-                        "first": {
-                          "type": [
-                            "string",
-                            "null"
-                          ]
-                        },
-                        "last": {
-                          "type": [
-                            "string",
-                            "null"
-                          ]
-                        },
-                        "prev": {
-                          "type": [
-                            "string",
-                            "null"
-                          ]
-                        },
-                        "next": {
-                          "type": [
-                            "string",
-                            "null"
-                          ]
-                        }
-                      },
-                      "required": [
-                        "first",
-                        "last",
-                        "prev",
-                        "next"
-                      ]
-                    },
-                    "meta": {
-                      "type": "object",
-                      "properties": {
-                        "current_page": {
-                          "type": "integer",
-                          "minimum": 1
-                        },
-                        "from": {
-                          "type": [
-                            "integer",
-                            "null"
-                          ],
-                          "minimum": 1
-                        },
-                        "last_page": {
-                          "type": "integer",
-                          "minimum": 1
-                        },
-                        "links": {
-                          "type": "array",
-                          "description": "Generated paginator links.",
-                          "items": {
-                            "type": "object",
-                            "properties": {
-                              "url": {
-                                "type": [
-                                  "string",
-                                  "null"
-                                ]
-                              },
-                              "label": {
-                                "type": "string"
-                              },
-                              "active": {
-                                "type": "boolean"
-                              }
-                            },
-                            "required": [
-                              "url",
-                              "label",
-                              "active"
-                            ]
-                          }
-                        },
-                        "path": {
-                          "type": [
-                            "string",
-                            "null"
-                          ],
-                          "description": "Base path for paginator generated URLs."
-                        },
-                        "per_page": {
-                          "type": "integer",
-                          "description": "Number of items shown per page.",
-                          "minimum": 0
-                        },
-                        "to": {
-                          "type": [
-                            "integer",
-                            "null"
-                          ],
-                          "description": "Number of the last item in the slice.",
-                          "minimum": 1
-                        },
-                        "total": {
-                          "type": "integer",
-                          "description": "Total number of items being paginated.",
-                          "minimum": 0
-                        }
-                      },
-                      "required": [
-                        "current_page",
-                        "from",
-                        "last_page",
-                        "links",
-                        "path",
-                        "per_page",
-                        "to",
-                        "total"
-                      ]
-                    }
-                  },
-                  "required": [
-                    "data",
-                    "links",
-                    "meta"
-                  ]
-                }
-              }
-            }
-          },
-          "422": {
-            "$ref": "#/components/responses/ValidationException"
-          }
-        },
-        "security": []
-      }
-    },
-    "/articles/{slug}": {
-      "get": {
-        "operationId": "articles.show",
-        "summary": "Нэг мэдээг slug-аар нь буцаана. Нийтлэгдээгүй бол 404. Нийтэд нээлттэй",
-        "tags": [
-          "Article"
-        ],
-        "parameters": [
-          {
-            "name": "slug",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "`ArticleResource`",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "data": {
-                      "$ref": "#/components/schemas/ArticleResource"
-                    }
-                  },
-                  "required": [
-                    "data"
-                  ]
-                }
-              }
-            }
-          }
-        },
-        "security": []
-      }
-    },
     "/auth/register": {
       "post": {
         "operationId": "auth.register",
-        "summary": "Шинэ Neomap хэрэглэгч (Customer) бүртгэж, Sanctum токен буцаана",
+        "description": "Шинэ хэрэглэгч бүртгэж Sanctum Bearer токен буцаана.",
+        "summary": "Бүртгэл",
         "tags": [
           "Auth"
         ],
@@ -1025,7 +72,8 @@
     "/auth/login": {
       "post": {
         "operationId": "auth.login",
-        "summary": "Имэйл, нууц үгээр нэвтэрч, Sanctum токен буцаана",
+        "description": "Имэйл, нууц үгээр нэвтэрч Sanctum Bearer токен авна. Минутанд 6 удаа хязгаарлагдана.",
+        "summary": "Нэвтрэх",
         "tags": [
           "Auth"
         ],
@@ -1077,7 +125,8 @@
     "/auth/user": {
       "get": {
         "operationId": "auth.user",
-        "summary": "Нэвтэрсэн хэрэглэгчийн мэдээллийг буцаана",
+        "description": "Одоогийн Bearer токентой хэрэглэгчийн профайлыг буцаана.",
+        "summary": "Нэвтэрсэн хэрэглэгч",
         "tags": [
           "Auth"
         ],
@@ -1109,7 +158,8 @@
     "/auth/profile": {
       "put": {
         "operationId": "auth.profile.update",
-        "summary": "Хэрэглэгчийн профайл (нэр, утас, имэйл)-ыг шинэчилнэ",
+        "description": "Нэр, утас, имэйлийг шинэчилнэ.",
+        "summary": "Профайл шинэчлэх",
         "tags": [
           "Auth"
         ],
@@ -1156,7 +206,8 @@
     "/auth/password": {
       "put": {
         "operationId": "auth.password.update",
-        "summary": "Нууц үг солино. Одоогийн нууц үгийг шалгаж, бусад төхөөрөмжийн токеныг хүчингүй болгоно",
+        "description": "Одоогийн нууц үгийг шалгаж, шинэчилнэ. Бусад төхөөрөмжийн токеныг хүчингүй болгоно.",
+        "summary": "Нууц үг солих",
         "tags": [
           "Auth"
         ],
@@ -1205,7 +256,8 @@
     "/auth/logout": {
       "post": {
         "operationId": "auth.logout",
-        "summary": "Одоогийн төхөөрөмжийн токеныг хүчингүй болгож гаргана",
+        "description": "Одоогийн төхөөрөмжийн токеныг хүчингүй болгоно.",
+        "summary": "Гарах",
         "tags": [
           "Auth"
         ],
@@ -1238,7 +290,8 @@
     "/auth/logout-all": {
       "post": {
         "operationId": "auth.logout-all",
-        "summary": "Бүх төхөөрөмжийн токеныг хүчингүй болгоно",
+        "description": "Бүх төхөөрөмж дээрх токеныг хүчингүй болгоно.",
+        "summary": "Бүгдээс гарах",
         "tags": [
           "Auth"
         ],
@@ -1271,7 +324,8 @@
     "/user": {
       "get": {
         "operationId": "user",
-        "summary": "Нэвтэрсэн хэрэглэгчийн мэдээллийг буцаана",
+        "description": "Одоогийн Bearer токентой хэрэглэгчийн профайлыг буцаана.",
+        "summary": "Нэвтэрсэн хэрэглэгч",
         "tags": [
           "Auth"
         ],
@@ -1300,144 +354,27 @@
         }
       }
     },
-    "/conversations": {
+    "/media": {
       "get": {
-        "operationId": "conversations.index",
-        "description": "Сүүлийн мессеж, уншаагүй тоо, агентын мэдээлэлтэйгээр, сүүлд бичсэн\nдарааллаар буцаана. Bearer token шаардана.",
-        "summary": "Нэвтэрсэн хэрэглэгчийн агенттай хийсэн харилцаанууд",
+        "operationId": "media.index",
+        "description": "Нэвтэрсэн хэрэглэгчийн upload хийсэн медиаг хуудаслан буцаана.\n`listing_id` эсвэл `category`-оор шүүж болно.",
+        "summary": "Медиа жагсаалт",
         "tags": [
-          "Conversation"
-        ],
-        "responses": {
-          "200": {
-            "description": "Array of `ConversationResource`",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "data": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/ConversationResource"
-                      }
-                    }
-                  },
-                  "required": [
-                    "data"
-                  ]
-                }
-              }
-            }
-          },
-          "401": {
-            "$ref": "#/components/responses/AuthenticationException"
-          }
-        }
-      },
-      "post": {
-        "operationId": "conversations.store",
-        "description": "Тухайн агент + зартай харилцаа аль хэдийн байгаа бол түүн рүү мессеж нэмнэ.\nBearer token шаардана.",
-        "summary": "Агенттай шинэ харилцаа эхлүүлж, эхний мессежийг илгээнэ",
-        "tags": [
-          "Conversation"
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/StoreConversationRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "`ConversationResource`",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "data": {
-                      "$ref": "#/components/schemas/ConversationResource"
-                    }
-                  },
-                  "required": [
-                    "data"
-                  ]
-                }
-              }
-            }
-          },
-          "401": {
-            "$ref": "#/components/responses/AuthenticationException"
-          },
-          "422": {
-            "$ref": "#/components/responses/ValidationException"
-          }
-        }
-      }
-    },
-    "/conversations/{conversation}/read": {
-      "patch": {
-        "operationId": "conversations.read",
-        "summary": "Харилцааны бүх (агентаас ирсэн) мессежийг уншсан гэж тэмдэглэнэ.\nBearer token шаардана",
-        "tags": [
-          "Conversation"
+          "Media"
         ],
         "parameters": [
           {
-            "name": "conversation",
-            "in": "path",
-            "required": true,
-            "description": "The conversation ID",
+            "name": "per_page",
+            "in": "query",
             "schema": {
-              "type": "integer"
+              "type": "integer",
+              "default": 20
             }
           }
         ],
         "responses": {
           "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "message": {
-                      "type": "string",
-                      "const": "Мессежүүдийг уншсан гэж тэмдэглэлээ."
-                    }
-                  },
-                  "required": [
-                    "message"
-                  ]
-                }
-              }
-            }
-          },
-          "401": {
-            "$ref": "#/components/responses/AuthenticationException"
-          },
-          "404": {
-            "$ref": "#/components/responses/ModelNotFoundException"
-          }
-        }
-      }
-    },
-    "/favorites": {
-      "get": {
-        "operationId": "favorites.index",
-        "description": "Нэвтэрсэн хэрэглэгчийн хадгалсан бүх зарыг сүүлд хадгалсан дарааллаар,\nхуудаслан буцаана. Bearer token шаардана.",
-        "summary": "Хадгалсан (зүрх дарсан) зарууд",
-        "tags": [
-          "Favorite"
-        ],
-        "responses": {
-          "200": {
-            "description": "Paginated set of `ListingResource`",
+            "description": "Paginated set of `MediaResource`",
             "content": {
               "application/json": {
                 "schema": {
@@ -1446,7 +383,7 @@
                     "data": {
                       "type": "array",
                       "items": {
-                        "$ref": "#/components/schemas/ListingResource"
+                        "$ref": "#/components/schemas/MediaResource"
                       }
                     },
                     "links": {
@@ -1577,32 +514,61 @@
           },
           "401": {
             "$ref": "#/components/responses/AuthenticationException"
+          },
+          "403": {
+            "$ref": "#/components/responses/AuthorizationException"
           }
         }
       },
       "post": {
-        "operationId": "favorites.store",
-        "description": "Аль хэдийн хадгалсан бол давхардуулахгүй (idempotent). Bearer token шаардана.",
-        "summary": "Зарыг хадгалсан жагсаалтад нэмнэ",
+        "operationId": "media.store",
+        "description": "Нэг буюу олон зураг/видео файл хүлээж авч storage-д хадгалаад `id` болон `url` буцаана.\nБуцаж ирсэн `id`-уудыг зар үүсгэх/засах үед `interior_image_ids[]` гэх мэт талбаруудад ашиглана.\n\n- Зураг: `jpeg`, `png`, `webp` — max 8 MB\n- Видео: `mp4`, `webm` — max 100 MB\n- Нэг хүсэлтэд дээд тал нь 20 файл",
+        "summary": "Медиа upload",
         "tags": [
-          "Favorite"
+          "Media"
         ],
         "requestBody": {
           "required": true,
           "content": {
-            "application/json": {
+            "multipart/form-data": {
               "schema": {
-                "$ref": "#/components/schemas/StoreFavoriteRequest"
+                "$ref": "#/components/schemas/StoreMediaRequest"
               }
             }
           }
         },
         "responses": {
-          "201": {
-            "description": ""
+          "200": {
+            "description": "Array of `MediaResource`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/MediaResource"
+                      }
+                    },
+                    "message": {
+                      "type": "string",
+                      "const": "Uploaded successfully"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "message"
+                  ]
+                }
+              }
+            }
           },
           "401": {
             "$ref": "#/components/responses/AuthenticationException"
+          },
+          "403": {
+            "$ref": "#/components/responses/AuthorizationException"
           },
           "422": {
             "$ref": "#/components/responses/ValidationException"
@@ -1610,19 +576,20 @@
         }
       }
     },
-    "/favorites/{listing}": {
+    "/media/{media}": {
       "delete": {
-        "operationId": "favorites.destroy",
-        "summary": "Зарыг хадгалсан жагсаалтаас хасна. Bearer token шаардана",
+        "operationId": "media.destroy",
+        "description": "Зөвхөн эзэмшигч хэрэглэгч устгаж болно. Storage файлыг бас устгана.",
+        "summary": "Медиа устгах",
         "tags": [
-          "Favorite"
+          "Media"
         ],
         "parameters": [
           {
-            "name": "listing",
+            "name": "media",
             "in": "path",
             "required": true,
-            "description": "The listing ID",
+            "description": "The media ID",
             "schema": {
               "type": "integer"
             }
@@ -1635,19 +602,83 @@
           "401": {
             "$ref": "#/components/responses/AuthenticationException"
           },
+          "403": {
+            "$ref": "#/components/responses/AuthorizationException"
+          },
           "404": {
             "$ref": "#/components/responses/ModelNotFoundException"
           }
         }
       }
     },
+    "/property-categories": {
+      "get": {
+        "operationId": "property-categories.index",
+        "description": "Үндсэн ангилал, дэд төрөл, газрын зориулалт болон suitable tag-уудыг\nнэг дуудлагаар буцаах форм рендерлэхэд зориулсан metadata.",
+        "summary": "Үл хөдлөхийн ангиллын metadata",
+        "tags": [
+          "Зар"
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "transactions": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "string"
+                      }
+                    },
+                    "categories": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "object",
+                        "additionalProperties": {}
+                      }
+                    },
+                    "landPurposes": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "string"
+                      }
+                    },
+                    "suitableUseTags": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "listingFlow": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "transactions",
+                    "categories",
+                    "landPurposes",
+                    "suitableUseTags",
+                    "listingFlow"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": []
+      }
+    },
     "/listing-flow": {
       "get": {
         "operationId": "listing-flow.metadata",
-        "description": "Зар бөглөх wizard-ийн алхмууд, enum сонголтууд, тохижилт (amenity) болон\nбагтсан зүйлсийн (included) бүлгүүдийг буцаана. Форм рендерлэхэд ашиглана.",
+        "description": "Зар бөглөх wizard-ийн алхмууд, enum сонголтууд, тохижилт болон багтсан зүйлсийн бүлгүүдийг буцаана.",
         "summary": "Зарын урсгалын metadata",
         "tags": [
-          "Listing"
+          "Зар"
         ],
         "responses": {
           "200": {
@@ -1699,9 +730,10 @@
     "/listings/form-options": {
       "get": {
         "operationId": "listings.form-options",
-        "summary": "Зар бөглөх формыг рендерлэхэд шаардлагатай бүх сонголтын утгуудыг нэг дуудлагаар буцаана",
+        "description": "Зар бөглөх формд шаардлагатай бүх metadata-г (хаяг, ангилал, enum-ууд) нэг дуудлагаар буцаана.",
+        "summary": "Форм сонголтууд",
         "tags": [
-          "Listing"
+          "Зар"
         ],
         "responses": {
           "200": {
@@ -1792,13 +824,75 @@
         "security": []
       }
     },
+    "/listings/search": {
+      "get": {
+        "operationId": "listings.search",
+        "description": "MeiliSearch ашиглан зарыг бүтэн текстээр хайна. `q` параметр заавал шаардлагатай.\nХайлтын үр дүн нь active зараас л гарна (shouldBeSearchable()-д тодорхойлсноор).",
+        "summary": "MeiliSearch хайлт",
+        "tags": [
+          "Зар"
+        ],
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": true,
+            "description": "Хайх үг / хэллэг. Заавал шаардлагатай.",
+            "schema": {
+              "type": "string",
+              "maxLength": 255
+            }
+          },
+          {
+            "name": "per_page",
+            "in": "query",
+            "description": "Нэг хуудсанд харуулах тоо (1–100, default 15).",
+            "schema": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 1,
+              "maximum": 100
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of `ListingResource`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ListingResource"
+                      }
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationException"
+          }
+        },
+        "security": []
+      }
+    },
     "/listings": {
       "get": {
         "operationId": "listings.index",
         "description": "Шүүлтүүр (төрөл, байршил, өрөө, үнэ, талбай, хайлт) болон хуудаслалттай\nзарын жагсаалтыг буцаана. Нэвтрэх шаардлагагүй нийтэд нээлттэй endpoint.",
-        "summary": "Зарын нийтийн жагсаалт",
+        "summary": "Зарын жагсаалт",
         "tags": [
-          "Listing"
+          "Зар"
         ],
         "parameters": [
           {
@@ -2074,10 +1168,10 @@
       },
       "post": {
         "operationId": "listings.store",
-        "description": "Нэвтэрсэн хэрэглэгчийн нэрийн өмнөөс шинэ зар болон холбоотой\nзураг, өрөө, үнийн түүхийг нэг гүйлгээгээр хадгална. Bearer token шаардана.\nХүлээн авах талбаруудыг StoreListingRequest-аас үзнэ үү.",
-        "summary": "Шинэ зар үүсгэх",
+        "description": "Шинэ зар болон холбоотой зураг, өрөө, үнийн түүхийг нэг гүйлгээгээр хадгална.\nЗургийг `POST /media`-аас авсан `interior_image_ids[]` гэх мэт ID-аар дамжуулна.",
+        "summary": "Зар үүсгэх",
         "tags": [
-          "Listing"
+          "Зар"
         ],
         "requestBody": {
           "required": true,
@@ -2120,10 +1214,10 @@
     "/listings/{listing}": {
       "get": {
         "operationId": "listings.show",
-        "description": "Заасан зарыг агент, зураг, өрөө, үнийн түүхтэй нь бүрэн буцаана.\nНэвтрэх шаардлагагүй нийтэд нээлттэй endpoint.",
+        "description": "Заасан зарыг агент, зураг (`photos`), өрөө, үнийн түүхтэй нь бүрэн буцаана.\n`photos` талбар нь `{ category: [url, ...] }` бүтэцтэй grouped object.",
         "summary": "Зарын дэлгэрэнгүй",
         "tags": [
-          "Listing"
+          "Зар"
         ],
         "parameters": [
           {
@@ -2163,10 +1257,10 @@
       },
       "put": {
         "operationId": "listings.update",
-        "description": "Зөвхөн зарын эзэн засварлах эрхтэй. Зарын мэдээлэл болон холбоотой\nзураг, өрөө, үнийн түүхийг нэг гүйлгээгээр шинэчилнэ. Bearer token шаардана.\nХүлээн авах талбаруудыг UpdateListingRequest-аас үзнэ үү.",
+        "description": "Зарын эзэн зарын мэдээлэл болон зураг, өрөө, үнийн түүхийг шинэчилнэ.",
         "summary": "Зар засах",
         "tags": [
-          "Listing"
+          "Зар"
         ],
         "parameters": [
           {
@@ -2220,10 +1314,10 @@
       },
       "delete": {
         "operationId": "listings.destroy",
-        "description": "Зөвхөн зарын эзэн устгах эрхтэй. Амжилттай бол 204 No Content буцаана.\nBearer token шаардана.",
+        "description": "Зарын эзэн зарыг устгана. Амжилттай бол 204 буцаана.",
         "summary": "Зар устгах",
         "tags": [
-          "Listing"
+          "Зар"
         ],
         "parameters": [
           {
@@ -2252,10 +1346,10 @@
     "/my/listings": {
       "get": {
         "operationId": "listings.mine",
-        "description": "Нэвтэрсэн хэрэглэгчийн өөрийнх нь үүсгэсэн зарын жагсаалтыг\nтөрөл, төлвөөр шүүж, хуудаслан буцаана. Bearer token шаардана.",
+        "description": "Нэвтэрсэн хэрэглэгчийн өөрийнх нь үүсгэсэн зарын жагсаалтыг\nтөрөл, төлвөөр шүүж, хуудаслан буцаана.",
         "summary": "Миний зарууд",
         "tags": [
-          "Listing"
+          "Зар"
         ],
         "parameters": [
           {
@@ -2448,144 +1542,13 @@
         }
       }
     },
-    "/listings/{listing}/draft": {
-      "patch": {
-        "operationId": "listings.saveDraft",
-        "description": "Зар үүсгэх wizard-ийн тодорхой алхмын (draft_step) өгөгдлийг хэсэгчлэн\nхадгална. Зөвхөн зарын эзэн ашиглана. Bearer token шаардана.\nХүлээн авах талбаруудыг SaveListingDraftRequest-аас үзнэ үү.",
-        "summary": "Зарын ноорог хадгалах",
-        "tags": [
-          "Listing"
-        ],
-        "parameters": [
-          {
-            "name": "listing",
-            "in": "path",
-            "required": true,
-            "description": "The listing ID",
-            "schema": {
-              "type": "integer"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/SaveListingDraftRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "`ListingResource`",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "data": {
-                      "$ref": "#/components/schemas/ListingResource"
-                    }
-                  },
-                  "required": [
-                    "data"
-                  ]
-                }
-              }
-            }
-          },
-          "401": {
-            "$ref": "#/components/responses/AuthenticationException"
-          },
-          "403": {
-            "$ref": "#/components/responses/AuthorizationException"
-          },
-          "404": {
-            "$ref": "#/components/responses/ModelNotFoundException"
-          },
-          "422": {
-            "$ref": "#/components/responses/ValidationException"
-          }
-        }
-      }
-    },
-    "/listings/{listing}/submit": {
-      "post": {
-        "operationId": "listings.submit",
-        "description": "Ноорог зарыг бөглөж дуусгаад хаягийн snapshot үүсгэн, төлвийг \"pending\"\nболгож модераци / нийтлэлд илгээнэ. Зөвхөн зарын эзэн ашиглана.\nBearer token шаардана. Хүлээн авах талбаруудыг SubmitListingRequest-аас үзнэ үү.",
-        "summary": "Зар нийтлэхээр илгээх",
-        "tags": [
-          "Listing"
-        ],
-        "parameters": [
-          {
-            "name": "listing",
-            "in": "path",
-            "required": true,
-            "description": "The listing ID",
-            "schema": {
-              "type": "integer"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/SubmitListingRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "message": {
-                      "type": "string",
-                      "const": "Зар нийтлэлэйн хүсэлт илгээх болсон."
-                    },
-                    "listing": {
-                      "$ref": "#/components/schemas/ListingResource"
-                    }
-                  },
-                  "required": [
-                    "message",
-                    "listing"
-                  ]
-                }
-              }
-            }
-          },
-          "401": {
-            "$ref": "#/components/responses/AuthenticationException"
-          },
-          "403": {
-            "$ref": "#/components/responses/AuthorizationException"
-          },
-          "404": {
-            "$ref": "#/components/responses/ModelNotFoundException"
-          },
-          "422": {
-            "$ref": "#/components/responses/ValidationException"
-          }
-        }
-      }
-    },
     "/listings/register": {
       "post": {
         "operationId": "listings.register",
         "description": "Зар үүсгэх wizard-ийн алхам бүрийг (`step` 1–5) нэг endpoint-оор хүлээн авна.\n1-р алхамд шинэ зар үүсгэж `listing_id` буцаах ба, дараагийн алхмууд тухайн\n`listing_id`-аар зарыг хэсэгчлэн шинэчилнэ. Bearer token шаардана.\nАлхам тус бүрийн хүлээн авах талбаруудыг RegisterListingRequest-аас үзнэ үү.",
         "summary": "Зарын олон алхамт бүртгэл",
         "tags": [
-          "ListingRegistration"
+          "Зар"
         ],
         "requestBody": {
           "content": {
@@ -2841,12 +1804,2293 @@
         }
       }
     },
+    "/listings/{listing}/draft": {
+      "patch": {
+        "operationId": "listings.saveDraft",
+        "description": "Зар үүсгэх wizard-ийн тодорхой алхмын (`draft_step`) өгөгдлийг хэсэгчлэн хадгална.",
+        "summary": "Ноорог хадгалах",
+        "tags": [
+          "Зар"
+        ],
+        "parameters": [
+          {
+            "name": "listing",
+            "in": "path",
+            "required": true,
+            "description": "The listing ID",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveListingDraftRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "`ListingResource`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/ListingResource"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "403": {
+            "$ref": "#/components/responses/AuthorizationException"
+          },
+          "404": {
+            "$ref": "#/components/responses/ModelNotFoundException"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationException"
+          }
+        }
+      }
+    },
+    "/listings/{listing}/submit": {
+      "post": {
+        "operationId": "listings.submit",
+        "description": "Ноорог зарыг бөглөж дуусгаад хаягийн snapshot үүсгэн, төлвийг `pending` болгоно.",
+        "summary": "Зар нийтлэхээр илгээх",
+        "tags": [
+          "Зар"
+        ],
+        "parameters": [
+          {
+            "name": "listing",
+            "in": "path",
+            "required": true,
+            "description": "The listing ID",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmitListingRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "const": "Зар нийтлэлэйн хүсэлт илгээх болсон."
+                    },
+                    "listing": {
+                      "$ref": "#/components/schemas/ListingResource"
+                    }
+                  },
+                  "required": [
+                    "message",
+                    "listing"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "403": {
+            "$ref": "#/components/responses/AuthorizationException"
+          },
+          "404": {
+            "$ref": "#/components/responses/ModelNotFoundException"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationException"
+          }
+        }
+      }
+    },
+    "/alerts": {
+      "get": {
+        "operationId": "alerts.index",
+        "description": "Хадгалсан хайлтуудаас үүссэн мэдэгдлүүдийг буцаана. `?unread=1` дамжуулбал зөвхөн уншаагүй.",
+        "summary": "Мэдэгдлийн жагсаалт",
+        "tags": [
+          "Мэдэгдэл"
+        ],
+        "parameters": [
+          {
+            "name": "unread",
+            "in": "query",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of `AlertResource`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/AlertResource"
+                      }
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          }
+        }
+      }
+    },
+    "/alerts/{alert}/read": {
+      "patch": {
+        "operationId": "alerts.read",
+        "description": "Нэг мэдэгдлийг уншсан гэж тэмдэглэнэ.",
+        "summary": "Мэдэгдэл унших",
+        "tags": [
+          "Мэдэгдэл"
+        ],
+        "parameters": [
+          {
+            "name": "alert",
+            "in": "path",
+            "required": true,
+            "description": "The alert ID",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "const": "Мэдэгдлийг уншсан гэж тэмдэглэлээ."
+                    }
+                  },
+                  "required": [
+                    "message"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "404": {
+            "$ref": "#/components/responses/ModelNotFoundException"
+          }
+        }
+      }
+    },
+    "/alerts/read-all": {
+      "post": {
+        "operationId": "alerts.read-all",
+        "description": "Бүх мэдэгдлийг уншсан гэж тэмдэглэнэ.",
+        "summary": "Бүгдийг унших",
+        "tags": [
+          "Мэдэгдэл"
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "const": "Бүх мэдэгдлийг уншсан гэж тэмдэглэлээ."
+                    }
+                  },
+                  "required": [
+                    "message"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          }
+        }
+      }
+    },
+    "/articles": {
+      "get": {
+        "operationId": "articles.index",
+        "description": "Нийтлэгдсэн мэдээнүүдийг ангилал, чөлөөт текстээр шүүж буцаана.",
+        "summary": "Мэдээний жагсаалт",
+        "tags": [
+          "Мэдээ"
+        ],
+        "parameters": [
+          {
+            "name": "category",
+            "in": "query",
+            "description": "Ангиллаар шүүх.",
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 255
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "description": "Гарчиг / хэсэгчилсэн агуулгаар хайх.",
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 255
+            }
+          },
+          {
+            "name": "per_page",
+            "in": "query",
+            "description": "Нэг хуудсанд харуулах тоо (1–100, default 15).",
+            "schema": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 1,
+              "maximum": 100
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated set of `ArticleResource`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ArticleResource"
+                      }
+                    },
+                    "links": {
+                      "type": "object",
+                      "properties": {
+                        "first": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "last": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "prev": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "next": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "first",
+                        "last",
+                        "prev",
+                        "next"
+                      ]
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "current_page": {
+                          "type": "integer",
+                          "minimum": 1
+                        },
+                        "from": {
+                          "type": [
+                            "integer",
+                            "null"
+                          ],
+                          "minimum": 1
+                        },
+                        "last_page": {
+                          "type": "integer",
+                          "minimum": 1
+                        },
+                        "links": {
+                          "type": "array",
+                          "description": "Generated paginator links.",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "url": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "label": {
+                                "type": "string"
+                              },
+                              "active": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "url",
+                              "label",
+                              "active"
+                            ]
+                          }
+                        },
+                        "path": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "description": "Base path for paginator generated URLs."
+                        },
+                        "per_page": {
+                          "type": "integer",
+                          "description": "Number of items shown per page.",
+                          "minimum": 0
+                        },
+                        "to": {
+                          "type": [
+                            "integer",
+                            "null"
+                          ],
+                          "description": "Number of the last item in the slice.",
+                          "minimum": 1
+                        },
+                        "total": {
+                          "type": "integer",
+                          "description": "Total number of items being paginated.",
+                          "minimum": 0
+                        }
+                      },
+                      "required": [
+                        "current_page",
+                        "from",
+                        "last_page",
+                        "links",
+                        "path",
+                        "per_page",
+                        "to",
+                        "total"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "links",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationException"
+          }
+        },
+        "security": []
+      }
+    },
+    "/articles/{slug}": {
+      "get": {
+        "operationId": "articles.show",
+        "description": "Slug-аар нэг мэдээг буцаана. Нийтлэгдээгүй бол 404.",
+        "summary": "Мэдээний дэлгэрэнгүй",
+        "tags": [
+          "Мэдээ"
+        ],
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "`ArticleResource`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/ArticleResource"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": []
+      }
+    },
+    "/saved-lists": {
+      "get": {
+        "operationId": "saved-lists.index",
+        "description": "Нэвтэрсэн хэрэглэгчийн нэртэй зарын жагсаалтуудыг зарын тоотой нь буцаана.",
+        "summary": "Нэртэй жагсаалтууд",
+        "tags": [
+          "Нэртэй жагсаалт"
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of `SavedListResource`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/SavedListResource"
+                      }
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          }
+        }
+      },
+      "post": {
+        "operationId": "saved-lists.store",
+        "summary": "Жагсаалт үүсгэх",
+        "tags": [
+          "Нэртэй жагсаалт"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StoreSavedListRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "`SavedListResource`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/SavedListResource"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationException"
+          }
+        }
+      }
+    },
+    "/saved-lists/{savedList}": {
+      "put": {
+        "operationId": "saved-lists.update",
+        "summary": "Жагсаалт засах",
+        "tags": [
+          "Нэртэй жагсаалт"
+        ],
+        "parameters": [
+          {
+            "name": "savedList",
+            "in": "path",
+            "required": true,
+            "description": "The saved list ID",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateSavedListRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "`SavedListResource`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/SavedListResource"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "404": {
+            "$ref": "#/components/responses/ModelNotFoundException"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationException"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "saved-lists.destroy",
+        "summary": "Жагсаалт устгах",
+        "tags": [
+          "Нэртэй жагсаалт"
+        ],
+        "parameters": [
+          {
+            "name": "savedList",
+            "in": "path",
+            "required": true,
+            "description": "The saved list ID",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No content"
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "404": {
+            "$ref": "#/components/responses/ModelNotFoundException"
+          }
+        }
+      }
+    },
+    "/saved-lists/{savedList}/items": {
+      "post": {
+        "operationId": "saved-lists.items.store",
+        "description": "Зарыг жагсаалтад нэмнэ. Аль хэдийн байгаа бол давхардуулахгүй.",
+        "summary": "Зар нэмэх",
+        "tags": [
+          "Нэртэй жагсаалт"
+        ],
+        "parameters": [
+          {
+            "name": "savedList",
+            "in": "path",
+            "required": true,
+            "description": "The saved list ID",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StoreSavedListItemRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "404": {
+            "$ref": "#/components/responses/ModelNotFoundException"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationException"
+          }
+        }
+      }
+    },
+    "/saved-lists/{savedList}/items/{listing}": {
+      "delete": {
+        "operationId": "saved-lists.items.destroy",
+        "summary": "Зар хасах",
+        "tags": [
+          "Нэртэй жагсаалт"
+        ],
+        "parameters": [
+          {
+            "name": "savedList",
+            "in": "path",
+            "required": true,
+            "description": "The saved list ID",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "listing",
+            "in": "path",
+            "required": true,
+            "description": "The listing ID",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No content"
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "404": {
+            "$ref": "#/components/responses/ModelNotFoundException"
+          }
+        }
+      }
+    },
+    "/preferences": {
+      "get": {
+        "operationId": "preferences.show",
+        "description": "Тохируулаагүй бол хоосон утгатай профайл буцаана.",
+        "summary": "Сонирхлын профайл",
+        "tags": [
+          "Сонирхол"
+        ],
+        "responses": {
+          "200": {
+            "description": "`PreferenceResource`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/PreferenceResource"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          }
+        }
+      },
+      "put": {
+        "operationId": "preferences.update",
+        "description": "Сонирхлын профайлыг үүсгэх / шинэчилнэ (upsert).",
+        "summary": "Сонирхол шинэчлэх",
+        "tags": [
+          "Сонирхол"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdatePreferenceRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "PUT нь idempotent upsert — шинэ үүсгэсэн ч 200 буцаана.\n\n\n\n`PreferenceResource`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/PreferenceResource"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationException"
+          }
+        }
+      }
+    },
+    "/rental/tenants": {
+      "get": {
+        "operationId": "rental.tenants.index",
+        "summary": "Түрээслэгчид",
+        "tags": [
+          "Түрээсийн удирдлага"
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of `RentalTenantResource`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/RentalTenantResource"
+                      }
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          }
+        }
+      },
+      "post": {
+        "operationId": "rental.tenants.store",
+        "summary": "Түрээслэгч нэмэх",
+        "tags": [
+          "Түрээсийн удирдлага"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StoreRentalTenantRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "`RentalTenantResource`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/RentalTenantResource"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationException"
+          }
+        }
+      }
+    },
+    "/rental/tenants/{rentalTenant}": {
+      "put": {
+        "operationId": "rental.tenants.update",
+        "summary": "Түрээслэгч засах",
+        "tags": [
+          "Түрээсийн удирдлага"
+        ],
+        "parameters": [
+          {
+            "name": "rentalTenant",
+            "in": "path",
+            "required": true,
+            "description": "The rental tenant ID",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateRentalTenantRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "`RentalTenantResource`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/RentalTenantResource"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "404": {
+            "$ref": "#/components/responses/ModelNotFoundException"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationException"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "rental.tenants.destroy",
+        "summary": "Түрээслэгч устгах",
+        "tags": [
+          "Түрээсийн удирдлага"
+        ],
+        "parameters": [
+          {
+            "name": "rentalTenant",
+            "in": "path",
+            "required": true,
+            "description": "The rental tenant ID",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No content"
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "404": {
+            "$ref": "#/components/responses/ModelNotFoundException"
+          }
+        }
+      }
+    },
+    "/rental/contracts": {
+      "get": {
+        "operationId": "rental.contracts.index",
+        "summary": "Гэрээнүүд",
+        "tags": [
+          "Түрээсийн удирдлага"
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of `RentalContractResource`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/RentalContractResource"
+                      }
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          }
+        }
+      },
+      "post": {
+        "operationId": "rental.contracts.store",
+        "description": "Түрээслэгч нь өөрийн хэрэглэгчийнх байх ёстой.",
+        "summary": "Гэрээ үүсгэх",
+        "tags": [
+          "Түрээсийн удирдлага"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StoreRentalContractRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "`RentalContractResource`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/RentalContractResource"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationException"
+          }
+        }
+      }
+    },
+    "/rental/contracts/{rentalContract}": {
+      "put": {
+        "operationId": "rental.contracts.update",
+        "summary": "Гэрээ засах",
+        "tags": [
+          "Түрээсийн удирдлага"
+        ],
+        "parameters": [
+          {
+            "name": "rentalContract",
+            "in": "path",
+            "required": true,
+            "description": "The rental contract ID",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateRentalContractRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "`RentalContractResource`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/RentalContractResource"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "404": {
+            "$ref": "#/components/responses/ModelNotFoundException"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationException"
+          }
+        }
+      }
+    },
+    "/rental/income": {
+      "get": {
+        "operationId": "rental.income.index",
+        "description": "Сараар нэгтгэсэн орлого. `?year=2026` дамжуулбал тухайн жилийн мэдээллийг буцаана.",
+        "summary": "Түрээсийн орлого",
+        "tags": [
+          "Түрээсийн удирдлага"
+        ],
+        "parameters": [
+          {
+            "name": "year",
+            "in": "query",
+            "schema": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 2000,
+              "maximum": 2100
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationException"
+          }
+        }
+      }
+    },
+    "/favorites": {
+      "get": {
+        "operationId": "favorites.index",
+        "description": "Нэвтэрсэн хэрэглэгчийн хадгалсан бүх зарыг сүүлд нэмсэн дарааллаар буцаана.",
+        "summary": "Хадгалсан зарууд",
+        "tags": [
+          "Хадгалсан зар"
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated set of `ListingResource`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ListingResource"
+                      }
+                    },
+                    "links": {
+                      "type": "object",
+                      "properties": {
+                        "first": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "last": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "prev": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "next": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "first",
+                        "last",
+                        "prev",
+                        "next"
+                      ]
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "current_page": {
+                          "type": "integer",
+                          "minimum": 1
+                        },
+                        "from": {
+                          "type": [
+                            "integer",
+                            "null"
+                          ],
+                          "minimum": 1
+                        },
+                        "last_page": {
+                          "type": "integer",
+                          "minimum": 1
+                        },
+                        "links": {
+                          "type": "array",
+                          "description": "Generated paginator links.",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "url": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "label": {
+                                "type": "string"
+                              },
+                              "active": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "url",
+                              "label",
+                              "active"
+                            ]
+                          }
+                        },
+                        "path": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "description": "Base path for paginator generated URLs."
+                        },
+                        "per_page": {
+                          "type": "integer",
+                          "description": "Number of items shown per page.",
+                          "minimum": 0
+                        },
+                        "to": {
+                          "type": [
+                            "integer",
+                            "null"
+                          ],
+                          "description": "Number of the last item in the slice.",
+                          "minimum": 1
+                        },
+                        "total": {
+                          "type": "integer",
+                          "description": "Total number of items being paginated.",
+                          "minimum": 0
+                        }
+                      },
+                      "required": [
+                        "current_page",
+                        "from",
+                        "last_page",
+                        "links",
+                        "path",
+                        "per_page",
+                        "to",
+                        "total"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "links",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          }
+        }
+      },
+      "post": {
+        "operationId": "favorites.store",
+        "description": "Зарыг хадгалсан жагсаалтад нэмнэ. Аль хэдийн хадгалсан бол давхардуулахгүй.",
+        "summary": "Зар хадгалах",
+        "tags": [
+          "Хадгалсан зар"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StoreFavoriteRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationException"
+          }
+        }
+      }
+    },
+    "/favorites/{listing}": {
+      "delete": {
+        "operationId": "favorites.destroy",
+        "description": "Зарыг хадгалсан жагсаалтаас хасна.",
+        "summary": "Зар устгах",
+        "tags": [
+          "Хадгалсан зар"
+        ],
+        "parameters": [
+          {
+            "name": "listing",
+            "in": "path",
+            "required": true,
+            "description": "The listing ID",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No content"
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "404": {
+            "$ref": "#/components/responses/ModelNotFoundException"
+          }
+        }
+      }
+    },
+    "/saved-searches": {
+      "get": {
+        "operationId": "saved-searches.index",
+        "description": "Шинэ тохирсон зарын тооны хамт буцаана.",
+        "summary": "Хадгалсан хайлтууд",
+        "tags": [
+          "Хадгалсан хайлт"
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of `SavedSearchResource`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/SavedSearchResource"
+                      }
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          }
+        }
+      },
+      "post": {
+        "operationId": "saved-searches.store",
+        "summary": "Хайлт хадгалах",
+        "tags": [
+          "Хадгалсан хайлт"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StoreSavedSearchRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "`SavedSearchResource`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/SavedSearchResource"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationException"
+          }
+        }
+      }
+    },
+    "/saved-searches/{savedSearch}": {
+      "put": {
+        "operationId": "saved-searches.update",
+        "summary": "Хайлт засах",
+        "tags": [
+          "Хадгалсан хайлт"
+        ],
+        "parameters": [
+          {
+            "name": "savedSearch",
+            "in": "path",
+            "required": true,
+            "description": "The saved search ID",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateSavedSearchRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "`SavedSearchResource`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/SavedSearchResource"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "404": {
+            "$ref": "#/components/responses/ModelNotFoundException"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationException"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "saved-searches.destroy",
+        "summary": "Хайлт устгах",
+        "tags": [
+          "Хадгалсан хайлт"
+        ],
+        "parameters": [
+          {
+            "name": "savedSearch",
+            "in": "path",
+            "required": true,
+            "description": "The saved search ID",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No content"
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "404": {
+            "$ref": "#/components/responses/ModelNotFoundException"
+          }
+        }
+      }
+    },
+    "/address/countries": {
+      "get": {
+        "operationId": "address.countries.index",
+        "description": "Идэвхтэй бүх улсыг эрэмбэлэгдсэн сонголтын утга хэлбэрээр буцаана.",
+        "summary": "Улс орнуудын жагсаалт",
+        "tags": [
+          "Хаяг"
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of `AddressOptionResource`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/AddressOptionResource"
+                      }
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "security": []
+      }
+    },
+    "/address/cities": {
+      "get": {
+        "operationId": "address.cities.index",
+        "description": "Сонгосон улсаар шүүж болох cascading сонголт.",
+        "summary": "Хот / аймгуудын жагсаалт",
+        "tags": [
+          "Хаяг"
+        ],
+        "parameters": [
+          {
+            "name": "country_id",
+            "in": "query",
+            "description": "Шүүх улсын ID. Хоосон бол бүх хотыг буцаана.",
+            "schema": {
+              "type": [
+                "integer",
+                "null"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of `AddressOptionResource`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/AddressOptionResource"
+                      }
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationException"
+          }
+        },
+        "security": []
+      }
+    },
+    "/address/districts": {
+      "get": {
+        "operationId": "address.districts.index",
+        "description": "Сонгосон хотоор шүүж болох cascading сонголт.",
+        "summary": "Дүүрэг / сумдын жагсаалт",
+        "tags": [
+          "Хаяг"
+        ],
+        "parameters": [
+          {
+            "name": "city_id",
+            "in": "query",
+            "description": "Шүүх хотын ID. Хоосон бол бүх дүүргийг буцаана.",
+            "schema": {
+              "type": [
+                "integer",
+                "null"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of `AddressOptionResource`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/AddressOptionResource"
+                      }
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationException"
+          }
+        },
+        "security": []
+      }
+    },
+    "/address/khoroos": {
+      "get": {
+        "operationId": "address.khoroos.index",
+        "description": "Сонгосон дүүргээр шүүж болох cascading сонголт.",
+        "summary": "Хороо / багуудын жагсаалт",
+        "tags": [
+          "Хаяг"
+        ],
+        "parameters": [
+          {
+            "name": "district_id",
+            "in": "query",
+            "description": "Шүүх дүүргийн ID. Хоосон бол бүх хороог буцаана.",
+            "schema": {
+              "type": [
+                "integer",
+                "null"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of `AddressOptionResource`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/AddressOptionResource"
+                      }
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationException"
+          }
+        },
+        "security": []
+      }
+    },
+    "/address/zipcodes": {
+      "get": {
+        "operationId": "address.zipcodes.index",
+        "description": "Сонгосон хороогоор шүүж болох cascading сонголт.",
+        "summary": "Зип / шуудангийн кодын жагсаалт",
+        "tags": [
+          "Хаяг"
+        ],
+        "parameters": [
+          {
+            "name": "khoroo_id",
+            "in": "query",
+            "description": "Шүүх хорооны ID. Хоосон бол бүх зип кодыг буцаана.",
+            "schema": {
+              "type": [
+                "integer",
+                "null"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of `AddressOptionResource`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/AddressOptionResource"
+                      }
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationException"
+          }
+        },
+        "security": []
+      }
+    },
+    "/address/streets": {
+      "get": {
+        "operationId": "address.streets.index",
+        "description": "Сонгосон хороогоор шүүж болох cascading сонголт.",
+        "summary": "Гудамжны жагсаалт",
+        "tags": [
+          "Хаяг"
+        ],
+        "parameters": [
+          {
+            "name": "khoroo_id",
+            "in": "query",
+            "description": "Шүүх хорооны ID. Хоосон бол бүх гудамжийг буцаана.",
+            "schema": {
+              "type": [
+                "integer",
+                "null"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of `AddressOptionResource`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/AddressOptionResource"
+                      }
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationException"
+          }
+        },
+        "security": []
+      }
+    },
+    "/address/complexes": {
+      "get": {
+        "operationId": "address.complexes.index",
+        "description": "Сонгосон хороо болон гудамжаар шүүж болох cascading сонголт.",
+        "summary": "Хотхон / цогцолборуудын жагсаалт",
+        "tags": [
+          "Хаяг"
+        ],
+        "parameters": [
+          {
+            "name": "khoroo_id",
+            "in": "query",
+            "description": "Шүүх хорооны ID. Хоосон бол бүх хотхоныг буцаана.",
+            "schema": {
+              "type": [
+                "integer",
+                "null"
+              ]
+            }
+          },
+          {
+            "name": "street_id",
+            "in": "query",
+            "description": "Шүүх гудамжны ID. Хоосон бол гудамжаар шүүхгүй.",
+            "schema": {
+              "type": [
+                "integer",
+                "null"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of `AddressOptionResource`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/AddressOptionResource"
+                      }
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationException"
+          }
+        },
+        "security": []
+      }
+    },
+    "/address/building-blocks": {
+      "get": {
+        "operationId": "address.building-blocks.index",
+        "description": "Сонгосон хотхоноор шүүж болох идэвхтэй блокууд.",
+        "summary": "Барилгын блокуудын жагсаалт",
+        "tags": [
+          "Хаяг"
+        ],
+        "parameters": [
+          {
+            "name": "complex_id",
+            "in": "query",
+            "description": "Шүүх хотхоны ID. Хоосон бол бүх блокыг буцаана.",
+            "schema": {
+              "type": [
+                "integer",
+                "null"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of `AddressOptionResource`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/AddressOptionResource"
+                      }
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationException"
+          }
+        },
+        "security": []
+      }
+    },
+    "/appointments": {
+      "get": {
+        "operationId": "appointments.index",
+        "description": "`?status=upcoming|past` шүүлттэй, хуудаслан буцаана.",
+        "summary": "Цаг товлолтын жагсаалт",
+        "tags": [
+          "Цаг товлолт"
+        ],
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "enum": [
+                "upcoming",
+                "past"
+              ]
+            }
+          },
+          {
+            "name": "per_page",
+            "in": "query",
+            "schema": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 1,
+              "maximum": 100
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of `AppointmentResource`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/AppointmentResource"
+                      }
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationException"
+          }
+        }
+      },
+      "post": {
+        "operationId": "appointments.store",
+        "description": "Зар үзэх цаг товлоно. Агентыг зараас автоматаар авна.",
+        "summary": "Цаг товлох",
+        "tags": [
+          "Цаг товлолт"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StoreAppointmentRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "`AppointmentResource`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/AppointmentResource"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "404": {
+            "$ref": "#/components/responses/ModelNotFoundException"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationException"
+          }
+        }
+      }
+    },
+    "/appointments/{appointment}": {
+      "patch": {
+        "operationId": "appointments.update",
+        "description": "Товлосон цагийн огноо, цаг, төлөв, тэмдэглэлийг шинэчилнэ.",
+        "summary": "Цаг товлолт засах",
+        "tags": [
+          "Цаг товлолт"
+        ],
+        "parameters": [
+          {
+            "name": "appointment",
+            "in": "path",
+            "required": true,
+            "description": "The appointment ID",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateAppointmentRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "`AppointmentResource`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/AppointmentResource"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "404": {
+            "$ref": "#/components/responses/ModelNotFoundException"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationException"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "appointments.destroy",
+        "description": "Товлосон цагийг цуцалж устгана.",
+        "summary": "Цаг товлолт цуцлах",
+        "tags": [
+          "Цаг товлолт"
+        ],
+        "parameters": [
+          {
+            "name": "appointment",
+            "in": "path",
+            "required": true,
+            "description": "The appointment ID",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No content"
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "404": {
+            "$ref": "#/components/responses/ModelNotFoundException"
+          }
+        }
+      }
+    },
+    "/conversations": {
+      "get": {
+        "operationId": "conversations.index",
+        "description": "Сүүлийн мессеж, уншаагүй тоо, агентын мэдээлэлтэйгээр буцаана.",
+        "summary": "Харилцааны жагсаалт",
+        "tags": [
+          "Чат"
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of `ConversationResource`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ConversationResource"
+                      }
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          }
+        }
+      },
+      "post": {
+        "operationId": "conversations.store",
+        "description": "Агенттай шинэ харилцаа эхлүүлж эхний мессежийг илгээнэ.\nТухайн агент + зартай харилцаа байгаа бол мессеж нэмнэ.",
+        "summary": "Шинэ харилцаа эхлүүлэх",
+        "tags": [
+          "Чат"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StoreConversationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "`ConversationResource`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/ConversationResource"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationException"
+          }
+        }
+      }
+    },
+    "/conversations/{conversation}/read": {
+      "patch": {
+        "operationId": "conversations.read",
+        "description": "Харилцааны агентаас ирсэн бүх мессежийг уншсан гэж тэмдэглэнэ.",
+        "summary": "Уншсан гэж тэмдэглэх",
+        "tags": [
+          "Чат"
+        ],
+        "parameters": [
+          {
+            "name": "conversation",
+            "in": "path",
+            "required": true,
+            "description": "The conversation ID",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "const": "Мессежүүдийг уншсан гэж тэмдэглэлээ."
+                    }
+                  },
+                  "required": [
+                    "message"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "404": {
+            "$ref": "#/components/responses/ModelNotFoundException"
+          }
+        }
+      }
+    },
     "/conversations/{conversation}/messages": {
       "get": {
         "operationId": "conversations.messages.index",
-        "summary": "Харилцааны мессежүүд — цаг хугацааны дарааллаар, хуудаслан. Bearer token шаардана",
+        "description": "Харилцааны мессежүүдийг цаг хугацааны дарааллаар хуудаслан буцаана.",
+        "summary": "Мессежийн жагсаалт",
         "tags": [
-          "Message"
+          "Чат"
         ],
         "parameters": [
           {
@@ -3009,9 +4253,10 @@
       },
       "post": {
         "operationId": "conversations.messages.store",
-        "summary": "Харилцаанд хэрэглэгчийн зүгээс шинэ мессеж илгээнэ. Bearer token шаардана",
+        "description": "Харилцаанд хэрэглэгчийн зүгээс шинэ мессеж илгээнэ.",
+        "summary": "Мессеж илгээх",
         "tags": [
-          "Message"
+          "Чат"
         ],
         "parameters": [
           {
@@ -3065,913 +4310,13 @@
         }
       }
     },
-    "/preferences": {
-      "get": {
-        "operationId": "preferences.show",
-        "description": "Хараахан тохируулаагүй бол хоосон утгатай профайл буцаана. Bearer token шаардана.",
-        "summary": "Нэвтэрсэн хэрэглэгчийн сонирхлын профайл",
-        "tags": [
-          "Preference"
-        ],
-        "responses": {
-          "200": {
-            "description": "`PreferenceResource`",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "data": {
-                      "$ref": "#/components/schemas/PreferenceResource"
-                    }
-                  },
-                  "required": [
-                    "data"
-                  ]
-                }
-              }
-            }
-          },
-          "401": {
-            "$ref": "#/components/responses/AuthenticationException"
-          }
-        }
-      },
-      "put": {
-        "operationId": "preferences.update",
-        "summary": "Сонирхлын профайлыг үүсгэх / шинэчилнэ. Bearer token шаардана",
-        "tags": [
-          "Preference"
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdatePreferenceRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "PUT нь idempotent upsert — шинэ үүсгэсэн ч 200 буцаана.\n\n\n\n`PreferenceResource`",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "data": {
-                      "$ref": "#/components/schemas/PreferenceResource"
-                    }
-                  },
-                  "required": [
-                    "data"
-                  ]
-                }
-              }
-            }
-          },
-          "401": {
-            "$ref": "#/components/responses/AuthenticationException"
-          },
-          "422": {
-            "$ref": "#/components/responses/ValidationException"
-          }
-        }
-      }
-    },
-    "/property-categories": {
-      "get": {
-        "operationId": "property-categories.index",
-        "description": "Үндсэн ангилал, дэд төрөл, газрын зориулалт болон suitable tag-уудыг\nнэг дуудлагаар буцаах форм рендерлэхэд зориулсан metadata.",
-        "summary": "Үл хөдлөхийн ангиллын metadata",
-        "tags": [
-          "PropertyCategory"
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "transactions": {
-                      "type": "object",
-                      "additionalProperties": {
-                        "type": "string"
-                      }
-                    },
-                    "categories": {
-                      "type": "object",
-                      "additionalProperties": {
-                        "type": "object",
-                        "additionalProperties": {}
-                      }
-                    },
-                    "landPurposes": {
-                      "type": "object",
-                      "additionalProperties": {
-                        "type": "string"
-                      }
-                    },
-                    "suitableUseTags": {
-                      "type": "array",
-                      "items": {
-                        "type": "string"
-                      }
-                    },
-                    "listingFlow": {
-                      "type": "object",
-                      "additionalProperties": {}
-                    }
-                  },
-                  "required": [
-                    "transactions",
-                    "categories",
-                    "landPurposes",
-                    "suitableUseTags",
-                    "listingFlow"
-                  ]
-                }
-              }
-            }
-          }
-        },
-        "security": []
-      }
-    },
-    "/rental/contracts": {
-      "get": {
-        "operationId": "rental.contracts.index",
-        "summary": "Түрээслүүлэгчийн гэрээнүүд. Bearer token шаардана",
-        "tags": [
-          "RentalContract"
-        ],
-        "responses": {
-          "200": {
-            "description": "Array of `RentalContractResource`",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "data": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/RentalContractResource"
-                      }
-                    }
-                  },
-                  "required": [
-                    "data"
-                  ]
-                }
-              }
-            }
-          },
-          "401": {
-            "$ref": "#/components/responses/AuthenticationException"
-          }
-        }
-      },
-      "post": {
-        "operationId": "rental.contracts.store",
-        "summary": "Шинэ гэрээ үүсгэнэ. Түрээслэгч нь өөрийн хэрэглэгчийнх байх ёстой. Bearer token шаардана",
-        "tags": [
-          "RentalContract"
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/StoreRentalContractRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "`RentalContractResource`",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "data": {
-                      "$ref": "#/components/schemas/RentalContractResource"
-                    }
-                  },
-                  "required": [
-                    "data"
-                  ]
-                }
-              }
-            }
-          },
-          "401": {
-            "$ref": "#/components/responses/AuthenticationException"
-          },
-          "422": {
-            "$ref": "#/components/responses/ValidationException"
-          }
-        }
-      }
-    },
-    "/rental/contracts/{rentalContract}": {
-      "put": {
-        "operationId": "rental.contracts.update",
-        "summary": "Гэрээг шинэчилнэ. Bearer token шаардана",
-        "tags": [
-          "RentalContract"
-        ],
-        "parameters": [
-          {
-            "name": "rentalContract",
-            "in": "path",
-            "required": true,
-            "description": "The rental contract ID",
-            "schema": {
-              "type": "integer"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateRentalContractRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "`RentalContractResource`",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "data": {
-                      "$ref": "#/components/schemas/RentalContractResource"
-                    }
-                  },
-                  "required": [
-                    "data"
-                  ]
-                }
-              }
-            }
-          },
-          "401": {
-            "$ref": "#/components/responses/AuthenticationException"
-          },
-          "404": {
-            "$ref": "#/components/responses/ModelNotFoundException"
-          },
-          "422": {
-            "$ref": "#/components/responses/ValidationException"
-          }
-        }
-      }
-    },
-    "/rental/income": {
-      "get": {
-        "operationId": "rental.income.index",
-        "description": "`?year=2026` дамжуулбал тухайн жилээр шүүнэ. Сар бүрийн хүлээгдэж буй\nболон бодит орлогыг нэгтгэн буцаана. Bearer token шаардана.",
-        "summary": "Түрээсийн орлого — сараар нэгтгэсэн",
-        "tags": [
-          "RentalIncome"
-        ],
-        "parameters": [
-          {
-            "name": "year",
-            "in": "query",
-            "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
-              "minimum": 2000,
-              "maximum": 2100
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "data": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "data"
-                  ]
-                }
-              }
-            }
-          },
-          "401": {
-            "$ref": "#/components/responses/AuthenticationException"
-          },
-          "422": {
-            "$ref": "#/components/responses/ValidationException"
-          }
-        }
-      }
-    },
-    "/rental/tenants": {
-      "get": {
-        "operationId": "rental.tenants.index",
-        "summary": "Түрээслүүлэгчийн түрээслэгчид. Bearer token шаардана",
-        "tags": [
-          "RentalTenant"
-        ],
-        "responses": {
-          "200": {
-            "description": "Array of `RentalTenantResource`",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "data": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/RentalTenantResource"
-                      }
-                    }
-                  },
-                  "required": [
-                    "data"
-                  ]
-                }
-              }
-            }
-          },
-          "401": {
-            "$ref": "#/components/responses/AuthenticationException"
-          }
-        }
-      },
-      "post": {
-        "operationId": "rental.tenants.store",
-        "summary": "Шинэ түрээслэгч бүртгэнэ. Bearer token шаардана",
-        "tags": [
-          "RentalTenant"
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/StoreRentalTenantRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "`RentalTenantResource`",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "data": {
-                      "$ref": "#/components/schemas/RentalTenantResource"
-                    }
-                  },
-                  "required": [
-                    "data"
-                  ]
-                }
-              }
-            }
-          },
-          "401": {
-            "$ref": "#/components/responses/AuthenticationException"
-          },
-          "422": {
-            "$ref": "#/components/responses/ValidationException"
-          }
-        }
-      }
-    },
-    "/rental/tenants/{rentalTenant}": {
-      "put": {
-        "operationId": "rental.tenants.update",
-        "summary": "Түрээслэгчийн мэдээллийг шинэчилнэ. Bearer token шаардана",
-        "tags": [
-          "RentalTenant"
-        ],
-        "parameters": [
-          {
-            "name": "rentalTenant",
-            "in": "path",
-            "required": true,
-            "description": "The rental tenant ID",
-            "schema": {
-              "type": "integer"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateRentalTenantRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "`RentalTenantResource`",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "data": {
-                      "$ref": "#/components/schemas/RentalTenantResource"
-                    }
-                  },
-                  "required": [
-                    "data"
-                  ]
-                }
-              }
-            }
-          },
-          "401": {
-            "$ref": "#/components/responses/AuthenticationException"
-          },
-          "404": {
-            "$ref": "#/components/responses/ModelNotFoundException"
-          },
-          "422": {
-            "$ref": "#/components/responses/ValidationException"
-          }
-        }
-      },
-      "delete": {
-        "operationId": "rental.tenants.destroy",
-        "summary": "Түрээслэгчийг устгана. Bearer token шаардана",
-        "tags": [
-          "RentalTenant"
-        ],
-        "parameters": [
-          {
-            "name": "rentalTenant",
-            "in": "path",
-            "required": true,
-            "description": "The rental tenant ID",
-            "schema": {
-              "type": "integer"
-            }
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": "No content"
-          },
-          "401": {
-            "$ref": "#/components/responses/AuthenticationException"
-          },
-          "404": {
-            "$ref": "#/components/responses/ModelNotFoundException"
-          }
-        }
-      }
-    },
-    "/saved-lists": {
-      "get": {
-        "operationId": "saved-lists.index",
-        "summary": "Нэвтэрсэн хэрэглэгчийн нэртэй жагсаалтууд (зарын ID-ууд болон тоотой нь).\nBearer token шаардана",
-        "tags": [
-          "SavedList"
-        ],
-        "responses": {
-          "200": {
-            "description": "Array of `SavedListResource`",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "data": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/SavedListResource"
-                      }
-                    }
-                  },
-                  "required": [
-                    "data"
-                  ]
-                }
-              }
-            }
-          },
-          "401": {
-            "$ref": "#/components/responses/AuthenticationException"
-          }
-        }
-      },
-      "post": {
-        "operationId": "saved-lists.store",
-        "summary": "Шинэ нэртэй жагсаалт үүсгэнэ. Bearer token шаардана",
-        "tags": [
-          "SavedList"
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/StoreSavedListRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "`SavedListResource`",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "data": {
-                      "$ref": "#/components/schemas/SavedListResource"
-                    }
-                  },
-                  "required": [
-                    "data"
-                  ]
-                }
-              }
-            }
-          },
-          "401": {
-            "$ref": "#/components/responses/AuthenticationException"
-          },
-          "422": {
-            "$ref": "#/components/responses/ValidationException"
-          }
-        }
-      }
-    },
-    "/saved-lists/{savedList}": {
-      "put": {
-        "operationId": "saved-lists.update",
-        "summary": "Жагсаалтын нэр / icon-ийг шинэчилнэ. Bearer token шаардана",
-        "tags": [
-          "SavedList"
-        ],
-        "parameters": [
-          {
-            "name": "savedList",
-            "in": "path",
-            "required": true,
-            "description": "The saved list ID",
-            "schema": {
-              "type": "integer"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateSavedListRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "`SavedListResource`",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "data": {
-                      "$ref": "#/components/schemas/SavedListResource"
-                    }
-                  },
-                  "required": [
-                    "data"
-                  ]
-                }
-              }
-            }
-          },
-          "401": {
-            "$ref": "#/components/responses/AuthenticationException"
-          },
-          "404": {
-            "$ref": "#/components/responses/ModelNotFoundException"
-          },
-          "422": {
-            "$ref": "#/components/responses/ValidationException"
-          }
-        }
-      },
-      "delete": {
-        "operationId": "saved-lists.destroy",
-        "summary": "Жагсаалтыг устгана. Bearer token шаардана",
-        "tags": [
-          "SavedList"
-        ],
-        "parameters": [
-          {
-            "name": "savedList",
-            "in": "path",
-            "required": true,
-            "description": "The saved list ID",
-            "schema": {
-              "type": "integer"
-            }
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": "No content"
-          },
-          "401": {
-            "$ref": "#/components/responses/AuthenticationException"
-          },
-          "404": {
-            "$ref": "#/components/responses/ModelNotFoundException"
-          }
-        }
-      }
-    },
-    "/saved-lists/{savedList}/items": {
-      "post": {
-        "operationId": "saved-lists.items.store",
-        "summary": "Зарыг жагсаалтад нэмнэ. Аль хэдийн байгаа бол давхардуулахгүй. Bearer token шаардана",
-        "tags": [
-          "SavedList"
-        ],
-        "parameters": [
-          {
-            "name": "savedList",
-            "in": "path",
-            "required": true,
-            "description": "The saved list ID",
-            "schema": {
-              "type": "integer"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/StoreSavedListItemRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": ""
-          },
-          "401": {
-            "$ref": "#/components/responses/AuthenticationException"
-          },
-          "404": {
-            "$ref": "#/components/responses/ModelNotFoundException"
-          },
-          "422": {
-            "$ref": "#/components/responses/ValidationException"
-          }
-        }
-      }
-    },
-    "/saved-lists/{savedList}/items/{listing}": {
-      "delete": {
-        "operationId": "saved-lists.items.destroy",
-        "summary": "Зарыг жагсаалтаас хасна. Bearer token шаардана",
-        "tags": [
-          "SavedList"
-        ],
-        "parameters": [
-          {
-            "name": "savedList",
-            "in": "path",
-            "required": true,
-            "description": "The saved list ID",
-            "schema": {
-              "type": "integer"
-            }
-          },
-          {
-            "name": "listing",
-            "in": "path",
-            "required": true,
-            "description": "The listing ID",
-            "schema": {
-              "type": "integer"
-            }
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": "No content"
-          },
-          "401": {
-            "$ref": "#/components/responses/AuthenticationException"
-          },
-          "404": {
-            "$ref": "#/components/responses/ModelNotFoundException"
-          }
-        }
-      }
-    },
-    "/saved-searches": {
-      "get": {
-        "operationId": "saved-searches.index",
-        "summary": "Нэвтэрсэн хэрэглэгчийн хадгалсан хайлтууд. Bearer token шаардана",
-        "tags": [
-          "SavedSearch"
-        ],
-        "responses": {
-          "200": {
-            "description": "Array of `SavedSearchResource`",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "data": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/SavedSearchResource"
-                      }
-                    }
-                  },
-                  "required": [
-                    "data"
-                  ]
-                }
-              }
-            }
-          },
-          "401": {
-            "$ref": "#/components/responses/AuthenticationException"
-          }
-        }
-      },
-      "post": {
-        "operationId": "saved-searches.store",
-        "summary": "Шинэ хадгалсан хайлт үүсгэнэ. Bearer token шаардана",
-        "tags": [
-          "SavedSearch"
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/StoreSavedSearchRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "`SavedSearchResource`",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "data": {
-                      "$ref": "#/components/schemas/SavedSearchResource"
-                    }
-                  },
-                  "required": [
-                    "data"
-                  ]
-                }
-              }
-            }
-          },
-          "401": {
-            "$ref": "#/components/responses/AuthenticationException"
-          },
-          "422": {
-            "$ref": "#/components/responses/ValidationException"
-          }
-        }
-      }
-    },
-    "/saved-searches/{savedSearch}": {
-      "put": {
-        "operationId": "saved-searches.update",
-        "summary": "Хадгалсан хайлтыг шинэчилнэ. Bearer token шаардана",
-        "tags": [
-          "SavedSearch"
-        ],
-        "parameters": [
-          {
-            "name": "savedSearch",
-            "in": "path",
-            "required": true,
-            "description": "The saved search ID",
-            "schema": {
-              "type": "integer"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateSavedSearchRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "`SavedSearchResource`",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "data": {
-                      "$ref": "#/components/schemas/SavedSearchResource"
-                    }
-                  },
-                  "required": [
-                    "data"
-                  ]
-                }
-              }
-            }
-          },
-          "401": {
-            "$ref": "#/components/responses/AuthenticationException"
-          },
-          "404": {
-            "$ref": "#/components/responses/ModelNotFoundException"
-          },
-          "422": {
-            "$ref": "#/components/responses/ValidationException"
-          }
-        }
-      },
-      "delete": {
-        "operationId": "saved-searches.destroy",
-        "summary": "Хадгалсан хайлтыг устгана. Bearer token шаардана",
-        "tags": [
-          "SavedSearch"
-        ],
-        "parameters": [
-          {
-            "name": "savedSearch",
-            "in": "path",
-            "required": true,
-            "description": "The saved search ID",
-            "schema": {
-              "type": "integer"
-            }
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": "No content"
-          },
-          "401": {
-            "$ref": "#/components/responses/AuthenticationException"
-          },
-          "404": {
-            "$ref": "#/components/responses/ModelNotFoundException"
-          }
-        }
-      }
-    },
     "/views": {
       "get": {
         "operationId": "views.index",
-        "summary": "Хэрэглэгчийн саяхан үзсэн зарууд — сүүлд үзсэн дарааллаар. Bearer token шаардана",
+        "description": "Сүүлд үзсэн дарааллаар буцаана.",
+        "summary": "Үзсэн зарууд",
         "tags": [
-          "View"
+          "Үзсэн түүх"
         ],
         "responses": {
           "200": {
@@ -4120,10 +4465,10 @@
       },
       "post": {
         "operationId": "views.store",
-        "description": "Зар бүр хэрэглэгчид нэг мөртэй — дахин үзвэл `viewed_at`-ийг шинэчилнэ\n(дээд тал руу нь зөөнө). Bearer token шаардана.",
-        "summary": "Зар үзсэнийг тэмдэглэнэ",
+        "description": "Дахин үзвэл `viewed_at`-ийг шинэчилнэ.",
+        "summary": "Зар үзсэнийг тэмдэглэх",
         "tags": [
-          "View"
+          "Үзсэн түүх"
         ],
         "requestBody": {
           "required": true,
@@ -5436,6 +5781,50 @@
         ],
         "title": "LoginCustomerRequest"
       },
+      "MediaResource": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          },
+          "mimeType": {
+            "type": "string"
+          },
+          "sizeBytes": {
+            "type": "string"
+          },
+          "width": {
+            "type": "string"
+          },
+          "height": {
+            "type": "string"
+          },
+          "listingId": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "url",
+          "category",
+          "mimeType",
+          "sizeBytes",
+          "width",
+          "height",
+          "listingId",
+          "createdAt"
+        ],
+        "title": "MediaResource"
+      },
       "MessageResource": {
         "type": "object",
         "properties": {
@@ -6404,7 +6793,7 @@
               "integer",
               "null"
             ],
-            "description": "АЛХАМ 11 — Зураг, бичлэг"
+            "description": "Media ID-аар зураг холбох (/media endpoint-аас авсан id-ууд)."
           },
           "confirms_information_is_true": {
             "type": [
@@ -6808,6 +7197,78 @@
               "maxLength": 255
             }
           },
+          "cover_image_ids": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "integer"
+            }
+          },
+          "interior_image_ids": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "integer"
+            }
+          },
+          "exterior_image_ids": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "integer"
+            }
+          },
+          "floor_plan_image_ids": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "integer"
+            }
+          },
+          "master_plan_image_ids": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "integer"
+            }
+          },
+          "view_from_inside_image_ids": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "integer"
+            }
+          },
+          "complex_amenity_image_ids": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "integer"
+            }
+          },
+          "video_ids": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "integer"
+            }
+          },
           "window_directions": {
             "type": "object",
             "description": "Цонхны зүг тус бүрийн тоо (south/north/west/east/... /other).",
@@ -6972,6 +7433,49 @@
           "price"
         ],
         "title": "StoreListingRequest"
+      },
+      "StoreMediaRequest": {
+        "type": "object",
+        "properties": {
+          "category": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "cover",
+              "exterior",
+              "interior",
+              "view_from_inside",
+              "plan",
+              "master_plan",
+              "amenity",
+              "other",
+              "video"
+            ]
+          },
+          "listing_id": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "files": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "binary",
+              "contentMediaType": "application/octet-stream",
+              "maxLength": 102400
+            },
+            "minItems": 1,
+            "maxItems": 20
+          }
+        },
+        "required": [
+          "files"
+        ],
+        "title": "StoreMediaRequest"
       },
       "StoreMessageRequest": {
         "type": "object",
@@ -8515,8 +9019,7 @@
             "type": [
               "integer",
               "null"
-            ],
-            "description": "АЛХАМ 11 — Зураг, бичлэг"
+            ]
           },
           "confirms_information_is_true": {
             "type": [
@@ -8901,6 +9404,78 @@
             "items": {
               "type": "string",
               "maxLength": 255
+            }
+          },
+          "cover_image_ids": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "integer"
+            }
+          },
+          "interior_image_ids": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "integer"
+            }
+          },
+          "exterior_image_ids": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "integer"
+            }
+          },
+          "floor_plan_image_ids": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "integer"
+            }
+          },
+          "master_plan_image_ids": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "integer"
+            }
+          },
+          "view_from_inside_image_ids": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "integer"
+            }
+          },
+          "complex_amenity_image_ids": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "integer"
+            }
+          },
+          "video_ids": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "integer"
             }
           },
           "window_directions": {

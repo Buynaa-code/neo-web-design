@@ -59,6 +59,10 @@ export async function apiFetch<T = unknown>(
   const { body, query, headers, method = "GET", skipAuth = false, ...rest } =
     options;
   const hasBody = body !== undefined;
+  // FormData (file upload) must be sent raw — the browser sets the multipart
+  // boundary in Content-Type itself; serializing or overriding it breaks it.
+  const isFormData =
+    typeof FormData !== "undefined" && body instanceof FormData;
   const token = skipAuth ? null : getToken();
 
   const res = await fetch(buildUrl(path, query), {
@@ -66,11 +70,15 @@ export async function apiFetch<T = unknown>(
     method,
     headers: {
       Accept: "application/json",
-      ...(hasBody ? { "Content-Type": "application/json" } : {}),
+      ...(hasBody && !isFormData ? { "Content-Type": "application/json" } : {}),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...headers,
     },
-    body: hasBody ? JSON.stringify(body) : undefined,
+    body: hasBody
+      ? isFormData
+        ? (body as FormData)
+        : JSON.stringify(body)
+      : undefined,
   });
 
   if (!res.ok) {

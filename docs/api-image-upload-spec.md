@@ -1,18 +1,36 @@
-# NEOMAP — Зураг/медиа хадгалах API-уудын тодорхойлолт (backend-д нэмэх)
+# NEOMAP — Зураг/медиа хадгалах API (хэрэгжсэн — нэг policy bug үлдсэн)
 
-> Энэ баримт нь зар (listing)-д **зураг/видео файл** оруулахад шаардлагатай, одоогийн
-> backend дээр **бодитоор ажиллахгүй** байгаа endpoint болон талбаруудын тодорхойлолт юм.
+> **ШИНЭЧЛЭЛ 2026-06-26:** `docs/document.json` дээр энэ специйн санал болгосон бүх зүйл
+> **backend дээр хэрэгжсэн** — `POST /media`, `GET /media`, `DELETE /media/{id}`,
+> `StoreMediaRequest`, `MediaResource`, мөн listing-д холбох `cover_image_id` +
+> `*_image_ids[]` талбарууд (доорх жагсаалт). Эдгээр нь одоо **бодит backend талбарууд** болсон.
 >
-> **Одоогийн төлөв (2026-06-26, live `https://core.neomap.mn/api` дээр шалгасан):**
-> - `POST /listings` нь `multipart/form-data`-г парсдаг (текст талбарууд ажиллана) **ГЭХДЭЭ**
->   файл талбаруудыг (`interior_images[]`, `photos[cover][]`, `images[]` г.м.) **чимээгүй хаядаг** — `photos` хоосон хэвээр.
-> - `POST /listings/{id}/draft` (`_method=PATCH`, `draft_step=10`) нь `media_upload` талбаруудыг
->   хүлээж авдаг ч файлыг хадгалдаггүй; зөвхөн scalar `cover_image_id` хадгалагдана.
-> - Зориулалтын upload endpoint **байхгүй** (`/media`, `/upload`, `/photos` бүгд 404 — сервер unknown route бүрд 405 буцаадаг тул статусаар ялгагдахгүй).
-> - **Одоо ажилладаг цорын ганц зам:** `photos`-ийг JSON **grouped object** (category → URL **string**[]) хэлбэрээр илгээх,
->   мөн `photo_seeds` (string[]) ба `cover_image_id` (int) scalar-ууд.
+> ## 🐞 БЛОКЛОГЧ BUG (live дээр шалгасан, 2026-06-26)
 >
-> Тиймээс **бодит файл upload** хийхэд доорх endpoint/логикийг backend дээр нэмэх/идэвхжүүлэх шаардлагатай.
+> `/media`-ийн **бүх** route нь вэб апп-ийн хэрэглэгчид **HTTP 500** буцааж байна:
+> ```
+> POST /media  → 500  MediaPolicy::create(): Argument #1 ($user) must be of type
+>                       App\Models\User, App\Models\Customer given
+> GET  /media  → 500  MediaPolicy::viewAny(): ... App\Models\Customer given
+> ```
+> **Шалтгаан:** `App\Policies\MediaPolicy`-ийн `viewAny/create/delete` методууд
+> `App\Models\User` гэж type-hint хийсэн. Гэтэл `register`-ээр үүсдэг вэб хэрэглэгч нь
+> **`App\Models\Customer`**. Тиймээс policy gate type error өгч crash болж байна.
+>
+> **Засвар (backend):** `MediaPolicy`-ийн методуудын аргументыг `Customer` (эсвэл аль
+> алийг хүлээх union / `Authenticatable`) болгох, эсвэл media-г Customer guard дээр зөв
+> policy-той холбох. Засмагц `*_image_ids[]` холболт ажиллана (тэдгээр нь `exists:media,id`-аар
+> шалгадаг тул эхлээд media id үүсэх шаардлагатай).
+>
+> ## Одоо ажилладаг түр зам (policy засагдтал)
+> `photos`-ийг JSON **grouped object** (category → URL **string**[]) хэлбэрээр илгээх,
+> мөн `photo_seeds` (string[]) ба `cover_image_id` (int). Энэ нь хэвээрээ ажиллана.
+>
+> ## Фронт талын бэлэн байдал (2026-06-26)
+> Клиент интеграц **бичигдсэн**: `MediaResource` schema, `infrastructure/api/media.ts`
+> (`uploadMedia/listMedia/deleteMedia`), `apiFetch` multipart дэмжлэг, wizard-д файл
+> сонгож upload→`*_image_ids[]`/`cover_image_id` холбох UI. Тест: `tests/api/media-upload.e2e.test.ts`
+> (одоо 500-г баримтжуулдаг; backend засагдсаны дараа `NEOMAP_MEDIA_FIXED=1`-ээр happy-path шалгана).
 
 **Конвенц** (одоо байгаа API-тай нэгдсэн):
 - Base URL: `https://core.neomap.mn/api` (**HTTPS**, http нь 301 redirect хийж POST body-г эвддэг).

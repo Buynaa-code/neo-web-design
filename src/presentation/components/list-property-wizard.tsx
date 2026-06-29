@@ -121,6 +121,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { createListing, submitListingDraft } from "@/infrastructure/api/listings";
+import { uploadMedia, type MediaCategory } from "@/infrastructure/api/media";
 import { ApiError } from "@/infrastructure/api/http";
 import { useFormOptions } from "@/application/queries/metadata";
 import {
@@ -163,10 +164,27 @@ const PHOTO_CATEGORY_API: Record<string, string> = {
   "Бичлэг": "video",
 };
 
+/**
+ * API `photos` group key → the listing-create field that links uploaded media
+ * by id. `other` has no id field, so those uploads fall back to a URL string.
+ */
+const PHOTO_IDS_FIELD: Record<string, string> = {
+  cover: "cover_image_ids",
+  plan: "floor_plan_image_ids",
+  interior: "interior_image_ids",
+  exterior: "exterior_image_ids",
+  master_plan: "master_plan_image_ids",
+  view_from_inside: "view_from_inside_image_ids",
+  amenity: "complex_amenity_image_ids",
+  video: "video_ids",
+};
+
 /** Resolve a PhotoDraft's display URL: an explicit URL, else a seed placeholder. */
 function photoDraftUrl(photo: { seed: string; url?: string }): string {
   const url = photo.url?.trim();
-  if (url) return url;
+  // Local object-URL / data-URL previews can't be fetched by the server — fall
+  // back to a seed placeholder for the payload (they still render in the grid).
+  if (url && !url.startsWith("blob:") && !url.startsWith("data:")) return url;
   return `https://picsum.photos/seed/${photo.seed}/800/600`;
 }
 
@@ -192,6 +210,45 @@ function buildPhotoPayload(
     (grouped[key] ??= []).push(photoDraftUrl(photo));
   }
   return { photos: grouped, photo_seeds: ordered.map((p) => p.seed) };
+}
+
+/**
+ * Build the full media payload for a listing create/update:
+ *  - Photos uploaded as real files (carry a `mediaId`) are linked by id through
+ *    the `*_image_ids[]` fields + `cover_image_id` (the modern `/media` flow).
+ *  - Photos added by URL / seed placeholder (no `mediaId`) fall back to the
+ *    grouped `photos` string payload, which the backend also persists.
+ */
+function buildMediaPayload(
+  photos: PhotoDraft[],
+  coverIndex: number
+): Record<string, unknown> {
+  if (!photos.length) return {};
+  const ordered =
+    coverIndex > 0 && coverIndex < photos.length
+      ? [photos[coverIndex], ...photos.filter((_, i) => i !== coverIndex)]
+      : photos;
+
+  const idFields: Record<string, number[]> = {};
+  const urlPhotos: PhotoDraft[] = [];
+  let coverImageId: number | undefined;
+
+  for (const photo of ordered) {
+    const apiKey = PHOTO_CATEGORY_API[photo.category] ?? "other";
+    const idField = PHOTO_IDS_FIELD[apiKey];
+    if (photo.mediaId != null && idField) {
+      (idFields[idField] ??= []).push(photo.mediaId);
+      if (apiKey === "cover" && coverImageId == null) coverImageId = photo.mediaId;
+    } else {
+      urlPhotos.push(photo);
+    }
+  }
+
+  const out: Record<string, unknown> = { ...idFields };
+  if (coverImageId != null) out.cover_image_id = coverImageId;
+  // Remaining URL/seed photos are already cover-ordered; pass coverIndex 0.
+  Object.assign(out, buildPhotoPayload(urlPhotos, 0));
+  return out;
 }
 
 type ClassificationLike = {
@@ -387,7 +444,7 @@ function buildCreateRequest(
     confirms_authorized_to_publish: draft.declarations.authority,
     accepts_terms: draft.declarations.terms,
     // ALHAM 11 — photos: grouped object + placeholder seeds (cover first).
-    ...buildPhotoPayload(draft.media.photos, draft.media.coverIndex),
+    ...buildMediaPayload(draft.media.photos, draft.media.coverIndex),
   };
 
   if (mode === "rent") {
@@ -455,6 +512,8 @@ type PhotoDraft = {
   category: string;
   /** Optional real image URL; when set it is sent instead of a seed placeholder. */
   url?: string;
+  /** Set when the file was uploaded to `/media`; linked by id on create. */
+  mediaId?: number;
 };
 
 type SmartDraft = {
@@ -1385,11 +1444,13 @@ function normalizePhotos(value: unknown): PhotoDraft[] {
     const raw = toRecord(item);
     const seed = String(raw.seed || raw.id || item || `${Date.now()}-${index}`);
     const url = typeof raw.url === "string" ? raw.url : undefined;
+    const mediaId = typeof raw.mediaId === "number" ? raw.mediaId : undefined;
     return {
       id: String(raw.id || `photo-${seed}-${index}`),
       seed,
       category: categoryMap[String(raw.category)] || String(raw.category || (index ? "Дотор зураг" : "Нүүрний зураг")),
       ...(url ? { url } : {}),
+      ...(mediaId != null ? { mediaId } : {}),
     };
   });
 }
@@ -3782,6 +3843,9 @@ function PricingSection({
 function MediaSection({ draft, actions }: { draft: SmartDraft; actions: DraftActions }) {
   const [urlInput, setUrlInput] = useState("");
   const [urlCategory, setUrlCategory] = useState(mediaCategories[0]);
+  const [uploading, setUploading] = useState(false);
+  const pushToast = useStore((s) => s.pushToast);
+  const isLoggedIn = useStore((s) => s.isLoggedIn);
   const addPhoto = (category: string, url?: string) => {
     actions.mutate((next) => {
       next.media.photos.push({
@@ -3792,6 +3856,62 @@ function MediaSection({ draft, actions }: { draft: SmartDraft; actions: DraftAct
       });
       if (next.media.photos.length === 1) next.media.coverIndex = 0;
     });
+  };
+  /** Add files as local object-URL previews (not uploaded). */
+  const addLocalFiles = (category: string, files: File[]) => {
+    actions.mutate((next) => {
+      const wasEmpty = next.media.photos.length === 0;
+      files.forEach((file, i) => {
+        const objectUrl =
+          typeof URL !== "undefined" ? URL.createObjectURL(file) : undefined;
+        next.media.photos.push({
+          id: `photo-${Date.now()}-${next.media.photos.length + i}`,
+          seed: `${category}-${Date.now()}-${next.media.photos.length + i}`,
+          category,
+          ...(objectUrl ? { url: objectUrl } : {}),
+        });
+      });
+      if (wasEmpty) next.media.coverIndex = 0;
+    });
+  };
+  /** Upload selected files to /media (logged in) or keep a local preview. */
+  const handleFiles = async (category: string, fileList: FileList | null) => {
+    const files = fileList ? Array.from(fileList) : [];
+    if (!files.length) return;
+    if (!isLoggedIn) {
+      addLocalFiles(category, files);
+      return;
+    }
+    const apiCategory = PHOTO_CATEGORY_API[category] as MediaCategory | undefined;
+    setUploading(true);
+    try {
+      const media = await uploadMedia({ files, category: apiCategory });
+      actions.mutate((next) => {
+        const wasEmpty = next.media.photos.length === 0;
+        for (const m of media) {
+          next.media.photos.push({
+            id: `photo-${m.id}`,
+            seed: `media-${m.id}`,
+            category,
+            url: m.url,
+            mediaId: m.id,
+          });
+        }
+        if (wasEmpty) next.media.coverIndex = 0;
+      });
+      pushToast(`${media.length} зураг байршууллаа`, "success");
+    } catch (err) {
+      // Keep a local preview so the user's selection isn't lost.
+      addLocalFiles(category, files);
+      const message =
+        err instanceof ApiError
+          ? Object.values(err.validationErrors ?? {})[0]?.[0] ??
+            `Серверийн алдаа (${err.status})`
+          : "Сүлжээний алдаа";
+      pushToast(`Зураг байршуулж чадсангүй: ${message}`, "danger");
+    } finally {
+      setUploading(false);
+    }
   };
   const addPhotoByUrl = () => {
     const url = urlInput.trim();
@@ -3819,17 +3939,32 @@ function MediaSection({ draft, actions }: { draft: SmartDraft; actions: DraftAct
         <div className="lp-upload-grid">
           {mediaCategories.map((category) => {
             const Icon = category === "Нүүрний зураг" ? ImageUp : category === "План зураг" ? Scan : category === "Бичлэг" ? Video : Upload;
+            const accept = category === "Бичлэг" ? "video/mp4,video/webm" : "image/jpeg,image/png,image/webp";
             return (
-              <button key={category} type="button" onClick={() => addPhoto(category)} className="lp-upload-card">
+              <label key={category} className={cn("lp-upload-card cursor-pointer", uploading && "pointer-events-none opacity-60")}>
+                <input
+                  type="file"
+                  multiple
+                  accept={accept}
+                  className="sr-only"
+                  disabled={uploading}
+                  onChange={(event) => {
+                    void handleFiles(category, event.target.files);
+                    event.target.value = "";
+                  }}
+                />
                 <Icon className="size-4" />
                 <div className="lp-upload-title">{category}</div>
                 <div className="lp-upload-count">
                   {draft.media.photos.filter((photo) => photo.category === category).length} файл
                 </div>
-              </button>
+              </label>
             );
           })}
         </div>
+        {uploading ? (
+          <p className="text-xs text-muted-foreground">Зураг байршуулж байна…</p>
+        ) : null}
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-6">
           {draft.media.photos.map((photo, index) => {
             const isCover = draft.media.coverIndex === index;
@@ -3873,13 +4008,20 @@ function MediaSection({ draft, actions }: { draft: SmartDraft; actions: DraftAct
             );
           })}
           {draft.media.photos.length < 15 ? (
-            <button
-              type="button"
-              onClick={() => addPhoto("Дотор зураг")}
-              className="flex aspect-square items-center justify-center rounded-md border border-dashed text-muted-foreground hover:border-primary hover:text-primary"
-            >
+            <label className="flex aspect-square cursor-pointer items-center justify-center rounded-md border border-dashed text-muted-foreground hover:border-primary hover:text-primary">
+              <input
+                type="file"
+                multiple
+                accept="image/jpeg,image/png,image/webp"
+                className="sr-only"
+                disabled={uploading}
+                onChange={(event) => {
+                  void handleFiles("Дотор зураг", event.target.files);
+                  event.target.value = "";
+                }}
+              />
               <Plus className="size-5" />
-            </button>
+            </label>
           ) : null}
         </div>
         <Field label="Зургийн линкээр нэмэх" hint="Интернэт дэх зургийн URL-ийг ангилалтай нь оруулна. Хадгалахад зурагнууд серверт хадгалагдана.">

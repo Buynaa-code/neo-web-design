@@ -220,6 +220,37 @@ export const listingEnvelopeSchema = z.object({ data: listingResourceSchema });
 export const listingPaginatedSchema = paginatedSchema(listingResourceSchema);
 
 /* -------------------------------------------------------------------------- */
+/* Media upload (POST /media)                                                 */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * `MediaResource` — returned by `POST /media` (per file) and `GET /media`.
+ * The OpenAPI doc types every field as a string; the live server may send
+ * numeric ids/sizes, so coerce the numeric fields to be safe.
+ */
+export const mediaResourceSchema = z
+  .object({
+    id: z.coerce.number().int(),
+    url: z.string(),
+    category: z.string().nullable(),
+    mimeType: z.string().nullable().optional(),
+    sizeBytes: z.coerce.number().nullable().optional(),
+    width: z.coerce.number().nullable().optional(),
+    height: z.coerce.number().nullable().optional(),
+    listingId: nullableInt.optional(),
+    createdAt: z.string().nullable().optional(),
+  })
+  .passthrough();
+export type MediaResource = z.infer<typeof mediaResourceSchema>;
+
+/** `POST /media` → `{ data: MediaResource[], message }`. */
+export const mediaUploadEnvelopeSchema = z.object({
+  data: z.array(mediaResourceSchema),
+  message: z.string().optional(),
+});
+export const mediaPaginatedSchema = paginatedSchema(mediaResourceSchema);
+
+/* -------------------------------------------------------------------------- */
 /* Metadata endpoints                                                         */
 /* -------------------------------------------------------------------------- */
 

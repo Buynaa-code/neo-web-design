@@ -12,6 +12,7 @@ import {
   getListing,
   updateListing,
 } from "@/infrastructure/api/listings";
+import { uploadMedia, deleteMedia } from "@/infrastructure/api/media";
 
 /**
  * Image contract for listings (2026-06-26 — backend now persists photos).
@@ -39,6 +40,7 @@ const addr = {
 };
 
 const createdIds: number[] = [];
+const createdMediaIds: number[] = [];
 
 function payload(extra: Record<string, unknown>): Record<string, unknown> {
   return {
@@ -77,6 +79,7 @@ describe.skipIf(!ENABLED)("listing photos contract (live, WRITES to server)", ()
 
   afterAll(async () => {
     for (const id of createdIds) await deleteListing(id).catch(() => {});
+    for (const id of createdMediaIds) await deleteMedia(id).catch(() => {});
   });
 
   it("stores grouped photos and preserves arbitrary category keys", async () => {
@@ -114,15 +117,27 @@ describe.skipIf(!ENABLED)("listing photos contract (live, WRITES to server)", ()
   });
 
   it("round-trips photo_seeds and cover_image_id, and lets update replace photos", async () => {
+    // Upload a real media file to get a valid cover_image_id (backend now validates exists:media,id).
+    const bytes = Uint8Array.from(
+      atob("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="),
+      (c) => c.charCodeAt(0)
+    );
+    const [uploadedMedia] = await uploadMedia({
+      files: [new File([bytes], "cover.png", { type: "image/png" })],
+      category: "cover",
+    });
+    createdMediaIds.push(uploadedMedia.id);
+
     const created = await createListing(payload({
       photo_seeds: ["seed-a", "seed-b"],
-      cover_image_id: 7,
+      cover_image_id: uploadedMedia.id,
+      cover_image_ids: [uploadedMedia.id],
       photos: { cover: [ABS_URL] },
     }));
     createdIds.push(created.id);
     const got = await getListing(created.id);
     expect(got.photoSeeds).toEqual(["seed-a", "seed-b"]);
-    expect(got.coverImageId).toBe(7);
+    expect(got.coverImageId).toBe(uploadedMedia.id);
 
     const updated = await updateListing(created.id, {
       photos: { interior: [ABS_URL] },
