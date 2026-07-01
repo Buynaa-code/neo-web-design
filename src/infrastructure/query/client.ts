@@ -17,7 +17,11 @@ export function makeQueryClient(): QueryClient {
       queries: {
         // Default for dynamic data; reference hooks override with a longer one.
         staleTime: STALE.listing,
-        gcTime: PERSIST_MAX_AGE,
+        // Keep inactive per-user data in memory only briefly so it doesn't
+        // linger for days after unmount/logout. Reference data is persisted to
+        // localStorage independently (PERSIST_MAX_AGE), so it survives reloads
+        // regardless of this in-memory GC window.
+        gcTime: 1000 * 60 * 10, // 10m
         retry: 1,
         refetchOnWindowFocus: false,
         // Stale-while-revalidate: cached data shows instantly, a background

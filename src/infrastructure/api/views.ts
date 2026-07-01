@@ -1,17 +1,13 @@
-import {
-  listingPaginatedSchema,
-  type ListingResource,
-  type PaginatorMeta,
-} from "@/domain/schemas/api";
+import type { ListingResource, PaginatorMeta } from "@/domain/schemas/api";
 import { apiFetch } from "./http";
+import { parseListingList } from "./listings";
 
 /** GET /views — recently-viewed listings (most recent first, paginated). */
 export async function listViews(): Promise<{
   items: ListingResource[];
   meta: PaginatorMeta;
 }> {
-  const res = listingPaginatedSchema.parse(await apiFetch("/views"));
-  return { items: res.data, meta: res.meta };
+  return parseListingList(await apiFetch("/views"));
 }
 
 /** POST /views — record that the user opened a listing. Fire-and-forget. */

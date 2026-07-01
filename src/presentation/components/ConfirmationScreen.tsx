@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Check } from "lucide-react";
@@ -24,30 +24,45 @@ function toIsoDate(label: string): string {
 
 export function ConfirmationScreen() {
   const router = useRouter();
-  const listingId = useStore((s) => s.scheduleListingId ?? s.currentListingId);
-  const date = useStore((s) => s.scheduleDate);
-  const time = useStore((s) => s.scheduleTime);
   const listingsVersion = useStore((s) => s.listingsVersion);
+  const resetSchedule = useStore((s) => s.resetSchedule);
   const { create } = useAppointmentMutations();
   const bookedRef = useRef(false);
+  // Snapshot the booking once on mount. This decouples the displayed summary
+  // from the store, so we can clear the schedule after booking without wiping
+  // the UI — and a Back-navigation remount reads the cleared store and redirects
+  // home instead of booking a duplicate appointment.
+  const [booking] = useState(() => {
+    const s = useStore.getState();
+    const listingId = s.scheduleListingId ?? s.currentListingId;
+    return listingId && s.scheduleDate && s.scheduleTime
+      ? { listingId, date: s.scheduleDate, time: s.scheduleTime }
+      : null;
+  });
   const listing = useMemo(
-    () => (listingId ? getListing(listingId) : undefined),
-    [listingId, listingsVersion]
+    () => (booking ? getListing(booking.listingId) : undefined),
+    [booking, listingsVersion]
   );
 
   useEffect(() => {
-    if (!listingId || !date || !time) {
+    if (!booking) {
       router.replace("/");
       return;
     }
-    // Persist the booking exactly once per confirmation mount.
     if (!bookedRef.current) {
       bookedRef.current = true;
-      create.mutate({ listing_id: listingId, date: toIsoDate(date), time });
+      create.mutate({
+        listing_id: booking.listingId,
+        date: toIsoDate(booking.date),
+        time: booking.time,
+      });
+      // Clear the schedule so a remount can't re-book the same slot.
+      resetSchedule();
     }
-  }, [listingId, date, time, router, create]);
+  }, [booking, router, create, resetSchedule]);
 
-  if (!listingId || !date || !time) return null;
+  if (!booking) return null;
+  const { date, time } = booking;
 
   return (
     <div className="max-w-2xl mx-auto px-4 lg:px-6 py-12 text-center">

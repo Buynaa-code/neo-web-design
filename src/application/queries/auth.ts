@@ -13,6 +13,8 @@ import {
 } from "@/infrastructure/api/auth";
 import { getToken, onUnauthorized } from "@/infrastructure/api/token";
 import { queryKeys } from "@/infrastructure/query/keys";
+import { useStore } from "@/infrastructure/store";
+import { customerToUser } from "@/infrastructure/customer-user";
 import type {
   LoginRequest,
   RegisterRequest,
@@ -63,7 +65,12 @@ export function useUpdateProfile() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (input: UpdateProfileRequest) => updateProfile(input),
-    onSuccess: (customer) => qc.setQueryData(queryKeys.currentUser, customer),
+    onSuccess: (customer) => {
+      qc.setQueryData(queryKeys.currentUser, customer);
+      // Header/ProfileScreen read the name/phone from the zustand store — keep
+      // it in sync so an updated profile shows immediately, not after a reload.
+      useStore.getState().signIn(customerToUser(customer));
+    },
   });
 }
 
@@ -78,8 +85,9 @@ export function useLogout() {
   return useMutation({
     mutationFn: (all?: boolean) => (all ? logoutAll() : logout()),
     onSuccess: () => {
-      qc.setQueryData(queryKeys.currentUser, null);
-      qc.removeQueries({ queryKey: ["my-listings"] });
+      // Wipe the whole cache so the next user on this device never sees the
+      // previous account's favorites / conversations / appointments / etc.
+      qc.clear();
     },
   });
 }

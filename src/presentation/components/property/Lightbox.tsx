@@ -31,6 +31,9 @@ function totalPhotos(photos: number): number {
 export function Lightbox() {
   const [state, setState] = useState<LightboxState | null>(current);
   const [mounted, setMounted] = useState(false);
+  // Re-render if the seed dataset is swapped for real listings while open, so
+  // getListing() below resolves against the current data.
+  useStore((s) => s.listingsVersion);
 
   useEffect(() => setMounted(true), []);
 

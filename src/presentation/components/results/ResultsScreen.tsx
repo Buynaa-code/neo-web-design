@@ -67,6 +67,15 @@ export function ResultsScreen() {
     if (m === "sale" || m === "rent") {
       if (m !== mode) setMode(m);
     }
+    // Sitelinks / external search box: `?q=` seeds the AI search.
+    const q = params.get("q");
+    if (q && q !== useStore.getState().aiQuery) {
+      useStore.getState().setAiQuery(q);
+    }
+    // "Төслүүд" nav (`?cat=project`) → enable the new-project filter.
+    if (params.get("cat") === "project" && !useStore.getState().filterNewProject) {
+      useStore.getState().toggleNewProject();
+    }
   }, [params, mode, setMode]);
 
   const listings = useMemo(() => filteredListings(state), [state]);

@@ -4,7 +4,6 @@ import { Suspense, type ReactNode } from "react";
 import "./globals.css";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { Header, BottomTab } from "@/components/Header";
-import { Splash } from "@/components/Splash";
 import { Modal } from "@/components/Modal";
 import { Toast } from "@/components/Toast";
 import { CmdPalette } from "@/components/CmdPalette";
@@ -16,6 +15,7 @@ import { BrandLogoSymbol } from "@/components/BrandLogo";
 import { JsonLd } from "@/components/JsonLd";
 import { QueryProvider } from "@/presentation/providers/QueryProvider";
 import { ListingsBootstrap } from "@/components/ListingsBootstrap";
+import { AuthSync } from "@/components/AuthSync";
 import { cn } from "@/lib/utils";
 
 const SITE_URL = "https://hdlh.vercel.app";
@@ -125,8 +125,8 @@ export default function RootLayout({
         <JsonLd data={siteJsonLd} />
         <QueryProvider>
         <ListingsBootstrap />
+        <AuthSync />
         <ThemeProvider>
-          <Splash />
           <BrandLogoSymbol />
           <Suspense fallback={null}>
             <Header />

@@ -52,7 +52,9 @@ export type Customer = z.infer<typeof customerSchema>;
 export const authTokenResponseSchema = z.object({
   customer: customerSchema,
   token: z.string(),
-  tokenType: z.literal("Bearer"),
+  // Don't fail a valid login just because the casing/presence of this hint
+  // differs — the value is unused; only `token` matters.
+  tokenType: z.string().optional(),
 });
 export type AuthTokenResponse = z.infer<typeof authTokenResponseSchema>;
 
@@ -185,9 +187,11 @@ export const listingResourceSchema = z
     googleMapLink: nullableString,
     floor: nullableString,
     rooms: nullableInt,
-    area: z.number(),
+    // Land listings can omit area; rent listings can omit a sale price. Keep
+    // these nullable so a single such listing doesn't fail the whole list parse.
+    area: nullableNumber,
     year: nullableInt,
-    price: z.number().int(),
+    price: nullableInt,
     deposit: nullableInt,
     salePricing: salePricingSchema.optional(),
     rentPricing: rentPricingSchema.optional(),

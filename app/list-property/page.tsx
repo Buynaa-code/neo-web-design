@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { ListPropertyWizard } from "@/components/list-property-wizard";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 
 export const metadata: Metadata = {
   title: "Зар оруулах — NEOMAP",
@@ -7,5 +8,9 @@ export const metadata: Metadata = {
 };
 
 export default function ListPropertyPage() {
-  return <ListPropertyWizard />;
+  return (
+    <ProtectedRoute>
+      <ListPropertyWizard />
+    </ProtectedRoute>
+  );
 }

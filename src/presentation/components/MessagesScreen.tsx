@@ -188,13 +188,17 @@ function MessageThread({
   const handleSend = () => {
     const text = body.trim();
     if (!text || send.isPending) return;
+    setBody("");
     send.mutate(
       { conversationId: conversation.id, body: text },
       {
-        onError: () => pushToast("Зурвас илгээж чадсангүй", "danger"),
+        onError: () => {
+          // Restore the composer so the user doesn't lose their typed message.
+          setBody((current) => (current ? current : text));
+          pushToast("Зурвас илгээж чадсангүй", "danger");
+        },
       }
     );
-    setBody("");
   };
 
   return (

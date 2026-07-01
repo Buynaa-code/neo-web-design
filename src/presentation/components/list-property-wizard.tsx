@@ -6,6 +6,7 @@ import {
   type ReactNode,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import {
@@ -123,6 +124,7 @@ import { cn } from "@/lib/utils";
 import { createListing, submitListingDraft } from "@/infrastructure/api/listings";
 import { uploadMedia, type MediaCategory } from "@/infrastructure/api/media";
 import { ApiError } from "@/infrastructure/api/http";
+import { getToken } from "@/infrastructure/api/token";
 import { useFormOptions } from "@/application/queries/metadata";
 import {
   useCountries,
@@ -178,6 +180,33 @@ const PHOTO_IDS_FIELD: Record<string, string> = {
   amenity: "complex_amenity_image_ids",
   video: "video_ids",
 };
+
+/** Server-enforced /media limits — validated client-side for a clear message. */
+const MAX_IMAGE_BYTES = 8 * 1024 * 1024; // 8 MB
+const MAX_VIDEO_BYTES = 100 * 1024 * 1024; // 100 MB
+const MAX_FILES_PER_UPLOAD = 20;
+const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
+const ALLOWED_VIDEO_TYPES = ["video/mp4", "video/webm"];
+
+/** Returns a Mongolian error string if any file violates the server limits, else null. */
+function validateMediaFiles(files: File[]): string | null {
+  if (files.length > MAX_FILES_PER_UPLOAD) {
+    return `Нэг удаад хамгийн ихдээ ${MAX_FILES_PER_UPLOAD} файл байршуулна`;
+  }
+  for (const file of files) {
+    const isVideo = file.type.startsWith("video/");
+    const allowed = isVideo ? ALLOWED_VIDEO_TYPES : ALLOWED_IMAGE_TYPES;
+    if (!allowed.includes(file.type)) {
+      return `"${file.name}" — дэмжигдэхгүй файлын төрөл (${file.type || "тодорхойгүй"})`;
+    }
+    const limit = isVideo ? MAX_VIDEO_BYTES : MAX_IMAGE_BYTES;
+    if (file.size > limit) {
+      const mb = Math.round(limit / (1024 * 1024));
+      return `"${file.name}" — хэтэрхий том (дээд хэмжээ ${mb}MB)`;
+    }
+  }
+  return null;
+}
 
 /** Resolve a PhotoDraft's display URL: an explicit URL, else a seed placeholder. */
 /** Backend APP_URL may be misconfigured as localhost — remap to the real origin. */
@@ -242,23 +271,22 @@ function buildMediaPayload(
 
   const idFields: Record<string, number[]> = {};
   const urlPhotos: PhotoDraft[] = [];
-  let coverImageId: number | undefined;
 
   for (const photo of ordered) {
     const apiKey = PHOTO_CATEGORY_API[photo.category] ?? "other";
     const idField = PHOTO_IDS_FIELD[apiKey];
     if (photo.mediaId != null && idField) {
       (idFields[idField] ??= []).push(photo.mediaId);
-      if (apiKey === "cover" && coverImageId == null) coverImageId = photo.mediaId;
-      // Also include the URL in the photos grouped object so the backend persists
-      // it in ListingResource.photos (backend does NOT auto-populate photos from IDs).
-      urlPhotos.push(photo);
-    } else {
-      urlPhotos.push(photo);
     }
+    // Always include the URL in the grouped photos object too — the backend does
+    // NOT auto-populate ListingResource.photos from the linked ids.
+    urlPhotos.push(photo);
   }
 
   const out: Record<string, unknown> = { ...idFields };
+  // The cover is whatever photo the user selected (moved to `ordered[0]` above),
+  // regardless of its category — not just photos in the "cover" group.
+  const coverImageId = ordered[0]?.mediaId;
   if (coverImageId != null) out.cover_image_id = coverImageId;
   // Remaining URL/seed photos are already cover-ordered; pass coverIndex 0.
   Object.assign(out, buildPhotoPayload(urlPhotos, 0));
@@ -2172,14 +2200,25 @@ function AddressCascade({
 
 export function ListPropertyWizard() {
   const [step, setStep] = useState(1);
-  const [draft, setDraft] = useState<SmartDraft>(() => loadInitialDraft());
+  // Start from defaults on both server and client so the initial render matches;
+  // the persisted draft is loaded in an effect below to avoid a hydration mismatch.
+  const [draft, setDraft] = useState<SmartDraft>(createDefaultDraft);
   const [submitted, setSubmitted] = useState<SubmissionPayload | null>(null);
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const draftLoadedRef = useRef(false);
   const pushToast = useStore((s) => s.pushToast);
   const isLoggedIn = useStore((s) => s.isLoggedIn);
   const formOptions = useFormOptions();
+
+  // Load the persisted draft once, after mount (client only).
+  useEffect(() => {
+    if (draftLoadedRef.current) return;
+    draftLoadedRef.current = true;
+    const saved = loadInitialDraft();
+    setDraft(saved);
+  }, []);
 
   useEffect(() => {
     const handle = window.setTimeout(() => {
@@ -2269,8 +2308,6 @@ export function ListPropertyWizard() {
   const submit = async () => {
     if (missing.length || submitting) return;
     const payload = buildSubmission(draft);
-    storeSubmission(payload);
-    setSubmitted(payload);
     setSubmitError(null);
     setSubmitting(true);
     try {
@@ -2287,10 +2324,13 @@ export function ListPropertyWizard() {
       } else {
         await submitListingDraft(payload);
       }
-      pushToast("Зар амжилттай илгээгдлээ", "success");
-      // Clear draft so the next listing starts fresh.
+      // Persist to local history + show the success banner ONLY after the server
+      // accepted it. resetDraft() nulls `submitted`, so set it again afterwards.
+      storeSubmission(payload);
       resetDraft();
+      setSubmitted(payload);
       setStep(1);
+      pushToast("Зар амжилттай илгээгдлээ", "success");
     } catch (err) {
       const message =
         err instanceof ApiError
@@ -3877,29 +3917,19 @@ function MediaSection({ draft, actions }: { draft: SmartDraft; actions: DraftAct
       if (next.media.photos.length === 1) next.media.coverIndex = 0;
     });
   };
-  /** Add files as local object-URL previews (not uploaded). */
-  const addLocalFiles = (category: string, files: File[]) => {
-    actions.mutate((next) => {
-      const wasEmpty = next.media.photos.length === 0;
-      files.forEach((file, i) => {
-        const objectUrl =
-          typeof URL !== "undefined" ? URL.createObjectURL(file) : undefined;
-        next.media.photos.push({
-          id: `photo-${Date.now()}-${next.media.photos.length + i}`,
-          seed: `${category}-${Date.now()}-${next.media.photos.length + i}`,
-          category,
-          ...(objectUrl ? { url: objectUrl } : {}),
-        });
-      });
-      if (wasEmpty) next.media.coverIndex = 0;
-    });
-  };
-  /** Upload selected files to /media (logged in) or keep a local preview. */
+  /** Upload selected files to /media. Requires a live session; rejects files
+   *  that violate the server limits up front so the user gets a clear message
+   *  instead of a silent 422 that degrades to a placeholder image. */
   const handleFiles = async (category: string, fileList: FileList | null) => {
     const files = fileList ? Array.from(fileList) : [];
     if (!files.length) return;
-    if (!isLoggedIn) {
-      addLocalFiles(category, files);
+    if (!isLoggedIn || !getToken()) {
+      pushToast("Зураг байршуулахын тулд нэвтэрнэ үү", "danger");
+      return;
+    }
+    const invalid = validateMediaFiles(files);
+    if (invalid) {
+      pushToast(invalid, "danger");
       return;
     }
     const apiCategory = PHOTO_CATEGORY_API[category] as MediaCategory | undefined;
@@ -3921,8 +3951,8 @@ function MediaSection({ draft, actions }: { draft: SmartDraft; actions: DraftAct
       });
       pushToast(`${media.length} зураг байршууллаа`, "success");
     } catch (err) {
-      // Keep a local preview so the user's selection isn't lost.
-      addLocalFiles(category, files);
+      // Do NOT keep a local blob preview on failure — it would look uploaded but
+      // silently become a placeholder image on submit. Surface the error instead.
       const message =
         err instanceof ApiError
           ? Object.values(err.validationErrors ?? {})[0]?.[0] ??
@@ -3942,7 +3972,11 @@ function MediaSection({ draft, actions }: { draft: SmartDraft; actions: DraftAct
   const removePhoto = (index: number) => {
     actions.mutate((next) => {
       next.media.photos.splice(index, 1);
-      next.media.coverIndex = Math.min(next.media.coverIndex, Math.max(0, next.media.photos.length - 1));
+      // Keep the cover pointing at the SAME photo: shift left if a photo before
+      // it was removed, then clamp to the new bounds.
+      let cover = next.media.coverIndex;
+      if (index < cover) cover -= 1;
+      next.media.coverIndex = Math.min(cover, Math.max(0, next.media.photos.length - 1));
     });
   };
 

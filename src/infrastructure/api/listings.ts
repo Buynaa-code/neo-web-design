@@ -1,12 +1,41 @@
 import type { Listing, ListingStatus } from "@/domain/types";
 import type { ListingDraftSubmission } from "@/domain/schemas/listing-draft";
+import { z } from "zod";
 import {
   listingEnvelopeSchema,
-  listingPaginatedSchema,
+  listingResourceSchema,
+  paginatorLinksSchema,
+  paginatorMetaSchema,
   type ListingResource,
   type PaginatorMeta,
 } from "@/domain/schemas/api";
 import { apiFetch } from "./http";
+
+/**
+ * Lenient paginated-listings parser: the envelope (links/meta) is validated
+ * strictly, but each listing is parsed individually so a single malformed row
+ * is dropped (with a warning) instead of blanking the entire results / favorites
+ * / my-listings page.
+ */
+const listingListEnvelopeSchema = z.object({
+  data: z.array(z.unknown()),
+  links: paginatorLinksSchema,
+  meta: paginatorMetaSchema,
+});
+
+export function parseListingList(raw: unknown): PaginatedListings {
+  const env = listingListEnvelopeSchema.parse(raw);
+  const items: ListingResource[] = [];
+  for (const row of env.data) {
+    const parsed = listingResourceSchema.safeParse(row);
+    if (parsed.success) {
+      items.push(parsed.data);
+    } else if (typeof console !== "undefined") {
+      console.warn("Skipping malformed listing:", parsed.error.issues);
+    }
+  }
+  return { items, meta: env.meta };
+}
 
 /* -------------------------------------------------------------------------- */
 /* Public listing browsing                                                    */
@@ -51,10 +80,9 @@ function toQuery(params: ListListingsParams): Record<string, string | number | u
 export async function listListings(
   params: ListListingsParams = {}
 ): Promise<PaginatedListings> {
-  const res = listingPaginatedSchema.parse(
+  return parseListingList(
     await apiFetch("/listings", { query: toQuery(params), skipAuth: true })
   );
-  return { items: res.data, meta: res.meta };
 }
 
 /** GET /listings/{id} — public detail. */
@@ -69,10 +97,7 @@ export async function getListing(id: number): Promise<ListingResource> {
 export async function listMyListings(
   params: Pick<ListListingsParams, "mode" | "status" | "perPage" | "page"> = {}
 ): Promise<PaginatedListings> {
-  const res = listingPaginatedSchema.parse(
-    await apiFetch("/my/listings", { query: toQuery(params) })
-  );
-  return { items: res.data, meta: res.meta };
+  return parseListingList(await apiFetch("/my/listings", { query: toQuery(params) }));
 }
 
 /* -------------------------------------------------------------------------- */
@@ -248,7 +273,7 @@ export function toListing(r: ListingResource): Listing {
     area: r.area ?? 0,
     floor: r.floor ?? "",
     year: r.year ?? 0,
-    price: r.price,
+    price: r.price ?? 0,
     photos: countPhotos(r.photos, r.photoSeeds),
     status: toUiStatus(r.status),
     listedDays: r.listedDays,

@@ -13,12 +13,26 @@ import {
   listingTimeAgo,
 } from "@/infrastructure/data/formatters";
 import { useStore } from "@/infrastructure/store";
+import { useToggleFavorite } from "@/application/queries/saved";
+import { getToken } from "@/infrastructure/api/token";
 import { cn } from "@/lib/utils";
 
 export function ListingCard({ listing }: { listing: Listing }) {
   const isSaved = useStore((s) => s.savedListingIds.includes(listing.id));
   const toggleSaved = useStore((s) => s.toggleSavedListing);
   const pushToast = useStore((s) => s.pushToast);
+  const toggleFavorite = useToggleFavorite();
+
+  // Local store drives instant feedback; when signed in, persist to the server
+  // so the Saved screen (server favorites) stays in sync.
+  const handleToggleSaved = () => {
+    toggleSaved(listing.id);
+    if (getToken()) toggleFavorite.mutate({ listingId: listing.id, favorited: isSaved });
+    pushToast(
+      isSaved ? "Хадгалснаас хаслаа" : "Хадгалсан жагсаалтад нэмэгдлээ",
+      "success"
+    );
+  };
   const agent = getAgent(listing.agentId);
   const [pillClass, pillLabel] = STATUS_PILL[listing.status] ?? ["", ""];
 
@@ -44,13 +58,7 @@ export function ListingCard({ listing }: { listing: Listing }) {
           className={cn("listing-save-btn", isSaved && "saved")}
           aria-pressed={isSaved}
           aria-label={isSaved ? "Хадгалснаас хасах" : "Хадгалах"}
-          onClick={() => {
-            toggleSaved(listing.id);
-            pushToast(
-              isSaved ? "Хадгалснаас хаслаа" : "Хадгалсан жагсаалтад нэмэгдлээ",
-              "success"
-            );
-          }}
+          onClick={handleToggleSaved}
         >
           <Heart
             className="w-4 h-4"

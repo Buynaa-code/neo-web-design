@@ -1,17 +1,13 @@
-import {
-  listingPaginatedSchema,
-  type ListingResource,
-  type PaginatorMeta,
-} from "@/domain/schemas/api";
+import type { ListingResource, PaginatorMeta } from "@/domain/schemas/api";
 import { apiFetch } from "./http";
+import { parseListingList } from "./listings";
 
 /** GET /favorites — the authenticated user's favourited listings (paginated). */
 export async function listFavorites(): Promise<{
   items: ListingResource[];
   meta: PaginatorMeta;
 }> {
-  const res = listingPaginatedSchema.parse(await apiFetch("/favorites"));
-  return { items: res.data, meta: res.meta };
+  return parseListingList(await apiFetch("/favorites"));
 }
 
 /** POST /favorites — favourite a listing. */

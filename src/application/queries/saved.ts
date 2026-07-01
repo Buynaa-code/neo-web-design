@@ -1,7 +1,10 @@
 "use client";
 
+import { useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { addFavorite, listFavorites, removeFavorite } from "@/infrastructure/api/favorites";
+import { getToken } from "@/infrastructure/api/token";
+import { useStore } from "@/infrastructure/store";
 import {
   addSavedListItem,
   createSavedList,
@@ -35,12 +38,35 @@ export function useFavorites() {
 
 export function useToggleFavorite() {
   const qc = useQueryClient();
-  const invalidate = () => qc.invalidateQueries({ queryKey: queryKeys.favorites });
   return useMutation({
     mutationFn: ({ listingId, favorited }: { listingId: number; favorited: boolean }) =>
       favorited ? removeFavorite(listingId) : addFavorite(listingId),
-    onSuccess: invalidate,
+    onSettled: () => qc.invalidateQueries({ queryKey: queryKeys.favorites }),
   });
+}
+
+/**
+ * Keeps the zustand `savedListingIds` (which drives the heart on cards/detail)
+ * in sync with the server favorites, so the heart and the Saved screen agree.
+ * The server is the source of truth; toggles update zustand instantly for
+ * snappy feedback and the mutation reconciles on the next fetch. Mounted once
+ * at app root. Only runs while authenticated.
+ */
+export function useSyncFavorites() {
+  const isLoggedIn = useStore((s) => s.isLoggedIn);
+  const setSavedListingIds = useStore((s) => s.setSavedListingIds);
+  const authed = isLoggedIn && typeof window !== "undefined" && !!getToken();
+
+  const { data } = useQuery({
+    queryKey: queryKeys.favorites,
+    queryFn: listFavorites,
+    enabled: authed,
+    select: (res) => res.items.map((i) => i.id),
+  });
+
+  useEffect(() => {
+    if (authed && data) setSavedListingIds(data);
+  }, [authed, data, setSavedListingIds]);
 }
 
 /* -------------------------------------------------------------------------- */

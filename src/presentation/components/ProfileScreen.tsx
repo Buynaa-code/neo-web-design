@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useStore } from "@/infrastructure/store";
-import { VIEWINGS } from "@/infrastructure/data/saved";
+import { useAppointments } from "@/application/queries/appointments";
 import {
   useCurrentUser,
   useLogout,
@@ -87,7 +87,9 @@ export function ProfileScreen() {
   const email = currentUser?.email ?? (storeUser as { email?: string } | null)?.email ?? "";
   const phone = currentUser?.phone ?? storeUser?.phone ?? "";
   const initials = initialsOf(name);
-  const viewingsCount = VIEWINGS.length;
+  // Real appointments (not the mock VIEWINGS) so the count matches /activity.
+  const { data: appointments } = useAppointments();
+  const viewingsCount = appointments?.length ?? 0;
 
   const openEdit = () => {
     if (!isLoggedIn) {

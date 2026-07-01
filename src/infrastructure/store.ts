@@ -9,7 +9,7 @@ import type {
   SavedSearch,
   Screen,
 } from "@/domain/types";
-import { DEFAULT_SAVED_IDS, SAVED_LISTS, SAVED_SEARCHES } from "@/infrastructure/data/saved";
+import { SAVED_LISTS, SAVED_SEARCHES } from "@/infrastructure/data/saved";
 import { clearToken } from "@/infrastructure/api/token";
 
 export interface User {
@@ -233,6 +233,7 @@ interface StoreActions {
 
   // Saved listings
   toggleSavedListing: (id: number) => void;
+  setSavedListingIds: (ids: number[]) => void;
   isSaved: (id: number) => boolean;
 
   // Saved searches
@@ -340,7 +341,9 @@ const initialState: StoreState = {
   authPhoneDraft: "",
   authResendLeft: 0,
 
-  savedListingIds: DEFAULT_SAVED_IDS,
+  // Server favorites are the source of truth (synced into this list on boot via
+  // useSyncFavorites); start empty so real users don't see phantom saved hearts.
+  savedListingIds: [],
   savedLists: SAVED_LISTS,
   savedSearches: SAVED_SEARCHES,
 
@@ -463,7 +466,7 @@ export const useStore = create<StoreState & StoreActions>()(
           currentUser: null,
           authPhoneDraft: "",
           authResendLeft: 0,
-          savedListingIds: DEFAULT_SAVED_IDS,
+          savedListingIds: [],
           savedLists: SAVED_LISTS,
           savedSearches: SAVED_SEARCHES,
           viewedIds: [],
@@ -490,6 +493,7 @@ export const useStore = create<StoreState & StoreActions>()(
             ? s.savedListingIds.filter((x) => x !== id)
             : [...s.savedListingIds, id],
         })),
+      setSavedListingIds: (ids) => set({ savedListingIds: ids }),
       isSaved: (id) => get().savedListingIds.includes(id),
 
       addSavedSearch: (draft) => {

@@ -15,9 +15,19 @@ function LockedFallback() {
         </div>
         <div>
           <div className="text-sm font-semibold text-[var(--text)]">Нэвтрэх шаардлагатай</div>
-          <div className="mt-1 text-xs text-[var(--text-3)]">Таны эрхийг шалгаж байна.</div>
+          <div className="mt-1 text-xs text-[var(--text-3)]">Үргэлжлүүлэхийн тулд нэвтэрнэ үү.</div>
         </div>
       </div>
+    </div>
+  );
+}
+
+/** Neutral placeholder shown while the persisted store is still hydrating, so
+ *  authenticated users don't flash the "login required" card on every load. */
+function CheckingFallback() {
+  return (
+    <div className="mx-auto flex min-h-[52vh] max-w-md items-center justify-center px-4">
+      <div className="h-6 w-6 animate-spin rounded-full border-2 border-[var(--border)] border-t-[var(--primary)]" />
     </div>
   );
 }
@@ -43,7 +53,10 @@ function ProtectedRouteInner({ children }: { children: ReactNode }) {
     router.replace(`/auth?next=${encodeURIComponent(nextUrl)}`);
   }, [hydrated, isLoggedIn, nextUrl, pushToast, router]);
 
-  if (!hydrated || !isLoggedIn) {
+  if (!hydrated) {
+    return <CheckingFallback />;
+  }
+  if (!isLoggedIn) {
     return <LockedFallback />;
   }
 
@@ -52,7 +65,7 @@ function ProtectedRouteInner({ children }: { children: ReactNode }) {
 
 export function ProtectedRoute({ children }: { children: ReactNode }) {
   return (
-    <Suspense fallback={<LockedFallback />}>
+    <Suspense fallback={<CheckingFallback />}>
       <ProtectedRouteInner>{children}</ProtectedRouteInner>
     </Suspense>
   );

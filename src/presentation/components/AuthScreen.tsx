@@ -2,34 +2,17 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useStore, type User } from "@/infrastructure/store";
+import { useStore } from "@/infrastructure/store";
 import { useStoreHydrated } from "@/infrastructure/useStoreHydrated";
 import { useLogin, useRegister } from "@/application/queries/auth";
 import { ApiError } from "@/infrastructure/api/http";
-import type { Customer } from "@/domain/schemas/api";
+import { customerToUser } from "@/infrastructure/customer-user";
 
 function safeNextPath(next: string | null, defaultPath = "/profile") {
   if (!next || !next.startsWith("/") || next.startsWith("//") || next.startsWith("/auth")) {
     return defaultPath;
   }
   return next;
-}
-
-function initialsOf(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return "?";
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return (parts[0][0] + parts[1][0]).toUpperCase();
-}
-
-function customerToUser(c: Customer): User {
-  return {
-    id: c.id,
-    name: c.name,
-    email: c.email,
-    phone: c.phone ?? "",
-    initials: initialsOf(c.name),
-  };
 }
 
 /** Pulls a human-readable message out of an ApiError (validation or generic). */
