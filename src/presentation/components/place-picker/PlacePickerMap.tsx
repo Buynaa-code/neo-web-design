@@ -46,6 +46,26 @@ function CenterOn({ lat, lng }: { lat: number; lng: number }) {
   return null;
 }
 
+/**
+ * Leaflet computes tile coverage from the container size at init. When the map
+ * mounts inside a container whose size isn't final yet (a wizard step, a modal),
+ * tiles fail to fill and the map shows blank. Recomputing after mount + on
+ * resize fixes it.
+ */
+function InvalidateOnMount() {
+  const map = useMap();
+  useEffect(() => {
+    const fix = () => map.invalidateSize();
+    const timers = [50, 250, 600].map((ms) => setTimeout(fix, ms));
+    window.addEventListener("resize", fix);
+    return () => {
+      timers.forEach(clearTimeout);
+      window.removeEventListener("resize", fix);
+    };
+  }, [map]);
+  return null;
+}
+
 export function PlacePickerMap({
   lat,
   lng,
@@ -71,6 +91,7 @@ export function PlacePickerMap({
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
+      <InvalidateOnMount />
       <MapClickHandler onPick={onPick} />
       {hasMarker && <CenterOn lat={lat} lng={lng} />}
       {hasMarker && (

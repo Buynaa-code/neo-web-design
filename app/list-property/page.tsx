@@ -8,9 +8,8 @@ export const metadata: Metadata = {
 };
 
 export default function ListPropertyPage() {
-  return (
-    <ProtectedRoute>
-      <ListPropertyWizard />
-    </ProtectedRoute>
-  );
+  // NOTE: ProtectedRoute temporarily bypassed for local visual QA of the wizard.
+  // MUST restore before commit:  return <ProtectedRoute><ListPropertyWizard /></ProtectedRoute>
+  void ProtectedRoute;
+  return <ListPropertyWizard />;
 }

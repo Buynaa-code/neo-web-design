@@ -3,6 +3,14 @@
 @import "shadcn/tailwind.css";
 @import "leaflet/dist/leaflet.css";
 
+/* Tailwind Preflight resets `img { max-width: 100% }`, which shrinks/misplaces
+   Leaflet's 256px tiles and can leave the map blank. Opt tiles out of the reset. */
+.leaflet-container img.leaflet-tile,
+.leaflet-container img.leaflet-marker-icon,
+.leaflet-container .leaflet-pane img {
+  max-width: none !important;
+}
+
 @custom-variant dark (&:is(.dark *));
 
 :root {
