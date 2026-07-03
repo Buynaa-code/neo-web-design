@@ -827,19 +827,394 @@
     "/listings/search": {
       "get": {
         "operationId": "listings.search",
-        "description": "MeiliSearch ашиглан зарыг бүтэн текстээр хайна. `q` параметр заавал шаардлагатай.\nХайлтын үр дүн нь active зараас л гарна (shouldBeSearchable()-д тодорхойлсноор).",
+        "description": "MeiliSearch ашиглан зарыг бүтэн текстээр хайна. `q` параметр заавал биш —\nөгөхгүй бол зөвхөн шүүлтүүрээр (төрөл, байршил, үнэ гэх мэт) хайна.\nХайлтын үр дүн нь active зараас л гарна (shouldBeSearchable()-д тодорхойлсноор).",
         "summary": "MeiliSearch хайлт",
         "tags": [
           "Зар"
         ],
         "parameters": [
           {
+            "name": "mode",
+            "in": "query",
+            "description": "Зарын төрөл: rent (түрээс) эсвэл sale (худалдаа).",
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "enum": [
+                "rent",
+                "sale"
+              ]
+            }
+          },
+          {
+            "name": "transaction_type",
+            "in": "query",
+            "description": "Гүйлгээний төрөл: sell, rent_out, buy_request.",
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 255
+            }
+          },
+          {
+            "name": "real_state_type",
+            "in": "query",
+            "description": "ҮХЭХ-ийн дээд төрөл: residential, commercial, land, other.",
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 255
+            }
+          },
+          {
+            "name": "property_type",
+            "in": "query",
+            "description": "Эд хөрөнгийн зориулалт: apartment, office, land гэх мэт.",
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 255
+            }
+          },
+          {
+            "name": "property_category",
+            "in": "query",
+            "description": "Ерөнхий ангилал: residential, commercial гэх мэт.",
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 255
+            }
+          },
+          {
+            "name": "property_subtype",
+            "in": "query",
+            "description": "Дэд зориулалт: simple, duplex, penthouse гэх мэт.",
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 255
+            }
+          },
+          {
+            "name": "floor_type",
+            "in": "query",
+            "description": "Давхрын төрөл: ground, middle, top гэх мэт.",
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 255
+            }
+          },
+          {
+            "name": "province",
+            "in": "query",
+            "description": "Аймаг / нийслэлээр шүүх.",
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 255
+            }
+          },
+          {
+            "name": "district",
+            "in": "query",
+            "description": "Дүүрэг / байршлаар шүүх нэр.",
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 255
+            }
+          },
+          {
+            "name": "khoroo",
+            "in": "query",
+            "description": "Хороогоор шүүх.",
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 255
+            }
+          },
+          {
+            "name": "rooms",
+            "in": "query",
+            "description": "Өрөөний тоогоор яг таарч шүүх.",
+            "schema": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 0
+            }
+          },
+          {
+            "name": "rooms_min",
+            "in": "query",
+            "description": "Өрөөний доод тоо.",
+            "schema": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 0
+            }
+          },
+          {
+            "name": "rooms_max",
+            "in": "query",
+            "description": "Өрөөний дээд тоо.",
+            "schema": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 0
+            }
+          },
+          {
+            "name": "bedroom_min",
+            "in": "query",
+            "description": "Унтлагын өрөөний доод тоо.",
+            "schema": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 0
+            }
+          },
+          {
+            "name": "bathroom_min",
+            "in": "query",
+            "description": "Ариун цэврийн өрөөний доод тоо.",
+            "schema": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 0
+            }
+          },
+          {
+            "name": "price_min",
+            "in": "query",
+            "description": "Худалдах үнийн доод хязгаар (₮).",
+            "schema": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 0
+            }
+          },
+          {
+            "name": "price_max",
+            "in": "query",
+            "description": "Худалдах үнийн дээд хязгаар (₮).",
+            "schema": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 0
+            }
+          },
+          {
+            "name": "monthly_price_min",
+            "in": "query",
+            "description": "Түрээсийн сарын үнийн доод хязгаар (₮).",
+            "schema": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 0
+            }
+          },
+          {
+            "name": "monthly_price_max",
+            "in": "query",
+            "description": "Түрээсийн сарын үнийн дээд хязгаар (₮).",
+            "schema": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 0
+            }
+          },
+          {
+            "name": "area_min",
+            "in": "query",
+            "description": "Талбайн доод хязгаар (м²).",
+            "schema": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "minimum": 0
+            }
+          },
+          {
+            "name": "area_max",
+            "in": "query",
+            "description": "Талбайн дээд хязгаар (м²).",
+            "schema": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "minimum": 0
+            }
+          },
+          {
+            "name": "year_min",
+            "in": "query",
+            "description": "Баригдсан оны доод хязгаар.",
+            "schema": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 0
+            }
+          },
+          {
+            "name": "year_max",
+            "in": "query",
+            "description": "Баригдсан оны дээд хязгаар.",
+            "schema": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 0
+            }
+          },
+          {
+            "name": "commissioned_status",
+            "in": "query",
+            "description": "Ашиглалтын төлөв: commissioned, under_construction гэх мэт.",
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 255
+            }
+          },
+          {
+            "name": "certificate_status",
+            "in": "query",
+            "description": "Гэрчилгээний төлөв: ready_certificate гэх мэт.",
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 255
+            }
+          },
+          {
+            "name": "usage_condition",
+            "in": "query",
+            "description": "Ашиглалтын байдал: brand_new_unused, used, other.",
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 255
+            }
+          },
+          {
+            "name": "interior_condition",
+            "in": "query",
+            "description": "Дотор заслын байдал: renovated_last_1_year гэх мэт.",
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 255
+            }
+          },
+          {
+            "name": "current_availability_status",
+            "in": "query",
+            "description": "Одоогийн байдал: vacant_available гэх мэт.",
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 255
+            }
+          },
+          {
+            "name": "collateral_status",
+            "in": "query",
+            "description": "Барьцааны төлөв: no_collateral гэх мэт.",
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 255
+            }
+          },
+          {
+            "name": "vat_included",
+            "in": "query",
+            "description": "НӨАТ багтсан эсэх.",
+            "schema": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            }
+          },
+          {
+            "name": "barter_allowed",
+            "in": "query",
+            "description": "Бартер зөвшөөрөх эсэх.",
+            "schema": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            }
+          },
+          {
             "name": "q",
             "in": "query",
-            "required": true,
-            "description": "Хайх үг / хэллэг. Заавал шаардлагатай.",
+            "description": "Хайх үг / хэллэг. Заавал биш — зөвхөн шүүлтүүрээр ч хайж болно.",
             "schema": {
-              "type": "string",
+              "type": [
+                "string",
+                "null"
+              ],
               "maxLength": 255
             }
           },
@@ -859,7 +1234,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Array of `ListingResource`",
+            "description": "Paginated set of `ListingResource`",
             "content": {
               "application/json": {
                 "schema": {
@@ -869,6 +1244,203 @@
                       "type": "array",
                       "items": {
                         "$ref": "#/components/schemas/ListingResource"
+                      }
+                    },
+                    "links": {
+                      "type": "object",
+                      "properties": {
+                        "first": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "last": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "prev": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "next": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "first",
+                        "last",
+                        "prev",
+                        "next"
+                      ]
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "current_page": {
+                          "type": "integer",
+                          "minimum": 1
+                        },
+                        "from": {
+                          "type": [
+                            "integer",
+                            "null"
+                          ],
+                          "minimum": 1
+                        },
+                        "last_page": {
+                          "type": "integer",
+                          "minimum": 1
+                        },
+                        "links": {
+                          "type": "array",
+                          "description": "Generated paginator links.",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "url": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "label": {
+                                "type": "string"
+                              },
+                              "active": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "url",
+                              "label",
+                              "active"
+                            ]
+                          }
+                        },
+                        "path": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "description": "Base path for paginator generated URLs."
+                        },
+                        "per_page": {
+                          "type": "integer",
+                          "description": "Number of items shown per page.",
+                          "minimum": 0
+                        },
+                        "to": {
+                          "type": [
+                            "integer",
+                            "null"
+                          ],
+                          "description": "Number of the last item in the slice.",
+                          "minimum": 1
+                        },
+                        "total": {
+                          "type": "integer",
+                          "description": "Total number of items being paginated.",
+                          "minimum": 0
+                        }
+                      },
+                      "required": [
+                        "current_page",
+                        "from",
+                        "last_page",
+                        "links",
+                        "path",
+                        "per_page",
+                        "to",
+                        "total"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "links",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationException"
+          }
+        },
+        "security": []
+      }
+    },
+    "/listings/tags": {
+      "get": {
+        "operationId": "listings.tags",
+        "description": "Зарын amenities, included_items эсвэл infrastructure баганаас өвөрмөц tag-уудыг\nашиглалтын тоогоор нь эрэмбэлж буцаана. Нэвтрэх шаардлагагүй.",
+        "summary": "Tag санал болгох",
+        "tags": [
+          "Зар"
+        ],
+        "parameters": [
+          {
+            "name": "group",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "amenities",
+                "included",
+                "infrastructure"
+              ]
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 255
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "key": {
+                            "type": "string"
+                          },
+                          "label": {
+                            "type": "string"
+                          },
+                          "usage_count": {
+                            "type": "integer"
+                          }
+                        },
+                        "required": [
+                          "key",
+                          "label",
+                          "usage_count"
+                        ]
                       }
                     }
                   },
@@ -911,6 +1483,90 @@
             }
           },
           {
+            "name": "transaction_type",
+            "in": "query",
+            "description": "Гүйлгээний төрөл: sell, rent_out, buy_request.",
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 255
+            }
+          },
+          {
+            "name": "real_state_type",
+            "in": "query",
+            "description": "ҮХЭХ-ийн дээд төрөл: residential, commercial, land, other.",
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 255
+            }
+          },
+          {
+            "name": "property_type",
+            "in": "query",
+            "description": "Эд хөрөнгийн зориулалт: apartment, office, land гэх мэт.",
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 255
+            }
+          },
+          {
+            "name": "property_category",
+            "in": "query",
+            "description": "Ерөнхий ангилал: residential, commercial гэх мэт.",
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 255
+            }
+          },
+          {
+            "name": "property_subtype",
+            "in": "query",
+            "description": "Дэд зориулалт: simple, duplex, penthouse гэх мэт.",
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 255
+            }
+          },
+          {
+            "name": "floor_type",
+            "in": "query",
+            "description": "Давхрын төрөл: ground, middle, top гэх мэт.",
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 255
+            }
+          },
+          {
+            "name": "province",
+            "in": "query",
+            "description": "Аймаг / нийслэлээр шүүх.",
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 255
+            }
+          },
+          {
             "name": "district",
             "in": "query",
             "description": "Дүүрэг / байршлаар шүүх нэр.",
@@ -923,21 +1579,9 @@
             }
           },
           {
-            "name": "rooms",
+            "name": "khoroo",
             "in": "query",
-            "description": "Өрөөний тоогоор шүүх.",
-            "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
-              "minimum": 0
-            }
-          },
-          {
-            "name": "status",
-            "in": "query",
-            "description": "Зарын төлвөөр шүүх (жишээ нь pending, active).",
+            "description": "Хороогоор шүүх.",
             "schema": {
               "type": [
                 "string",
@@ -947,9 +1591,69 @@
             }
           },
           {
+            "name": "rooms",
+            "in": "query",
+            "description": "Өрөөний тоогоор яг таарч шүүх.",
+            "schema": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 0
+            }
+          },
+          {
+            "name": "rooms_min",
+            "in": "query",
+            "description": "Өрөөний доод тоо.",
+            "schema": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 0
+            }
+          },
+          {
+            "name": "rooms_max",
+            "in": "query",
+            "description": "Өрөөний дээд тоо.",
+            "schema": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 0
+            }
+          },
+          {
+            "name": "bedroom_min",
+            "in": "query",
+            "description": "Унтлагын өрөөний доод тоо.",
+            "schema": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 0
+            }
+          },
+          {
+            "name": "bathroom_min",
+            "in": "query",
+            "description": "Ариун цэврийн өрөөний доод тоо.",
+            "schema": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 0
+            }
+          },
+          {
             "name": "price_min",
             "in": "query",
-            "description": "Үнийн доод хязгаар (₮).",
+            "description": "Худалдах үнийн доод хязгаар (₮).",
             "schema": {
               "type": [
                 "integer",
@@ -961,7 +1665,31 @@
           {
             "name": "price_max",
             "in": "query",
-            "description": "Үнийн дээд хязгаар (₮).",
+            "description": "Худалдах үнийн дээд хязгаар (₮).",
+            "schema": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 0
+            }
+          },
+          {
+            "name": "monthly_price_min",
+            "in": "query",
+            "description": "Түрээсийн сарын үнийн доод хязгаар (₮).",
+            "schema": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 0
+            }
+          },
+          {
+            "name": "monthly_price_max",
+            "in": "query",
+            "description": "Түрээсийн сарын үнийн дээд хязгаар (₮).",
             "schema": {
               "type": [
                 "integer",
@@ -992,6 +1720,136 @@
                 "null"
               ],
               "minimum": 0
+            }
+          },
+          {
+            "name": "year_min",
+            "in": "query",
+            "description": "Баригдсан оны доод хязгаар.",
+            "schema": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 0
+            }
+          },
+          {
+            "name": "year_max",
+            "in": "query",
+            "description": "Баригдсан оны дээд хязгаар.",
+            "schema": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 0
+            }
+          },
+          {
+            "name": "commissioned_status",
+            "in": "query",
+            "description": "Ашиглалтын төлөв: commissioned, under_construction гэх мэт.",
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 255
+            }
+          },
+          {
+            "name": "certificate_status",
+            "in": "query",
+            "description": "Гэрчилгээний төлөв: ready_certificate гэх мэт.",
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 255
+            }
+          },
+          {
+            "name": "usage_condition",
+            "in": "query",
+            "description": "Ашиглалтын байдал: brand_new_unused, used, other.",
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 255
+            }
+          },
+          {
+            "name": "interior_condition",
+            "in": "query",
+            "description": "Дотор заслын байдал: renovated_last_1_year гэх мэт.",
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 255
+            }
+          },
+          {
+            "name": "current_availability_status",
+            "in": "query",
+            "description": "Одоогийн байдал: vacant_available гэх мэт.",
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 255
+            }
+          },
+          {
+            "name": "collateral_status",
+            "in": "query",
+            "description": "Барьцааны төлөв: no_collateral гэх мэт.",
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 255
+            }
+          },
+          {
+            "name": "vat_included",
+            "in": "query",
+            "description": "НӨАТ багтсан эсэх.",
+            "schema": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            }
+          },
+          {
+            "name": "barter_allowed",
+            "in": "query",
+            "description": "Бартер зөвшөөрөх эсэх.",
+            "schema": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "description": "Зарын төлвөөр шүүх (жишээ нь pending, active).",
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 255
             }
           },
           {
@@ -3358,17 +4216,16 @@
         }
       }
     },
-    "/address/countries": {
+    "/address/provinces": {
       "get": {
-        "operationId": "address.countries.index",
-        "description": "Идэвхтэй бүх улсыг эрэмбэлэгдсэн сонголтын утга хэлбэрээр буцаана.",
-        "summary": "Улс орнуудын жагсаалт",
+        "operationId": "address.provinces.index",
+        "summary": "Аймаг / нийслэлийн жагсаалт",
         "tags": [
           "Хаяг"
         ],
         "responses": {
           "200": {
-            "description": "Array of `AddressOptionResource`",
+            "description": "",
             "content": {
               "application/json": {
                 "schema": {
@@ -3377,7 +4234,19 @@
                     "data": {
                       "type": "array",
                       "items": {
-                        "$ref": "#/components/schemas/AddressOptionResource"
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name"
+                        ]
                       }
                     }
                   },
@@ -3387,56 +4256,6 @@
                 }
               }
             }
-          }
-        },
-        "security": []
-      }
-    },
-    "/address/cities": {
-      "get": {
-        "operationId": "address.cities.index",
-        "description": "Сонгосон улсаар шүүж болох cascading сонголт.",
-        "summary": "Хот / аймгуудын жагсаалт",
-        "tags": [
-          "Хаяг"
-        ],
-        "parameters": [
-          {
-            "name": "country_id",
-            "in": "query",
-            "description": "Шүүх улсын ID. Хоосон бол бүх хотыг буцаана.",
-            "schema": {
-              "type": [
-                "integer",
-                "null"
-              ]
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Array of `AddressOptionResource`",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "data": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/AddressOptionResource"
-                      }
-                    }
-                  },
-                  "required": [
-                    "data"
-                  ]
-                }
-              }
-            }
-          },
-          "422": {
-            "$ref": "#/components/responses/ValidationException"
           }
         },
         "security": []
@@ -3445,27 +4264,23 @@
     "/address/districts": {
       "get": {
         "operationId": "address.districts.index",
-        "description": "Сонгосон хотоор шүүж болох cascading сонголт.",
-        "summary": "Дүүрэг / сумдын жагсаалт",
+        "summary": "Сонгосон аймагт харьяалагдах дүүрэг / сумдын жагсаалт",
         "tags": [
           "Хаяг"
         ],
         "parameters": [
           {
-            "name": "city_id",
+            "name": "province_id",
             "in": "query",
-            "description": "Шүүх хотын ID. Хоосон бол бүх дүүргийг буцаана.",
+            "required": true,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ]
+              "type": "integer"
             }
           }
         ],
         "responses": {
           "200": {
-            "description": "Array of `AddressOptionResource`",
+            "description": "",
             "content": {
               "application/json": {
                 "schema": {
@@ -3474,7 +4289,19 @@
                     "data": {
                       "type": "array",
                       "items": {
-                        "$ref": "#/components/schemas/AddressOptionResource"
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name"
+                        ]
                       }
                     }
                   },
@@ -3495,8 +4322,7 @@
     "/address/khoroos": {
       "get": {
         "operationId": "address.khoroos.index",
-        "description": "Сонгосон дүүргээр шүүж болох cascading сонголт.",
-        "summary": "Хороо / багуудын жагсаалт",
+        "summary": "Сонгосон дүүрэгт харьяалагдах хорооны жагсаалт",
         "tags": [
           "Хаяг"
         ],
@@ -3504,18 +4330,15 @@
           {
             "name": "district_id",
             "in": "query",
-            "description": "Шүүх дүүргийн ID. Хоосон бол бүх хороог буцаана.",
+            "required": true,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ]
+              "type": "integer"
             }
           }
         ],
         "responses": {
           "200": {
-            "description": "Array of `AddressOptionResource`",
+            "description": "",
             "content": {
               "application/json": {
                 "schema": {
@@ -3524,7 +4347,19 @@
                     "data": {
                       "type": "array",
                       "items": {
-                        "$ref": "#/components/schemas/AddressOptionResource"
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name"
+                        ]
                       }
                     }
                   },
@@ -3542,11 +4377,10 @@
         "security": []
       }
     },
-    "/address/zipcodes": {
+    "/address/khoroolols": {
       "get": {
-        "operationId": "address.zipcodes.index",
-        "description": "Сонгосон хороогоор шүүж болох cascading сонголт.",
-        "summary": "Зип / шуудангийн кодын жагсаалт",
+        "operationId": "address.khoroolols.index",
+        "summary": "Сонгосон хороонд харьяалагдах хороололын жагсаалт",
         "tags": [
           "Хаяг"
         ],
@@ -3554,18 +4388,15 @@
           {
             "name": "khoroo_id",
             "in": "query",
-            "description": "Шүүх хорооны ID. Хоосон бол бүх зип кодыг буцаана.",
+            "required": true,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ]
+              "type": "integer"
             }
           }
         ],
         "responses": {
           "200": {
-            "description": "Array of `AddressOptionResource`",
+            "description": "",
             "content": {
               "application/json": {
                 "schema": {
@@ -3574,7 +4405,77 @@
                     "data": {
                       "type": "array",
                       "items": {
-                        "$ref": "#/components/schemas/AddressOptionResource"
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationException"
+          }
+        },
+        "security": []
+      }
+    },
+    "/address/khotkons": {
+      "get": {
+        "operationId": "address.khotkons.index",
+        "summary": "Сонгосон хороонд харьяалагдах хотхоны жагсаалт",
+        "tags": [
+          "Хаяг"
+        ],
+        "parameters": [
+          {
+            "name": "khoroo_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name"
+                        ]
                       }
                     }
                   },
@@ -3595,8 +4496,7 @@
     "/address/streets": {
       "get": {
         "operationId": "address.streets.index",
-        "description": "Сонгосон хороогоор шүүж болох cascading сонголт.",
-        "summary": "Гудамжны жагсаалт",
+        "summary": "Сонгосон хороонд харьяалагдах гудамжны жагсаалт",
         "tags": [
           "Хаяг"
         ],
@@ -3604,18 +4504,15 @@
           {
             "name": "khoroo_id",
             "in": "query",
-            "description": "Шүүх хорооны ID. Хоосон бол бүх гудамжийг буцаана.",
+            "required": true,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ]
+              "type": "integer"
             }
           }
         ],
         "responses": {
           "200": {
-            "description": "Array of `AddressOptionResource`",
+            "description": "",
             "content": {
               "application/json": {
                 "schema": {
@@ -3624,7 +4521,19 @@
                     "data": {
                       "type": "array",
                       "items": {
-                        "$ref": "#/components/schemas/AddressOptionResource"
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name"
+                        ]
                       }
                     }
                   },
@@ -3642,11 +4551,10 @@
         "security": []
       }
     },
-    "/address/complexes": {
+    "/address/buildings": {
       "get": {
-        "operationId": "address.complexes.index",
-        "description": "Сонгосон хороо болон гудамжаар шүүж болох cascading сонголт.",
-        "summary": "Хотхон / цогцолборуудын жагсаалт",
+        "operationId": "address.buildings.index",
+        "summary": "Сонгосон хороонд харьяалагдах барилгын жагсаалт",
         "tags": [
           "Хаяг"
         ],
@@ -3654,29 +4562,15 @@
           {
             "name": "khoroo_id",
             "in": "query",
-            "description": "Шүүх хорооны ID. Хоосон бол бүх хотхоныг буцаана.",
+            "required": true,
             "schema": {
-              "type": [
-                "integer",
-                "null"
-              ]
-            }
-          },
-          {
-            "name": "street_id",
-            "in": "query",
-            "description": "Шүүх гудамжны ID. Хоосон бол гудамжаар шүүхгүй.",
-            "schema": {
-              "type": [
-                "integer",
-                "null"
-              ]
+              "type": "integer"
             }
           }
         ],
         "responses": {
           "200": {
-            "description": "Array of `AddressOptionResource`",
+            "description": "",
             "content": {
               "application/json": {
                 "schema": {
@@ -3685,57 +4579,19 @@
                     "data": {
                       "type": "array",
                       "items": {
-                        "$ref": "#/components/schemas/AddressOptionResource"
-                      }
-                    }
-                  },
-                  "required": [
-                    "data"
-                  ]
-                }
-              }
-            }
-          },
-          "422": {
-            "$ref": "#/components/responses/ValidationException"
-          }
-        },
-        "security": []
-      }
-    },
-    "/address/building-blocks": {
-      "get": {
-        "operationId": "address.building-blocks.index",
-        "description": "Сонгосон хотхоноор шүүж болох идэвхтэй блокууд.",
-        "summary": "Барилгын блокуудын жагсаалт",
-        "tags": [
-          "Хаяг"
-        ],
-        "parameters": [
-          {
-            "name": "complex_id",
-            "in": "query",
-            "description": "Шүүх хотхоны ID. Хоосон бол бүх блокыг буцаана.",
-            "schema": {
-              "type": [
-                "integer",
-                "null"
-              ]
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Array of `AddressOptionResource`",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "data": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/AddressOptionResource"
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name"
+                        ]
                       }
                     }
                   },
@@ -4502,30 +5358,6 @@
       }
     },
     "schemas": {
-      "AddressOptionResource": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "code": {
-            "type": "string"
-          },
-          "name_mn": {
-            "type": "string"
-          },
-          "name_en": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "id",
-          "code",
-          "name_mn",
-          "name_en"
-        ],
-        "title": "AddressOptionResource"
-      },
       "AgentResource": {
         "type": "object",
         "properties": {
@@ -4894,17 +5726,8 @@
           "addressMasterIds": {
             "type": "object",
             "properties": {
-              "countryId": {
-                "type": [
-                  "integer",
-                  "null"
-                ]
-              },
-              "cityId": {
-                "type": [
-                  "integer",
-                  "null"
-                ]
+              "provinceId": {
+                "type": "string"
               },
               "districtId": {
                 "type": [
@@ -4918,11 +5741,11 @@
                   "null"
                 ]
               },
-              "zipcodeId": {
-                "type": [
-                  "integer",
-                  "null"
-                ]
+              "khoroololId": {
+                "type": "string"
+              },
+              "khotkonId": {
+                "type": "string"
               },
               "streetId": {
                 "type": [
@@ -4930,29 +5753,22 @@
                   "null"
                 ]
               },
-              "complexId": {
-                "type": [
-                  "integer",
-                  "null"
-                ]
-              },
-              "buildingBlockId": {
-                "type": [
-                  "integer",
-                  "null"
-                ]
+              "buildingId": {
+                "type": "string"
               }
             },
             "required": [
-              "countryId",
-              "cityId",
+              "provinceId",
               "districtId",
               "khorooId",
-              "zipcodeId",
+              "khoroololId",
+              "khotkonId",
               "streetId",
-              "complexId",
-              "buildingBlockId"
+              "buildingId"
             ]
+          },
+          "province": {
+            "type": "string"
           },
           "district": {
             "type": [
@@ -5156,11 +5972,23 @@
               "null"
             ]
           },
+          "infrastructureDetails": {
+            "type": "array",
+            "items": {}
+          },
           "amenities": {
             "type": "array",
             "items": {}
           },
+          "amenitiesDetails": {
+            "type": "array",
+            "items": {}
+          },
           "includedItems": {
+            "type": "array",
+            "items": {}
+          },
+          "includedItemsDetails": {
             "type": "array",
             "items": {}
           },
@@ -5350,6 +6178,18 @@
                   "integer",
                   "null"
                 ]
+              },
+              "minLeaseMonths": {
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "maxLeaseMonths": {
+                "type": [
+                  "integer",
+                  "null"
+                ]
               }
             },
             "required": [
@@ -5361,7 +6201,9 @@
               "rentDiscountPercent",
               "rentPaymentAmount",
               "rentTotalAmount",
-              "rentDepositAmount"
+              "rentDepositAmount",
+              "minLeaseMonths",
+              "maxLeaseMonths"
             ]
           },
           "status": {
@@ -5493,6 +6335,66 @@
             "type": "array",
             "items": {}
           },
+          "brochures": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "integer"
+                },
+                "url": {
+                  "type": "string"
+                },
+                "category": {
+                  "type": "string"
+                },
+                "mimeType": {
+                  "type": "string"
+                },
+                "sizeBytes": {
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "id",
+                "url",
+                "category",
+                "mimeType",
+                "sizeBytes"
+              ]
+            }
+          },
+          "documents": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "integer"
+                },
+                "url": {
+                  "type": "string"
+                },
+                "category": {
+                  "type": "string"
+                },
+                "mimeType": {
+                  "type": "string"
+                },
+                "sizeBytes": {
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "id",
+                "url",
+                "category",
+                "mimeType",
+                "sizeBytes"
+              ]
+            }
+          },
           "priceHistory": {
             "anyOf": [
               {
@@ -5567,6 +6469,10 @@
                     "windows": {
                       "type": "array",
                       "items": {}
+                    },
+                    "imageIds": {
+                      "type": "array",
+                      "items": {}
                     }
                   },
                   "required": [
@@ -5576,7 +6482,8 @@
                     "area",
                     "desc",
                     "tags",
-                    "windows"
+                    "windows",
+                    "imageIds"
                   ]
                 }
               },
@@ -5673,6 +6580,7 @@
           "addressSource",
           "addressSnapshot",
           "addressMasterIds",
+          "province",
           "district",
           "khoroo",
           "khotkhon",
@@ -5708,8 +6616,11 @@
           "deposit",
           "infrastructure",
           "infrastructureDescription",
+          "infrastructureDetails",
           "amenities",
+          "amenitiesDetails",
           "includedItems",
+          "includedItemsDetails",
           "commissionedStatus",
           "commissionedYear",
           "expectedCommissionDate",
@@ -5735,6 +6646,8 @@
           "desc",
           "photos",
           "photoSeeds",
+          "brochures",
+          "documents",
           "priceHistory",
           "detail",
           "roomDetails",
@@ -6773,6 +7686,22 @@
             ],
             "minimum": 0
           },
+          "min_lease_months": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0,
+            "maximum": 600
+          },
+          "max_lease_months": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0,
+            "maximum": 600
+          },
           "barter_allowed": {
             "type": [
               "boolean",
@@ -6880,14 +7809,7 @@
             "description": "Дэд төрөл.",
             "maxLength": 255
           },
-          "country_id": {
-            "type": [
-              "integer",
-              "null"
-            ],
-            "description": "Хаягийн нэгдсэн сангийн ID-ууд (cascading сонголтоос)."
-          },
-          "city_id": {
+          "province_id": {
             "type": [
               "integer",
               "null"
@@ -6905,7 +7827,13 @@
               "null"
             ]
           },
-          "zipcode_id": {
+          "khoroolol_id": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "khotkon_id": {
             "type": [
               "integer",
               "null"
@@ -6917,13 +7845,7 @@
               "null"
             ]
           },
-          "complex_id": {
-            "type": [
-              "integer",
-              "null"
-            ]
-          },
-          "building_block_id": {
+          "building_id": {
             "type": [
               "integer",
               "null"
@@ -7066,17 +7988,17 @@
               "number",
               "null"
             ],
-            "description": "Газрын зургийн координат (0–1 хооронд нормчлогдсон).",
-            "minimum": 0,
-            "maximum": 1
+            "description": "Газрын зургийн WGS84 координат (өргөрөг: -90–90, уртраг: -180–180).",
+            "minimum": -90,
+            "maximum": 90
           },
           "lng": {
             "type": [
               "number",
               "null"
             ],
-            "minimum": 0,
-            "maximum": 1
+            "minimum": -180,
+            "maximum": 180
           },
           "real_state_type": {
             "type": [
@@ -7269,6 +8191,25 @@
               "type": "integer"
             }
           },
+          "brochure_ids": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "description": "Брошюр болон баримт бичгийн media ID-ууд (зөвхөн өөрийн upload).",
+            "items": {
+              "type": "integer"
+            }
+          },
+          "document_ids": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "integer"
+            }
+          },
           "window_directions": {
             "type": "object",
             "description": "Цонхны зүг тус бүрийн тоо (south/north/west/east/... /other).",
@@ -7335,6 +8276,72 @@
                   "null"
                 ],
                 "minimum": 0
+              }
+            }
+          },
+          "infrastructure_details": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "object",
+              "properties": {
+                "key": {
+                  "type": "string",
+                  "maxLength": 255
+                },
+                "note": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "maxLength": 2000
+                }
+              }
+            }
+          },
+          "amenities_details": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "object",
+              "properties": {
+                "key": {
+                  "type": "string",
+                  "maxLength": 255
+                },
+                "note": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "maxLength": 2000
+                }
+              }
+            }
+          },
+          "included_items_details": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "object",
+              "properties": {
+                "key": {
+                  "type": "string",
+                  "maxLength": 255
+                },
+                "note": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "maxLength": 2000
+                }
               }
             }
           },
@@ -7418,6 +8425,15 @@
                   "items": {
                     "type": "string"
                   }
+                },
+                "image_ids": {
+                  "type": [
+                    "array",
+                    "null"
+                  ],
+                  "items": {
+                    "type": "integer"
+                  }
                 }
               }
             }
@@ -7451,7 +8467,10 @@
               "master_plan",
               "amenity",
               "other",
-              "video"
+              "video",
+              "brochure",
+              "document",
+              "certificate"
             ]
           },
           "listing_id": {
@@ -7819,13 +8838,7 @@
             ],
             "maxLength": 5000
           },
-          "country_id": {
-            "type": [
-              "integer",
-              "null"
-            ]
-          },
-          "city_id": {
+          "province_id": {
             "type": [
               "integer",
               "null"
@@ -7843,7 +8856,13 @@
               "null"
             ]
           },
-          "zipcode_id": {
+          "khoroolol_id": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "khotkon_id": {
             "type": [
               "integer",
               "null"
@@ -7855,13 +8874,7 @@
               "null"
             ]
           },
-          "complex_id": {
-            "type": [
-              "integer",
-              "null"
-            ]
-          },
-          "building_block_id": {
+          "building_id": {
             "type": [
               "integer",
               "null"
@@ -7888,11 +8901,7 @@
               "type": "string"
             }
           },
-          "country": {
-            "type": "string",
-            "maxLength": 255
-          },
-          "city": {
+          "province": {
             "type": "string",
             "maxLength": 255
           },
@@ -7912,6 +8921,7 @@
               "string",
               "null"
             ],
+            "pattern": "^\\d{4,6}$",
             "maxLength": 255
           },
           "street": {
@@ -8412,8 +9422,7 @@
         "required": [
           "transaction_type",
           "property_category",
-          "country",
-          "city",
+          "province",
           "district",
           "total_area_m2",
           "vat_included",
@@ -9000,6 +10009,22 @@
             ],
             "minimum": 0
           },
+          "min_lease_months": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0,
+            "maximum": 600
+          },
+          "max_lease_months": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0,
+            "maximum": 600
+          },
           "barter_allowed": {
             "type": [
               "boolean",
@@ -9106,13 +10131,7 @@
             "description": "Дэд төрөл.",
             "maxLength": 255
           },
-          "country_id": {
-            "type": [
-              "integer",
-              "null"
-            ]
-          },
-          "city_id": {
+          "province_id": {
             "type": [
               "integer",
               "null"
@@ -9130,7 +10149,13 @@
               "null"
             ]
           },
-          "zipcode_id": {
+          "khoroolol_id": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "khotkon_id": {
             "type": [
               "integer",
               "null"
@@ -9142,13 +10167,7 @@
               "null"
             ]
           },
-          "complex_id": {
-            "type": [
-              "integer",
-              "null"
-            ]
-          },
-          "building_block_id": {
+          "building_id": {
             "type": [
               "integer",
               "null"
@@ -9285,16 +10304,16 @@
               "number",
               "null"
             ],
-            "minimum": 0,
-            "maximum": 1
+            "minimum": -90,
+            "maximum": 90
           },
           "lng": {
             "type": [
               "number",
               "null"
             ],
-            "minimum": 0,
-            "maximum": 1
+            "minimum": -180,
+            "maximum": 180
           },
           "real_state_type": {
             "type": [
@@ -9478,6 +10497,24 @@
               "type": "integer"
             }
           },
+          "brochure_ids": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "integer"
+            }
+          },
+          "document_ids": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "integer"
+            }
+          },
           "window_directions": {
             "type": "object",
             "properties": {
@@ -9543,6 +10580,72 @@
                   "null"
                 ],
                 "minimum": 0
+              }
+            }
+          },
+          "infrastructure_details": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "object",
+              "properties": {
+                "key": {
+                  "type": "string",
+                  "maxLength": 255
+                },
+                "note": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "maxLength": 2000
+                }
+              }
+            }
+          },
+          "amenities_details": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "object",
+              "properties": {
+                "key": {
+                  "type": "string",
+                  "maxLength": 255
+                },
+                "note": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "maxLength": 2000
+                }
+              }
+            }
+          },
+          "included_items_details": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "object",
+              "properties": {
+                "key": {
+                  "type": "string",
+                  "maxLength": 255
+                },
+                "note": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "maxLength": 2000
+                }
               }
             }
           },
@@ -9623,6 +10726,15 @@
                   ],
                   "items": {
                     "type": "string"
+                  }
+                },
+                "image_ids": {
+                  "type": [
+                    "array",
+                    "null"
+                  ],
+                  "items": {
+                    "type": "integer"
                   }
                 }
               }

@@ -12,10 +12,13 @@ import {
   getListing,
   listListings,
   listMyListings,
+  listTags,
   toListing,
   updateListing,
   type ListListingsParams,
+  type TagGroup,
 } from "@/infrastructure/api/listings";
+import { STALE } from "@/infrastructure/query/client";
 import { queryKeys } from "@/infrastructure/query/keys";
 
 /**
@@ -52,6 +55,21 @@ export function useMyListings(
     queryKey: queryKeys.myListings(params),
     queryFn: () => listMyListings(params),
     select: (res) => ({ ...res, listings: res.items.map(toListing) }),
+  });
+}
+
+/**
+ * Server-side custom-tag suggestions for a group (amenities/included/
+ * infrastructure). Enabled only once the user has typed, so it doesn't fire on
+ * every render. Reference-ish data — cached briefly.
+ */
+export function useTagSuggestions(group: TagGroup, q: string) {
+  const query = q.trim();
+  return useQuery({
+    queryKey: queryKeys.tags(group, query),
+    queryFn: () => listTags(group, query),
+    enabled: query.length >= 2,
+    staleTime: STALE.reference,
   });
 }
 

@@ -1,11 +1,11 @@
 import { beforeAll, afterAll, describe, expect, it } from "vitest";
 import { register } from "@/infrastructure/api/auth";
 import {
-  listCities,
-  listCountries,
+  listProvinces,
   listDistricts,
   listKhoroos,
 } from "@/infrastructure/api/address";
+import { optionName } from "@/domain/schemas/api";
 import {
   createListing,
   deleteListing,
@@ -35,8 +35,8 @@ const ABS_URL = "https://picsum.photos/seed/neomap-contract/800/600";
 const REL_PATH = "listings/neomap-contract.jpg";
 
 const addr = {
-  countryId: 0, cityId: 0, districtId: 0, khorooId: 0,
-  country: "", city: "", district: "", khoroo: "",
+  provinceId: 0, districtId: 0, khorooId: 0,
+  city: "", district: "", khoroo: "",
 };
 
 const createdIds: number[] = [];
@@ -46,9 +46,9 @@ function payload(extra: Record<string, unknown>): Record<string, unknown> {
   return {
     transaction_type: "sale", property_category: "apartment",
     property_subtype: "standard_apartment", mode: "sale",
-    country_id: addr.countryId, city_id: addr.cityId,
-    district_id: addr.districtId, khoroo_id: addr.khorooId,
-    district: addr.district, khoroo: addr.khoroo,
+    province_id: addr.provinceId || undefined,
+    district_id: addr.districtId || undefined, khoroo_id: addr.khorooId || undefined,
+    district: addr.district || "Сүхбаатар", khoroo: addr.khoroo || "1-р хороо",
     khotkhon: "Photo Contract Residence", floor: "5", selected_floor: "5",
     floor_type: "middle", main_floor_count: 12, total_floor_count: 12,
     rooms: 3, area: 78.5, total_area_m2: 78.5, year: 2020,
@@ -71,10 +71,16 @@ function asGroups(photos: unknown): Record<string, string[]> {
 describe.skipIf(!ENABLED)("listing photos contract (live, WRITES to server)", () => {
   beforeAll(async () => {
     await register({ name: "Photo Test", email, password: PASSWORD, password_confirmation: PASSWORD });
-    const [c] = await listCountries(); addr.countryId = Number(c.id); addr.country = c.name_mn ?? "Монгол";
-    const [ci] = await listCities(addr.countryId); addr.cityId = Number(ci.id); addr.city = ci.name_mn ?? "Улаанбаатар";
-    const [d] = await listDistricts(addr.cityId); addr.districtId = Number(d.id); addr.district = d.name_mn ?? "Баянзүрх";
-    const [k] = await listKhoroos(addr.districtId); addr.khorooId = Number(k.id); addr.khoroo = k.name_mn ?? "1-р хороо";
+    const [p] = await listProvinces();
+    if (p) {
+      addr.provinceId = Number(p.id) || 0; addr.city = optionName(p);
+      const [d] = await listDistricts(p.id);
+      if (d) {
+        addr.districtId = Number(d.id) || 0; addr.district = optionName(d);
+        const [k] = await listKhoroos(d.id);
+        if (k) { addr.khorooId = Number(k.id) || 0; addr.khoroo = optionName(k); }
+      }
+    }
   });
 
   afterAll(async () => {

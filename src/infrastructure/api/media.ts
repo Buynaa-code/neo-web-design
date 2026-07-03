@@ -11,7 +11,8 @@ import { apiFetch } from "./http";
  * ids are linked to a listing via the `*_image_ids[]` / `cover_image_id`
  * fields on create/update/draft.
  *
- * The nine valid `category` values mirror the listing `photos` groups.
+ * The `category` values mirror the listing `photos` groups, plus the document
+ * categories (brochure/document/certificate) the backend accepts for PDFs.
  */
 export type MediaCategory =
   | "cover"
@@ -22,7 +23,18 @@ export type MediaCategory =
   | "master_plan"
   | "amenity"
   | "other"
-  | "video";
+  | "video"
+  | "brochure"
+  | "document"
+  | "certificate";
+
+/** Document/PDF categories — uploaded via file picker, not the photo grid. */
+export const DOCUMENT_CATEGORIES = [
+  "brochure",
+  "document",
+  "certificate",
+] as const;
+export type DocumentCategory = (typeof DOCUMENT_CATEGORIES)[number];
 
 export interface UploadMediaParams {
   files: File[];

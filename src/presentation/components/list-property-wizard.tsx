@@ -38,8 +38,10 @@ import {
   Flame,
   GitBranch,
   Home,
+  ImageOff,
   ImageUp,
   Images,
+  Loader2,
   KeyRound,
   Layers2,
   Layers3,
@@ -81,6 +83,7 @@ import {
   Target,
   ThermometerSun,
   Trash2,
+  FileText,
   TreePine,
   Trees,
   Upload,
@@ -123,21 +126,36 @@ import {
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-import { createListing, submitListingDraft } from "@/infrastructure/api/listings";
-import { uploadMedia, type MediaCategory } from "@/infrastructure/api/media";
+import {
+  createListing,
+  updateListing,
+  submitListingDraft,
+  type TagGroup,
+} from "@/infrastructure/api/listings";
+import { useTagSuggestions, useListing } from "@/application/queries/listings";
+import {
+  uploadMedia,
+  DOCUMENT_CATEGORIES,
+  type MediaCategory,
+  type DocumentCategory,
+} from "@/infrastructure/api/media";
 import { ApiError } from "@/infrastructure/api/http";
 import { getToken } from "@/infrastructure/api/token";
 import { useFormOptions } from "@/application/queries/metadata";
 import {
-  useCountries,
-  useCities,
+  useProvinces,
   useDistricts,
   useKhoroos,
   useStreets,
-  useZipcodes,
-  useComplexes,
-  useBuildingBlocks,
+  useKhoroolols,
+  useKhotkhons,
+  useBuildings,
 } from "@/application/queries/address";
+import {
+  optionName,
+  type AddressOption,
+  type ListingResource,
+} from "@/domain/schemas/api";
 import { useStore } from "@/infrastructure/store";
 
 /** Maps the wizard's PropertyKey to the API's `property_category` enum. */
@@ -189,6 +207,28 @@ const MAX_VIDEO_BYTES = 100 * 1024 * 1024; // 100 MB
 const MAX_FILES_PER_UPLOAD = 20;
 const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const ALLOWED_VIDEO_TYPES = ["video/mp4", "video/webm"];
+const MAX_DOCUMENT_BYTES = 25 * 1024 * 1024; // 25 MB
+const ALLOWED_DOCUMENT_TYPES = [
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+];
+
+/** Validate brochure/document/certificate uploads (PDF/DOC, ≤25MB each). */
+function validateDocumentFiles(files: File[]): string | null {
+  if (files.length > MAX_FILES_PER_UPLOAD) {
+    return `Нэг удаад хамгийн ихдээ ${MAX_FILES_PER_UPLOAD} файл байршуулна`;
+  }
+  for (const file of files) {
+    if (!ALLOWED_DOCUMENT_TYPES.includes(file.type)) {
+      return `"${file.name}" — зөвхөн PDF/DOC файл (${file.type || "тодорхойгүй"})`;
+    }
+    if (file.size > MAX_DOCUMENT_BYTES) {
+      return `"${file.name}" — хэтэрхий том (дээд хэмжээ 25MB)`;
+    }
+  }
+  return null;
+}
 
 /** Returns a Mongolian error string if any file violates the server limits, else null. */
 function validateMediaFiles(files: File[]): string | null {
@@ -292,6 +332,26 @@ function buildMediaPayload(
   if (coverImageId != null) out.cover_image_id = coverImageId;
   // Remaining URL/seed photos are already cover-ordered; pass coverIndex 0.
   Object.assign(out, buildPhotoPayload(urlPhotos, 0));
+  return out;
+}
+
+/**
+ * Link uploaded brochure/document/certificate PDFs to the listing via the
+ * backend's `brochure_ids` / `document_ids` fields. Certificates ride along in
+ * `document_ids` (the media itself keeps its `certificate` category server-side;
+ * there is no separate certificate_ids link field).
+ */
+function buildDocumentPayload(documents: DocumentDraft[]): Record<string, unknown> {
+  const brochure: number[] = [];
+  const document: number[] = [];
+  for (const doc of documents) {
+    if (doc.mediaId == null) continue;
+    if (doc.category === "brochure") brochure.push(doc.mediaId);
+    else document.push(doc.mediaId);
+  }
+  const out: Record<string, unknown> = {};
+  if (brochure.length) out.brochure_ids = brochure;
+  if (document.length) out.document_ids = document;
   return out;
 }
 
@@ -434,15 +494,14 @@ function buildCreateRequest(
     mode,
     property_category: category,
     property_subtype: resolveSubtypeKey(category, draft.subtype, classification),
-    country_id: draft.address.countryId ?? undefined,
-    city_id: draft.address.cityId ?? undefined,
+    // Live address cascade master ids (Province → District → Khoroo → …).
+    province_id: draft.address.provinceId ?? undefined,
     district_id: draft.address.districtId ?? undefined,
     khoroo_id: draft.address.khorooId ?? undefined,
-    // New cascading address ids (optional).
-    zipcode_id: draft.address.zipcodeId ?? undefined,
     street_id: draft.address.streetId ?? undefined,
-    complex_id: draft.address.complexId ?? undefined,
-    building_block_id: draft.address.buildingBlockId ?? undefined,
+    khoroolol_id: draft.address.khoroololId ?? undefined,
+    khotkon_id: draft.address.khotkonId ?? undefined,
+    building_id: draft.address.buildingId ?? undefined,
     district: draft.address.district || "—",
     khotkhon: draft.address.khotkhon || draft.address.district || "—",
     khoroo: draft.address.khoroo || undefined,
@@ -480,6 +539,10 @@ function buildCreateRequest(
     vat_included: draft.pricing.vatIncluded,
     provides_vat_ebarimt: draft.pricing.ebarimt,
     desc: draft.desc || undefined,
+    // Tag arrays — the backend accepts arbitrary strings (custom tags included).
+    amenities: flattenTags(Object.values(draft.community)),
+    included_items: flattenTags(Object.values(draft.included)),
+    infrastructure: flattenInfra(draft.infra),
     // Optional paid services + declarations.
     wants_verified: draft.services.verified,
     wants_brokerage: draft.services.brokerage,
@@ -489,6 +552,8 @@ function buildCreateRequest(
     accepts_terms: draft.declarations.terms,
     // ALHAM 11 — photos: grouped object + placeholder seeds (cover first).
     ...buildMediaPayload(draft.media.photos, draft.media.coverIndex),
+    // Танилцуулга/брошур/гэрчилгээ PDF-үүд → brochure_ids / document_ids.
+    ...buildDocumentPayload(draft.media.documents),
   };
 
   if (mode === "rent") {
@@ -507,6 +572,206 @@ function buildCreateRequest(
   }
 
   return pruneEmpty(base);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Reverse map: ListingResource (wire) -> SmartDraft (wizard edit mode)        */
+/* -------------------------------------------------------------------------- */
+
+/** Flatten grouped tag arrays into a unique flat list (drops empties). */
+function flattenTags(groups: string[][]): string[] {
+  const seen = new Set<string>();
+  for (const arr of groups) for (const t of arr) if (t && t.trim()) seen.add(t.trim());
+  return Array.from(seen);
+}
+
+/** Flatten the single-choice infra map into a flat list of chosen values. */
+function flattenInfra(infra: SmartDraft["infra"]): string[] {
+  const out: string[] = [];
+  for (const field of infraFields) {
+    const value = infra[field.key];
+    if (!value) continue;
+    if (field.key === "internet") {
+      for (const part of value.split(",").map((s) => s.trim()).filter(Boolean)) out.push(part);
+    } else {
+      out.push(value);
+    }
+  }
+  return out;
+}
+
+const API_CATEGORY: Record<string, PropertyKey> = Object.fromEntries(
+  Object.entries(CATEGORY_API).map(([key, value]) => [value, key])
+) as Record<string, PropertyKey>;
+const API_PHOTO_CATEGORY: Record<string, string> = Object.fromEntries(
+  Object.entries(PHOTO_CATEGORY_API).map(([label, key]) => [key, label])
+);
+
+/** key → label using an inverted label→key enum map, else the fallback. */
+function labelFromKey(map: Record<string, string>, key: unknown, fallback: string): string {
+  if (typeof key !== "string" || !key) return fallback;
+  const found = Object.entries(map).find(([, v]) => v === key);
+  return found ? found[0] : fallback;
+}
+
+/** Sort a flat tag list back into its grouped buckets; unknown → custom bucket. */
+function distributeTags<K extends string>(
+  values: unknown,
+  groups: Array<{ key: K; items: string[] }>,
+  customKey: K,
+  base: Record<K, string[]>
+): Record<K, string[]> {
+  const out = {} as Record<K, string[]>;
+  for (const key of Object.keys(base) as K[]) out[key] = [];
+  const arr = Array.isArray(values) ? values.filter((v): v is string => typeof v === "string") : [];
+  for (const value of arr) {
+    const group = groups.find((g) => g.items.includes(value));
+    out[group ? group.key : customKey].push(value);
+  }
+  return out;
+}
+
+/** Rebuild the single-choice infra map from a flat infrastructure list. */
+function infraFromList(values: unknown, base: SmartDraft["infra"]): SmartDraft["infra"] {
+  const out = { ...base };
+  const arr = Array.isArray(values) ? values.filter((v): v is string => typeof v === "string") : [];
+  const internet: string[] = [];
+  for (const value of arr) {
+    const field = infraFields.find((f) => f.choices.includes(value));
+    if (field?.key === "internet") internet.push(value);
+    else if (field) out[field.key] = value;
+  }
+  if (internet.length) out.internet = internet.join(", ");
+  return out;
+}
+
+/** Rebuild PhotoDraft[] from the grouped `photos` object the API returns. */
+function photosFromResource(photos: unknown): PhotoDraft[] {
+  if (!photos || typeof photos !== "object" || Array.isArray(photos)) return [];
+  const out: PhotoDraft[] = [];
+  for (const [group, urls] of Object.entries(photos as Record<string, unknown>)) {
+    if (!Array.isArray(urls)) continue;
+    const category = API_PHOTO_CATEGORY[group] ?? "Дотор зураг";
+    urls.forEach((url, i) => {
+      if (typeof url === "string" && url) {
+        out.push({ id: `photo-edit-${group}-${i}`, seed: `${group}-${i}`, category, url });
+      }
+    });
+  }
+  return out;
+}
+
+/**
+ * Reverse of `buildCreateRequest`: populate a wizard draft from an existing
+ * `ListingResource` so the user can EDIT a listing. Best-effort — core fields
+ * round-trip exactly; enum labels, grouped tags and photos are reconstructed
+ * from the live values (unknown tags land in the custom bucket).
+ */
+function draftFromListing(
+  resource: ListingResource,
+  classification: ClassificationLike | undefined
+): SmartDraft {
+  const base = createDefaultDraft();
+  const r = resource as unknown as Record<string, unknown>;
+  const str = (key: string): string => (typeof r[key] === "string" ? (r[key] as string) : "");
+  const numStr = (key: string): string => {
+    const v = r[key];
+    return typeof v === "number" && Number.isFinite(v) ? String(v) : "";
+  };
+  const int = (key: string): number => {
+    const v = r[key];
+    return typeof v === "number" && Number.isFinite(v) ? v : 0;
+  };
+
+  const category = String(r.propertyCategory ?? "");
+  const propertyType = API_CATEGORY[category] ?? base.propertyType;
+  const subtypeKey = str("propertySubtype");
+  const subtypeLabel =
+    classification?.categories?.[category]?.subtypes?.[subtypeKey]?.label ||
+    subtypes[propertyType]?.[0] ||
+    base.subtype;
+
+  const masterIds = toRecord(r.addressMasterIds);
+  const idOf = (key: string): string | null =>
+    masterIds[key] != null ? String(masterIds[key]) : null;
+
+  const rawLat = typeof r.lat === "number" ? r.lat : base.lat;
+  const rawLng = typeof r.lng === "number" ? r.lng : base.lng;
+  const hasCoords = typeof r.lat === "number" && r.lat > 1;
+
+  return {
+    ...base,
+    goal: r.mode === "rent" || r.transactionType === "rent" ? "rent" : "sell",
+    propertyType,
+    subtype: subtypeLabel,
+    desc: str("desc"),
+    address: {
+      ...base.address,
+      district: str("district") || base.address.district,
+      khoroo: str("khoroo"),
+      khotkhon: str("khotkhon"),
+      zip: str("zipcode"),
+      streetNumber: str("streetNumber"),
+      buildingNumber: str("buildingBlockNumber"),
+      buildingName: str("buildingBlockName"),
+      googleMapLink: str("googleMapLink"),
+      note: str("addressDescription"),
+      unit: str("unitNumber"),
+      selectedFloor: str("selectedFloor") || str("floor") || base.address.selectedFloor,
+      floorBasement: int("basementFloorCount"),
+      floorAbove: int("mainFloorCount"),
+      floorTotal: int("totalFloorCount"),
+      provinceId: idOf("provinceId"),
+      districtId: idOf("districtId"),
+      khorooId: idOf("khorooId"),
+      streetId: idOf("streetId"),
+      khoroololId: idOf("khoroololId"),
+      khotkonId: idOf("khotkonId"),
+      buildingId: idOf("buildingId"),
+    },
+    specs: {
+      ...base.specs,
+      areaCert: numStr("area"),
+      areaInterior: numStr("netInternalAreaM2"),
+      areaBalcony: numStr("balconyTerraceVerandaLoggiaAreaM2"),
+      areaGarage: numStr("indoorParkingAreaM2"),
+      areaStorage: numStr("storageTechnicalRoomAreaM2"),
+      rooms: numStr("rooms"),
+      bedrooms: numStr("bedroomCount"),
+      bathrooms: numStr("bathroomCount"),
+    },
+    infra: infraFromList(r.infrastructure, base.infra),
+    community: distributeTags(r.amenities, communityGroups, "amenities", base.community),
+    included: distributeTags(r.includedItems, includedGroups, "extra", base.included),
+    state: {
+      ...base.state,
+      usage: r.commissionedStatus === "commissioned" ? "Ашиглалтад орсон" : base.state.usage,
+      condition: labelFromKey(USAGE_KEY, r.usageCondition, base.state.condition),
+      interior: labelFromKey(INTERIOR_KEY, r.interiorCondition, base.state.interior),
+      certStatus: labelFromKey(CERT_KEY, r.certificateStatus, base.state.certStatus),
+      current: labelFromKey(CURRENT_KEY, r.currentAvailabilityStatus, base.state.current),
+      collateral: labelFromKey(COLLATERAL_KEY, r.collateralStatus, base.state.collateral),
+      certNumber: str("propertyRegistrationNumber"),
+      commissionYear: numStr("year") || numStr("commissionedYear"),
+    },
+    pricing: {
+      ...base.pricing,
+      totalPrice: numStr("price") || numStr("totalPrice"),
+      monthlyPrice: numStr("monthlyTotalPrice"),
+      deposit: numStr("deposit"),
+      vatIncluded: Boolean(r.vatIncluded),
+      ebarimt: Boolean(r.providesVatEbarimt),
+      rentFrequency: labelFromKey(RENT_FREQ_KEY, r.rentPaymentFrequency, base.pricing.rentFrequency),
+    },
+    services: {
+      ...base.services,
+      relation: labelFromKey(RELATION_KEY, r.relationshipToProperty, base.services.relation),
+    },
+    media: { ...base.media, photos: photosFromResource(r.photos) },
+    lat: hasCoords ? rawLat : base.lat,
+    lng: hasCoords ? rawLng : base.lng,
+    locationTouched: hasCoords,
+  };
 }
 
 const SMART_LIST_PROP_DRAFT_KEY = "neomap.smartListPropertyDraft.v1";
@@ -560,6 +825,15 @@ type PhotoDraft = {
   mediaId?: number;
 };
 
+/** A brochure / document / certificate PDF uploaded to `/media`. */
+type DocumentDraft = {
+  id: string;
+  category: DocumentCategory;
+  name: string;
+  url?: string;
+  mediaId?: number;
+};
+
 type SmartDraft = {
   goal: GoalKey;
   propertyType: PropertyKey;
@@ -571,14 +845,14 @@ type SmartDraft = {
     district: string;
     khoroo: string;
     // Master ids resolved from the cascading address API (for the create payload).
-    countryId: number | null;
-    cityId: number | null;
-    districtId: number | null;
-    khorooId: number | null;
-    zipcodeId: number | null;
-    streetId: number | null;
-    complexId: number | null;
-    buildingBlockId: number | null;
+    // Live cascade: Province → District → Khoroo → {Street, Khoroolol, Khotkhon, Building}.
+    provinceId: string | null;
+    districtId: string | null;
+    khorooId: string | null;
+    streetId: string | null;
+    khoroololId: string | null;
+    khotkonId: string | null;
+    buildingId: string | null;
     zip: string;
     street: string;
     streetNumber: string;
@@ -634,6 +908,7 @@ type SmartDraft = {
   };
   media: {
     photos: PhotoDraft[];
+    documents: DocumentDraft[];
     videoLink: string;
     coverIndex: number;
   };
@@ -1209,14 +1484,13 @@ function createDefaultDraft(): SmartDraft {
       city: "Улаанбаатар",
       district,
       khoroo: "",
-      countryId: null,
-      cityId: null,
+      provinceId: null,
       districtId: null,
       khorooId: null,
-      zipcodeId: null,
       streetId: null,
-      complexId: null,
-      buildingBlockId: null,
+      khoroololId: null,
+      khotkonId: null,
+      buildingId: null,
       zip: "",
       street: "",
       streetNumber: "",
@@ -1280,7 +1554,7 @@ function createDefaultDraft(): SmartDraft {
       deposit: "",
       rentDiscounts: { 1: 0, 2: 0, 3: 0, 4: 0, 6: 5, 12: 10 },
     },
-    media: { photos: [], videoLink: "", coverIndex: 0 },
+    media: { photos: [], documents: [], videoLink: "", coverIndex: 0 },
     declarations: { truth: false, authority: false, terms: false },
     services: { verified: true, brokerage: false, sponsored: false, relation: "Өмчлөгч" },
     roomDetails: [],
@@ -1397,6 +1671,7 @@ function normalizeDraft(value?: unknown): SmartDraft {
       ...base.media,
       ...media,
       photos: normalizePhotos(media.photos ?? raw.photos),
+      documents: normalizeDocuments(media.documents),
       coverIndex: clampInt(media.coverIndex, 0, 999),
       videoLink: String(media.videoLink || ""),
     },
@@ -1431,7 +1706,10 @@ function normalizeDraft(value?: unknown): SmartDraft {
   out.address.floorTotal = out.address.floorBasement + out.address.floorAbove;
   normalizeSelectedFloor(out);
   infraFields.forEach((field) => {
-    if (!field.choices.includes(out.infra[field.key])) {
+    // internet is multi-select (comma-joined) and any field may hold a custom
+    // "Бусад" free-text value — only backfill when the value is empty.
+    if (field.key === "internet") return;
+    if (!out.infra[field.key]) {
       out.infra[field.key] = field.choices[0];
     }
   });
@@ -1510,6 +1788,26 @@ function normalizePhotos(value: unknown): PhotoDraft[] {
       id: String(raw.id || `photo-${seed}-${index}`),
       seed,
       category: categoryMap[String(raw.category)] || String(raw.category || (index ? "Дотор зураг" : "Нүүрний зураг")),
+      ...(url ? { url } : {}),
+      ...(mediaId != null ? { mediaId } : {}),
+    };
+  });
+}
+
+function normalizeDocuments(value: unknown): DocumentDraft[] {
+  if (!Array.isArray(value)) return [];
+  const valid = DOCUMENT_CATEGORIES as readonly string[];
+  return value.map((item, index) => {
+    const raw = toRecord(item);
+    const category = valid.includes(String(raw.category))
+      ? (String(raw.category) as DocumentCategory)
+      : "document";
+    const url = typeof raw.url === "string" ? raw.url : undefined;
+    const mediaId = typeof raw.mediaId === "number" ? raw.mediaId : undefined;
+    return {
+      id: String(raw.id || `doc-${Date.now()}-${index}`),
+      category,
+      name: String(raw.name || "файл"),
       ...(url ? { url } : {}),
       ...(mediaId != null ? { mediaId } : {}),
     };
@@ -1634,9 +1932,26 @@ function floorList(draft: SmartDraft) {
   );
 }
 
+/** The floors the unit itself occupies (from selectedFloor, which may be a
+ *  range like "F01-F02"). Rooms pick their floor from these, not the whole
+ *  building. Falls back to the full list if nothing is selected. */
+function unitFloors(draft: SmartDraft): string[] {
+  const all = floorList(draft);
+  const parts = (draft.address.selectedFloor || "").split("-").filter(Boolean);
+  if (parts.length === 0) return all;
+  if (parts.length === 1) return parts;
+  const i = all.indexOf(parts[0]);
+  const j = all.indexOf(parts[1]);
+  if (i >= 0 && j >= 0) return all.slice(Math.min(i, j), Math.max(i, j) + 1);
+  return parts;
+}
+
 function normalizeSelectedFloor(draft: SmartDraft) {
   const floors = floorList(draft);
-  if (!floors.includes(draft.address.selectedFloor)) {
+  // selectedFloor may be a single floor ("F01") or a range ("F01-F02").
+  const parts = (draft.address.selectedFloor || "").split("-").filter(Boolean);
+  const valid = parts.length > 0 && parts.every((p) => floors.includes(p));
+  if (!valid) {
     draft.address.selectedFloor = floors.includes("F01") ? "F01" : floors[0] || "F01";
   }
 }
@@ -1722,6 +2037,21 @@ function requiredItems(draft: SmartDraft): Requirement[] {
     { label: "Эрх бүхий этгээд", ok: draft.declarations.authority, step: 6 },
     { label: "Үйлчилгээний нөхцөл зөвшөөрөх", ok: draft.declarations.terms, step: 6 },
   ];
+}
+
+/**
+ * Whether the user has put anything into a requirement-free step. Currently
+ * only step 3 (АЛХАМ 06-08: infra / amenities / included) is requirement-free —
+ * it's "engaged with" once any amenity or included item is selected.
+ */
+function stepHasContent(draft: SmartDraft, step: number): boolean {
+  if (step === 3) {
+    return (
+      communityGroups.some((group) => draft.community[group.key].length > 0) ||
+      includedGroups.some((group) => draft.included[group.key].length > 0)
+    );
+  }
+  return false;
 }
 
 function optionalItems(draft: SmartDraft): OptionalItem[] {
@@ -2065,78 +2395,57 @@ function AddressCascade({
   address: AddressDraft;
   setPath: (path: string, value: unknown) => void;
 }) {
-  const countries = useCountries();
-  const cities = useCities(address.countryId ?? undefined);
-  const districts = useDistricts(address.cityId ?? undefined);
+  const provinces = useProvinces();
+  const districts = useDistricts(address.provinceId ?? undefined);
   const khoroos = useKhoroos(address.districtId ?? undefined);
   const streets = useStreets(address.khorooId ?? undefined);
-  const zipcodes = useZipcodes(address.khorooId ?? undefined);
-  const complexes = useComplexes(
-    address.khorooId ?? undefined,
-    address.streetId ?? undefined
-  );
-  const buildingBlocks = useBuildingBlocks(address.complexId ?? undefined);
+  const khoroolols = useKhoroolols(address.khorooId ?? undefined);
+  const khotkhons = useKhotkhons(address.khorooId ?? undefined);
+  const buildings = useBuildings(address.khorooId ?? undefined);
 
-  // Auto-select when there is exactly one option (e.g. Монгол / Улаанбаатар).
+  // Auto-select when there is exactly one province (e.g. Улаанбаатар only).
   useEffect(() => {
-    if (address.countryId == null && countries.data?.length === 1) {
-      const c = countries.data[0];
-      setPath("address.countryId", Number(c.id));
-      setPath("address.country", c.name_mn ?? c.name_en ?? "");
+    if (address.provinceId == null && provinces.data?.length === 1) {
+      const p = provinces.data[0];
+      setPath("address.provinceId", String(p.id));
+      setPath("address.city", optionName(p));
     }
-  }, [address.countryId, countries.data, setPath]);
+  }, [address.provinceId, provinces.data, setPath]);
 
-  useEffect(() => {
-    if (address.countryId != null && address.cityId == null && cities.data?.length === 1) {
-      const c = cities.data[0];
-      setPath("address.cityId", Number(c.id));
-      setPath("address.city", c.name_mn ?? c.name_en ?? "");
-    }
-  }, [address.countryId, address.cityId, cities.data, setPath]);
-
-  const toOptions = (
-    items: { id: string | number; name_mn: string | null; name_en: string | null }[] | undefined
-  ) => [
+  const toOptions = (items: AddressOption[] | undefined) => [
     { label: "— сонгох —", value: "" },
-    ...(items ?? []).map((i) => ({
-      value: String(i.id),
-      label: i.name_mn ?? i.name_en ?? String(i.id),
-    })),
+    ...(items ?? []).map((i) => ({ value: String(i.id), label: optionName(i) })),
   ];
 
-  const pick = (
-    items: { id: string | number; name_mn: string | null; name_en: string | null }[] | undefined,
-    value: string
-  ) => (items ?? []).find((i) => String(i.id) === value);
+  const pick = (items: AddressOption[] | undefined, value: string) =>
+    (items ?? []).find((i) => String(i.id) === value);
+
+  // The provinces table can be empty until the backend seeds it; surface that
+  // instead of showing an inexplicably blank dropdown.
+  const provincesEmpty =
+    provinces.isSuccess && (provinces.data?.length ?? 0) === 0;
 
   return (
     <div className="grid gap-3 sm:grid-cols-2">
-      <Field label="Улс">
+      <Field label="Хот / Аймаг" required>
         <NativeSelect
-          value={address.countryId != null ? String(address.countryId) : ""}
-          options={toOptions(countries.data)}
+          value={address.provinceId != null ? String(address.provinceId) : ""}
+          options={toOptions(provinces.data)}
           onChange={(value) => {
-            const item = pick(countries.data, value);
-            setPath("address.countryId", item ? Number(item.id) : null);
-            setPath("address.country", item?.name_mn ?? item?.name_en ?? "");
-            setPath("address.cityId", null);
+            const item = pick(provinces.data, value);
+            setPath("address.provinceId", item ? String(item.id) : null);
+            setPath("address.city", item ? optionName(item) : "");
             setPath("address.districtId", null);
+            setPath("address.district", "");
             setPath("address.khorooId", null);
+            setPath("address.khoroo", "");
           }}
         />
-      </Field>
-      <Field label="Хот / Аймаг">
-        <NativeSelect
-          value={address.cityId != null ? String(address.cityId) : ""}
-          options={toOptions(cities.data)}
-          onChange={(value) => {
-            const item = pick(cities.data, value);
-            setPath("address.cityId", item ? Number(item.id) : null);
-            setPath("address.city", item?.name_mn ?? item?.name_en ?? "");
-            setPath("address.districtId", null);
-            setPath("address.khorooId", null);
-          }}
-        />
+        {provincesEmpty ? (
+          <p className="mt-1 text-xs text-amber-600">
+            Хаягийн жагсаалт серверт хараахан ороогүй байна — доорх талбаруудыг гараар бөглөнө үү.
+          </p>
+        ) : null}
       </Field>
       <Field label="Дүүрэг / Сум" required>
         <NativeSelect
@@ -2144,10 +2453,14 @@ function AddressCascade({
           options={toOptions(districts.data)}
           onChange={(value) => {
             const item = pick(districts.data, value);
-            setPath("address.districtId", item ? Number(item.id) : null);
-            setPath("address.district", item?.name_mn ?? item?.name_en ?? "");
+            setPath("address.districtId", item ? String(item.id) : null);
+            setPath("address.district", item ? optionName(item) : "");
             setPath("address.khorooId", null);
             setPath("address.khoroo", "");
+            setPath("address.streetId", null);
+            setPath("address.khoroololId", null);
+            setPath("address.khotkonId", null);
+            setPath("address.buildingId", null);
           }}
         />
       </Field>
@@ -2157,12 +2470,12 @@ function AddressCascade({
           options={toOptions(khoroos.data)}
           onChange={(value) => {
             const item = pick(khoroos.data, value);
-            setPath("address.khorooId", item ? Number(item.id) : null);
-            setPath("address.khoroo", item?.name_mn ?? item?.name_en ?? "");
-            setPath("address.zipcodeId", null);
+            setPath("address.khorooId", item ? String(item.id) : null);
+            setPath("address.khoroo", item ? optionName(item) : "");
             setPath("address.streetId", null);
-            setPath("address.complexId", null);
-            setPath("address.buildingBlockId", null);
+            setPath("address.khoroololId", null);
+            setPath("address.khotkonId", null);
+            setPath("address.buildingId", null);
           }}
         />
       </Field>
@@ -2172,44 +2485,41 @@ function AddressCascade({
           options={toOptions(streets.data)}
           onChange={(value) => {
             const item = pick(streets.data, value);
-            setPath("address.streetId", item ? Number(item.id) : null);
-            if (item) setPath("address.street", item.name_mn ?? item.name_en ?? "");
-            setPath("address.complexId", null);
-            setPath("address.buildingBlockId", null);
+            setPath("address.streetId", item ? String(item.id) : null);
+            if (item) setPath("address.street", optionName(item));
           }}
         />
       </Field>
-      <Field label="Зип / шуудангийн код" hint="Заавал биш">
+      <Field label="Хороолол" hint="Заавал биш">
         <NativeSelect
-          value={address.zipcodeId != null ? String(address.zipcodeId) : ""}
-          options={toOptions(zipcodes.data)}
+          value={address.khoroololId != null ? String(address.khoroololId) : ""}
+          options={toOptions(khoroolols.data)}
           onChange={(value) => {
-            const item = pick(zipcodes.data, value);
-            setPath("address.zipcodeId", item ? Number(item.id) : null);
-            if (item) setPath("address.zip", item.name_mn ?? item.name_en ?? "");
+            const item = pick(khoroolols.data, value);
+            setPath("address.khoroololId", item ? String(item.id) : null);
+            if (item) setPath("address.zip", optionName(item));
           }}
         />
       </Field>
       <Field label="Хотхон / цогцолбор" hint="Заавал биш">
         <NativeSelect
-          value={address.complexId != null ? String(address.complexId) : ""}
-          options={toOptions(complexes.data)}
+          value={address.khotkonId != null ? String(address.khotkonId) : ""}
+          options={toOptions(khotkhons.data)}
           onChange={(value) => {
-            const item = pick(complexes.data, value);
-            setPath("address.complexId", item ? Number(item.id) : null);
-            if (item) setPath("address.khotkhon", item.name_mn ?? item.name_en ?? "");
-            setPath("address.buildingBlockId", null);
+            const item = pick(khotkhons.data, value);
+            setPath("address.khotkonId", item ? String(item.id) : null);
+            if (item) setPath("address.khotkhon", optionName(item));
           }}
         />
       </Field>
-      <Field label="Барилгын блок" hint="Заавал биш">
+      <Field label="Барилга" hint="Заавал биш">
         <NativeSelect
-          value={address.buildingBlockId != null ? String(address.buildingBlockId) : ""}
-          options={toOptions(buildingBlocks.data)}
+          value={address.buildingId != null ? String(address.buildingId) : ""}
+          options={toOptions(buildings.data)}
           onChange={(value) => {
-            const item = pick(buildingBlocks.data, value);
-            setPath("address.buildingBlockId", item ? Number(item.id) : null);
-            if (item) setPath("address.buildingNumber", item.name_mn ?? item.name_en ?? "");
+            const item = pick(buildings.data, value);
+            setPath("address.buildingId", item ? String(item.id) : null);
+            if (item) setPath("address.buildingNumber", optionName(item));
           }}
         />
       </Field>
@@ -2219,6 +2529,9 @@ function AddressCascade({
 
 export function ListPropertyWizard() {
   const [step, setStep] = useState(1);
+  // Steps the user has opened — used to mark requirement-free sections (e.g.
+  // step 3, which is entirely optional) as "done" once they've been reviewed.
+  const [visitedSteps, setVisitedSteps] = useState<Set<number>>(() => new Set([1]));
   // Start from defaults on both server and client so the initial render matches;
   // the persisted draft is loaded in an effect below to avoid a hydration mismatch.
   const [draft, setDraft] = useState<SmartDraft>(createDefaultDraft);
@@ -2227,19 +2540,44 @@ export function ListPropertyWizard() {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const draftLoadedRef = useRef(false);
+  const editLoadedRef = useRef(false);
+  // `/list-property?edit=<id>` opens the wizard in EDIT mode for an existing
+  // listing. Read from the URL on the client to avoid a Suspense boundary.
+  const [editId, setEditId] = useState<number | null>(null);
   const pushToast = useStore((s) => s.pushToast);
   const isLoggedIn = useStore((s) => s.isLoggedIn);
   const formOptions = useFormOptions();
+  const editListing = useListing(editId);
 
-  // Load the persisted draft once, after mount (client only).
+  useEffect(() => {
+    const raw = new URLSearchParams(window.location.search).get("edit");
+    const id = raw ? Number(raw) : NaN;
+    if (Number.isInteger(id) && id > 0) setEditId(id);
+  }, []);
+
+  // Load the persisted draft once, after mount (client only). Skip when editing
+  // — the listing being edited loads the draft instead (below).
   useEffect(() => {
     if (draftLoadedRef.current) return;
+    const raw = new URLSearchParams(window.location.search).get("edit");
+    if (raw) return; // edit mode: don't clobber with the local "new listing" draft
     draftLoadedRef.current = true;
     const saved = loadInitialDraft();
     setDraft(saved);
   }, []);
 
+  // Populate the draft from the fetched listing once (edit mode).
   useEffect(() => {
+    if (editId == null || editLoadedRef.current) return;
+    const resource = editListing.data?.resource;
+    if (!resource) return;
+    editLoadedRef.current = true;
+    setDraft(draftFromListing(resource, formOptions.data?.classification));
+  }, [editId, editListing.data?.resource, formOptions.data?.classification]);
+
+  useEffect(() => {
+    // Don't persist an edited listing over the user's in-progress new draft.
+    if (editId != null) return;
     const handle = window.setTimeout(() => {
       try {
         window.localStorage.setItem(SMART_LIST_PROP_DRAFT_KEY, JSON.stringify(draft));
@@ -2248,12 +2586,13 @@ export function ListPropertyWizard() {
       }
     }, 400);
     return () => window.clearTimeout(handle);
-  }, [draft]);
+  }, [draft, editId]);
 
   // Scroll back to the top whenever the step changes so each new step starts at
   // its header instead of wherever the previous step was scrolled to.
   useEffect(() => {
     if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
+    setVisitedSteps((prev) => (prev.has(step) ? prev : new Set(prev).add(step)));
   }, [step]);
 
   const selectedType = getPropertyType(draft.propertyType);
@@ -2337,7 +2676,7 @@ export function ListPropertyWizard() {
     setSubmitting(true);
     try {
       if (isLoggedIn) {
-        // Logged-in users create a real listing via the API, mapping the
+        // Logged-in users create/update a real listing via the API, mapping the
         // wizard draft to a StoreListingRequest (subtype keys resolved from
         // the live form-options metadata).
         const body = buildCreateRequest(
@@ -2345,17 +2684,21 @@ export function ListPropertyWizard() {
           formOptions.data?.classification,
           formOptions.data?.enumOptions
         );
-        await createListing(body);
+        if (editId != null) {
+          await updateListing(editId, body);
+        } else {
+          await createListing(body);
+        }
       } else {
         await submitListingDraft(payload);
       }
       // Persist to local history + show the success banner ONLY after the server
       // accepted it. resetDraft() nulls `submitted`, so set it again afterwards.
       storeSubmission(payload);
-      resetDraft();
+      if (editId == null) resetDraft();
       setSubmitted(payload);
       setStep(1);
-      pushToast("Зар амжилттай илгээгдлээ", "success");
+      pushToast(editId != null ? "Зар амжилттай шинэчлэгдлээ" : "Зар амжилттай илгээгдлээ", "success");
     } catch (err) {
       const message =
         err instanceof ApiError
@@ -2391,10 +2734,20 @@ export function ListPropertyWizard() {
                 <WandSparkles className="size-3.5" />
                 Ухаалаг зарын туслах
               </Badge>
+              {editId != null ? (
+                <Badge variant="outline" className="h-6 rounded-full border-amber-400 px-2 text-amber-600">
+                  <Pencil className="size-3" />
+                  Засварлаж байна #{editId}
+                </Badge>
+              ) : null}
             </div>
-            <h1 className="text-3xl font-semibold">Зар оруулах</h1>
+            <h1 className="text-3xl font-semibold">{editId != null ? "Зар засах" : "Зар оруулах"}</h1>
             <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">
-              Зар оруулах 13 алхмын мэдээлэл, логик, баталгаажуулалтыг 6 хэсэгт нэгтгэсэн хялбар урсгал.
+              {editId != null
+                ? editListing.isLoading
+                  ? "Зарын мэдээллийг ачаалж байна…"
+                  : "Одоо байгаа зараа шинэчилж, дахин илгээнэ."
+                : "Зар оруулах 13 алхмын мэдээлэл, логик, баталгаажуулалтыг 6 хэсэгт нэгтгэсэн хялбар урсгал."}
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -2433,10 +2786,15 @@ export function ListPropertyWizard() {
                 {groups.map((group) => {
                   const Icon = group.icon;
                   const groupReqs = required.filter((item) => item.step === group.step);
-                  // A section is "done" only when it HAS required items and all
-                  // are satisfied — `[].every()` is true, which previously
-                  // marked requirement-free sections as complete by mistake.
-                  const done = groupReqs.length > 0 && groupReqs.every((item) => item.ok);
+                  // A section with required items is "done" when they're all
+                  // satisfied. A requirement-free section (e.g. step 3 —
+                  // infra/amenities/included, all optional) is "done" once the
+                  // user has filled something in it OR simply reviewed it, so it
+                  // can actually be checked off instead of never completing.
+                  const done =
+                    groupReqs.length > 0
+                      ? groupReqs.every((item) => item.ok)
+                      : stepHasContent(draft, group.step) || visitedSteps.has(group.step);
                   const active = step === group.step;
                   return (
                     <Button
@@ -2549,7 +2907,13 @@ export function ListPropertyWizard() {
                     className="bg-primary text-primary-foreground"
                   >
                     <Send className="size-4" />
-                    {submitting ? "Илгээж байна…" : "Зар нийтлэх хүсэлт илгээх"}
+                    {submitting
+                      ? editId != null
+                        ? "Шинэчилж байна…"
+                        : "Илгээж байна…"
+                      : editId != null
+                        ? "Зарын өөрчлөлтийг хадгалах"
+                        : "Зар нийтлэх хүсэлт илгээх"}
                   </Button>
                 )}
               </div>
@@ -2845,8 +3209,6 @@ function StepTwo({
                   max={99999}
                   step={1}
                   decimals={1}
-                  quick={areaQuickValues(draft)}
-                  quickSuffix=" м²"
                   placeholder="0"
                   hint="Гэрчилгээний үндсэн талбай."
                 />
@@ -2858,8 +3220,6 @@ function StepTwo({
                   max={99999}
                   step={1}
                   decimals={1}
-                  quick={[30, 50, 70, 90]}
-                  quickSuffix=" м²"
                 />
                 <NumberStepper
                   label="Тагт / террас / лодж (м²)"
@@ -2869,8 +3229,6 @@ function StepTwo({
                   max={99999}
                   step={0.5}
                   decimals={1}
-                  quick={[2, 4, 6, 8]}
-                  quickSuffix=" м²"
                 />
                 <NumberStepper
                   label="Авто дулаан зогсоол (м²)"
@@ -2880,8 +3238,6 @@ function StepTwo({
                   max={99999}
                   step={1}
                   decimals={1}
-                  quick={[12, 15, 18, 24]}
-                  quickSuffix=" м²"
                 />
                 <NumberStepper
                   label="Агуулах, техникийн өрөө (м²)"
@@ -2891,8 +3247,6 @@ function StepTwo({
                   max={99999}
                   step={1}
                   decimals={1}
-                  quick={[2, 4, 6, 10]}
-                  quickSuffix=" м²"
                 />
               </div>
               {areaWarn ? (
@@ -2984,16 +3338,17 @@ function StepTwo({
 }
 
 function FloorSection({ draft, actions }: { draft: SmartDraft; actions: DraftActions }) {
-  const selected = floorParts(draft);
   const floorTotal = draft.address.floorBasement + draft.address.floorAbove;
-
-  const setFloor = (type: "B" | "F", num: number) => {
-    actions.mutate((next) => {
-      const value = formatFloor(type, num);
-      if (type === "B") next.address.floorBasement = Math.max(next.address.floorBasement, num);
-      else next.address.floorAbove = Math.max(next.address.floorAbove, num);
-      next.address.selectedFloor = value;
-    });
+  const floors = floorList(draft);
+  // A unit may span several floors → selectedFloor can be "F01-F02".
+  const [fromFloor, toFloor] = (() => {
+    const raw = draft.address.selectedFloor || floors[0] || "F01";
+    const parts = raw.split("-");
+    return [parts[0], parts[1] ?? ""] as const;
+  })();
+  const setRange = (from: string, to: string) => {
+    const value = to && to !== from ? `${from}-${to}` : from;
+    actions.setPath("address.selectedFloor", value);
   };
 
   return (
@@ -3028,55 +3383,25 @@ function FloorSection({ draft, actions }: { draft: SmartDraft; actions: DraftAct
           hint="F01, F02 гэх мэт."
         />
       </div>
-      <div className="mt-3 grid gap-3 lg:grid-cols-[250px_minmax(0,1fr)]">
-        <div className="rounded-md border bg-muted/50 p-3">
-          <div className="text-xs text-muted-foreground">Байрлах давхар</div>
-          <div className="mt-1 text-lg font-semibold">{floorTitle(selected.value)}</div>
-          <div className="mt-3 flex gap-2">
-            <Button
-              type="button"
-              variant={selected.type === "F" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setFloor("F", selected.type === "F" ? selected.num : 1)}
-            >
-              <Building2 className="size-3.5" />
-              Үндсэн
-            </Button>
-            <Button
-              type="button"
-              variant={selected.type === "B" ? "default" : "outline"}
-              size="sm"
-              disabled={draft.address.floorBasement === 0}
-              onClick={() => setFloor("B", selected.type === "B" ? selected.num : 1)}
-            >
-              <Layers2 className="size-3.5" />
-              Зоорь
-            </Button>
-          </div>
+      <div className="mt-3 rounded-md border bg-muted/50 p-3">
+        <div className="mb-2 text-xs text-muted-foreground">
+          Байрлах давхар{" "}
+          <span className="text-[11px]">(нэгж олон давхарт бол «хүртэл»-ээ сонго — ж: F01–F02)</span>
         </div>
-        <div>
-          <NumberStepper
-            label={selected.type === "B" ? "Зоорийн давхар сонгох" : "Үндсэн давхар сонгох"}
-            value={selected.num}
-            onChange={(value) => setFloor(selected.type, clampInt(value, 1, selected.type === "B" ? 20 : 80))}
-            min={1}
-            max={selected.type === "B" ? 20 : 80}
-            hint={selected.type === "B" ? `${draft.address.floorBasement || 1} хүртэл B давхар` : `${draft.address.floorAbove || 1} хүртэл F давхар`}
-          />
-          <div className="lp-quick-row">
-            {floorCandidates(draft).map((item) => {
-              const value = formatFloor(item.type, item.num);
-              return (
-                <button
-                  key={value}
-                  type="button"
-                  className={cn("lp-quick-chip", draft.address.selectedFloor === value && "is-active")}
-                  onClick={() => setFloor(item.type, item.num)}
-                >
-                  {value}
-                </button>
-              );
-            })}
+        <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end">
+          <Field label="Давхар (эхлэл)">
+            <NativeSelect value={fromFloor} onChange={(value) => setRange(value, toFloor)} options={floors} />
+          </Field>
+          <Field label="Хүртэл (олон давхарт)">
+            <NativeSelect
+              value={toFloor}
+              onChange={(value) => setRange(fromFloor, value)}
+              options={[{ value: "", label: "— нэг давхар —" }, ...floors.map((f) => ({ value: f, label: f }))]}
+            />
+          </Field>
+          <div className="rounded-md border bg-background px-3 py-2 text-center">
+            <div className="text-[11px] text-muted-foreground">Сонгосон</div>
+            <div className="text-base font-semibold tabular-nums">{draft.address.selectedFloor || fromFloor}</div>
           </div>
         </div>
       </div>
@@ -3086,14 +3411,6 @@ function FloorSection({ draft, actions }: { draft: SmartDraft; actions: DraftAct
             value={draft.address.unit}
             onChange={(event) => actions.setPath("address.unit", event.target.value)}
             placeholder="301"
-          />
-        </Field>
-        <Field label="Google Maps линк">
-          <Input
-            type="url"
-            value={draft.address.googleMapLink}
-            onChange={(event) => actions.setPath("address.googleMapLink", event.target.value)}
-            placeholder="https://maps.google.com/..."
           />
         </Field>
       </div>
@@ -3301,7 +3618,7 @@ function RoomFormModal({
   const existing = editId ? draft.roomDetails.find((item) => item.id === editId) : undefined;
   const [typeKey, setTypeKey] = useState(existing?.typeKey ?? ROOM_TYPES[0].key);
   const [label, setLabel] = useState(existing?.label ?? ROOM_TYPES[0].label);
-  const [floor, setFloor] = useState(existing?.floor ?? draft.address.selectedFloor);
+  const [floor, setFloor] = useState(existing?.floor ?? unitFloors(draft)[0] ?? "F01");
   const [area, setArea] = useState(existing?.area ?? "");
   const [tags, setTags] = useState<string[]>(existing?.tags ?? []);
   const [note, setNote] = useState(existing?.note ?? "");
@@ -3364,7 +3681,7 @@ function RoomFormModal({
           <Input value={label} onChange={(event) => setLabel(event.target.value)} placeholder={meta.label} />
         </Field>
         <Field label="Давхар">
-          <NativeSelect value={floor} onChange={setFloor} options={floorList(draft)} />
+          <NativeSelect value={floor} onChange={setFloor} options={unitFloors(draft)} />
         </Field>
         <NumberStepper
           label="Талбай (м²)"
@@ -3621,14 +3938,51 @@ function StepThree({ draft, actions }: { draft: SmartDraft; actions: DraftAction
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {infraFields.map((field) => {
               const Icon = field.icon;
+              // Internet / IPTV can have several providers → multi-select chips
+              // stored as a comma-joined string in the same field.
+              if (field.key === "internet") {
+                const chosen = draft.infra.internet
+                  ? draft.infra.internet.split(", ").filter(Boolean)
+                  : [];
+                const toggleInternet = (item: string) => {
+                  const set = new Set(chosen);
+                  if (set.has(item)) set.delete(item);
+                  else set.add(item);
+                  actions.setPath("infra.internet", Array.from(set).join(", "));
+                };
+                return (
+                  <Field key={field.key} label={field.label} hint="Олон сонголт">
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      {field.choices.map((item) => (
+                        <ToggleChip
+                          key={item}
+                          active={chosen.includes(item)}
+                          onClick={() => toggleInternet(item)}
+                          icon={chosen.includes(item) ? Check : undefined}
+                        >
+                          {item}
+                        </ToggleChip>
+                      ))}
+                    </div>
+                  </Field>
+                );
+              }
               const subOptions = field.key === "heating" ? heatingSubChoices[draft.infra.heating] : undefined;
+              const rawValue = draft.infra[field.key];
+              const hasOther = field.choices.includes("Бусад");
+              const isOther = hasOther && (rawValue === "Бусад" || !field.choices.includes(rawValue));
+              const selectValue = field.choices.includes(rawValue)
+                ? rawValue
+                : hasOther
+                  ? "Бусад"
+                  : field.choices[0];
               return (
                 <Field key={field.key} label={field.label} required={field.required}>
                   <div className="space-y-1.5">
                     <div className="relative">
                       <Icon className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-accent" />
                       <select
-                        value={draft.infra[field.key]}
+                        value={selectValue}
                         onChange={(event) => {
                           actions.setPath(`infra.${field.key}`, event.target.value);
                           if (field.key === "heating") {
@@ -3657,6 +4011,15 @@ function StepThree({ draft, actions }: { draft: SmartDraft; actions: DraftAction
                           </option>
                         ))}
                       </select>
+                    ) : null}
+                    {isOther ? (
+                      <Input
+                        value={rawValue === "Бусад" ? "" : rawValue}
+                        onChange={(event) =>
+                          actions.setPath(`infra.${field.key}`, event.target.value || "Бусад")
+                        }
+                        placeholder="Бусадыг бичнэ үү…"
+                      />
                     ) : null}
                   </div>
                 </Field>
@@ -3709,6 +4072,19 @@ function StepThree({ draft, actions }: { draft: SmartDraft; actions: DraftAction
               ))}
             </div>
           </details>
+          <div>
+            <div className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+              <Plus className="size-3.5 text-accent" />
+              Өөрийн сонголт нэмэх (жагсаалтад байхгүй бол)
+            </div>
+            <CustomTags
+              storeKey="community"
+              group="amenities"
+              selected={draft.community.amenities}
+              onToggle={(tag) => actions.toggleArray("community.amenities", tag)}
+              placeholder="Жишээ: Гэрэлт хашаа, EV цэнэглэгч…"
+            />
+          </div>
       </CollapsibleGroup>
 
       <CollapsibleGroup
@@ -3726,6 +4102,19 @@ function StepThree({ draft, actions }: { draft: SmartDraft; actions: DraftAction
               onToggle={(item) => actions.toggleArray(`included.${group.key}`, item)}
             />
           ))}
+          <div>
+            <div className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+              <Plus className="size-3.5 text-accent" />
+              Өөрийн зүйл нэмэх (жагсаалтад байхгүй бол)
+            </div>
+            <CustomTags
+              storeKey="included"
+              group="included"
+              selected={draft.included.extra}
+              onToggle={(tag) => actions.toggleArray("included.extra", tag)}
+              placeholder="Жишээ: Хөшиг, агааржуулагч…"
+            />
+          </div>
       </CollapsibleGroup>
     </div>
   );
@@ -3766,6 +4155,114 @@ function GroupedChips({
   );
 }
 
+/* Remembered user-added tags (per group), persisted so they can be reused. */
+const CUSTOM_TAGS_PREFIX = "neomap.customTags.";
+function loadCustomTags(key: string): string[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(CUSTOM_TAGS_PREFIX + key);
+    const list = raw ? JSON.parse(raw) : [];
+    return Array.isArray(list) ? list.filter((t): t is string => typeof t === "string") : [];
+  } catch {
+    return [];
+  }
+}
+function rememberCustomTag(key: string, tag: string): string[] {
+  const list = loadCustomTags(key).filter((t) => t !== tag);
+  list.unshift(tag);
+  const trimmed = list.slice(0, 40);
+  try {
+    window.localStorage.setItem(CUSTOM_TAGS_PREFIX + key, JSON.stringify(trimmed));
+  } catch {
+    // ignore storage errors
+  }
+  return trimmed;
+}
+
+/**
+ * Free-form tag adder (LinkedIn-skills style): type a tag → it's selected and
+ * remembered (localStorage) so it can be reused on the next listing. Remembered
+ * tags render as reselectable chips.
+ */
+function CustomTags({
+  storeKey,
+  group,
+  selected,
+  onToggle,
+  placeholder,
+}: {
+  storeKey: string;
+  group: TagGroup;
+  selected: string[];
+  onToggle: (tag: string) => void;
+  placeholder?: string;
+}) {
+  const [remembered, setRemembered] = useState<string[]>([]);
+  const [input, setInput] = useState("");
+  useEffect(() => setRemembered(loadCustomTags(storeKey)), [storeKey]);
+
+  // Server-side suggestions (tags other listings have used), filtered by input.
+  const suggestions = useTagSuggestions(group, input);
+  const suggested = (suggestions.data ?? [])
+    .map((t) => t.label)
+    .filter((label) => !remembered.includes(label) && !selected.includes(label))
+    .slice(0, 8);
+
+  const add = (value?: string) => {
+    const tag = (value ?? input).trim();
+    if (!tag) return;
+    setRemembered(rememberCustomTag(storeKey, tag));
+    if (!selected.includes(tag)) onToggle(tag);
+    setInput("");
+  };
+
+  return (
+    <div className="space-y-2">
+      {remembered.length ? (
+        <div className="flex flex-wrap gap-2">
+          {remembered.map((tag) => (
+            <ToggleChip
+              key={tag}
+              active={selected.includes(tag)}
+              onClick={() => onToggle(tag)}
+              icon={selected.includes(tag) ? Check : undefined}
+            >
+              {tag}
+            </ToggleChip>
+          ))}
+        </div>
+      ) : null}
+      {suggested.length ? (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs text-muted-foreground">Бусдын нэмсэн:</span>
+          {suggested.map((label) => (
+            <ToggleChip key={label} active={false} onClick={() => add(label)} icon={Plus}>
+              {label}
+            </ToggleChip>
+          ))}
+        </div>
+      ) : null}
+      <div className="flex gap-2">
+        <Input
+          value={input}
+          onChange={(event) => setInput(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              event.preventDefault();
+              add();
+            }
+          }}
+          placeholder={placeholder ?? "Өөрийн шошго нэмэх…"}
+        />
+        <Button type="button" variant="outline" onClick={() => add()}>
+          <Plus className="size-4" />
+          Нэмэх
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 function StepFour({
   draft,
   actions,
@@ -3794,7 +4291,15 @@ function StepFour({
             <Field label="Ашиглалтад орсон эсэх">
               <NativeSelect
                 value={draft.state.usage}
-                onChange={(value) => actions.setPath("state.usage", value)}
+                onChange={(value) =>
+                  actions.mutate((next) => {
+                    next.state.usage = value;
+                    // A not-yet-commissioned property can't have a ready certificate.
+                    if (value !== "Ашиглалтад орсон" && next.state.certStatus === "Бэлэн гэрчилгээтэй") {
+                      next.state.certStatus = "Гэрчилгээгүй - Гэрчилгээ гарахад бэлэн";
+                    }
+                  })
+                }
                 options={["Ашиглалтад орсон", "Ашиглалтад ороогүй"]}
               />
             </Field>
@@ -3822,7 +4327,11 @@ function StepFour({
               <NativeSelect
                 value={draft.state.certStatus}
                 onChange={(value) => actions.setPath("state.certStatus", value)}
-                options={certOptions}
+                options={
+                  isCommissioned
+                    ? certOptions
+                    : certOptions.filter((option) => option !== "Бэлэн гэрчилгээтэй")
+                }
               />
             </Field>
             {hasCertificate ? (
@@ -3895,6 +4404,12 @@ function StepFour({
   );
 }
 
+/** Display an integer string with thousands separators (raw digits are stored). */
+function formatThousands(value: string): string {
+  const digits = String(value ?? "").replace(/\D/g, "");
+  return digits ? Number(digits).toLocaleString("en-US") : "";
+}
+
 function PricingSection({
   draft,
   actions,
@@ -3917,11 +4432,16 @@ function PricingSection({
         <div className="grid gap-3 md:grid-cols-2">
           <Field label={isRent ? "Нийт үнэ/сар (₮)" : "Нийт үнэ (₮)"} required>
             <Input
-              type="number"
-              min={0}
-              value={isRent ? draft.pricing.monthlyPrice : draft.pricing.totalPrice}
-              onChange={(event) => actions.setPath(isRent ? "pricing.monthlyPrice" : "pricing.totalPrice", event.target.value)}
-              placeholder={isRent ? "4000000" : "450000000"}
+              type="text"
+              inputMode="numeric"
+              value={formatThousands(isRent ? draft.pricing.monthlyPrice : draft.pricing.totalPrice)}
+              onChange={(event) =>
+                actions.setPath(
+                  isRent ? "pricing.monthlyPrice" : "pricing.totalPrice",
+                  event.target.value.replace(/\D/g, "")
+                )
+              }
+              placeholder={isRent ? "4,000,000" : "450,000,000"}
             />
           </Field>
           <Field label={isRent ? "Нэгжийн үнэ/сар (₮/м²/сар)" : "Нэгжийн үнэ (₮/м²)"}>
@@ -4030,10 +4550,37 @@ function PricingSection({
   );
 }
 
+/** Photo thumbnail that falls back to a neutral placeholder if the image
+ *  fails to load (e.g. a backend localhost URL or a dead link). */
+function PhotoTileImage({ url, alt }: { url: string; alt: string }) {
+  const [failed, setFailed] = useState(false);
+  if (!url || failed) {
+    return (
+      <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 text-muted-foreground">
+        <ImageOff className="size-5" />
+        <span className="text-[10px]">зураг алга</span>
+      </div>
+    );
+  }
+  return (
+    <img
+      src={url}
+      alt={alt}
+      loading="lazy"
+      className="absolute inset-0 h-full w-full object-cover"
+      onError={() => setFailed(true)}
+    />
+  );
+}
+
 function MediaSection({ draft, actions }: { draft: SmartDraft; actions: DraftActions }) {
   const [urlInput, setUrlInput] = useState("");
   const [urlCategory, setUrlCategory] = useState(mediaCategories[0]);
   const [uploading, setUploading] = useState(false);
+  // Transient local previews shown WHILE an upload is in-flight (blob URLs),
+  // so the user sees their image + a spinner immediately. Replaced by the real
+  // server photos on success, dropped on failure. Not part of the saved draft.
+  const [pending, setPending] = useState<{ id: string; url: string; category: string }[]>([]);
   const pushToast = useStore((s) => s.pushToast);
   const isLoggedIn = useStore((s) => s.isLoggedIn);
   const addPhoto = (category: string, url?: string) => {
@@ -4063,6 +4610,17 @@ function MediaSection({ draft, actions }: { draft: SmartDraft; actions: DraftAct
       return;
     }
     const apiCategory = PHOTO_CATEGORY_API[category] as MediaCategory | undefined;
+    // Instant optimistic previews (blob) with a spinner while uploading.
+    const previews = files.map((file, i) => ({
+      id: `pending-${Date.now()}-${i}`,
+      url: typeof URL !== "undefined" ? URL.createObjectURL(file) : "",
+      category,
+    }));
+    setPending((prev) => [...prev, ...previews]);
+    const clearPreviews = () => {
+      setPending((prev) => prev.filter((p) => !previews.some((q) => q.id === p.id)));
+      previews.forEach((p) => p.url && URL.revokeObjectURL(p.url));
+    };
     setUploading(true);
     try {
       const media = await uploadMedia({ files, category: apiCategory });
@@ -4090,8 +4648,56 @@ function MediaSection({ draft, actions }: { draft: SmartDraft; actions: DraftAct
           : "Сүлжээний алдаа";
       pushToast(`Зураг байршуулж чадсангүй: ${message}`, "danger");
     } finally {
+      clearPreviews();
       setUploading(false);
     }
+  };
+  /** Upload brochure/document/certificate PDFs to /media and store their ids. */
+  const handleDocuments = async (
+    category: DocumentCategory,
+    fileList: FileList | null
+  ) => {
+    const files = fileList ? Array.from(fileList) : [];
+    if (!files.length) return;
+    if (!isLoggedIn || !getToken()) {
+      pushToast("Файл байршуулахын тулд нэвтэрнэ үү", "danger");
+      return;
+    }
+    const invalid = validateDocumentFiles(files);
+    if (invalid) {
+      pushToast(invalid, "danger");
+      return;
+    }
+    setUploading(true);
+    try {
+      const media = await uploadMedia({ files, category });
+      actions.mutate((next) => {
+        media.forEach((m, i) => {
+          next.media.documents.push({
+            id: `doc-${m.id}`,
+            category,
+            name: files[i]?.name ?? "файл",
+            url: m.url,
+            mediaId: m.id,
+          });
+        });
+      });
+      pushToast(`${media.length} файл байршууллаа`, "success");
+    } catch (err) {
+      const message =
+        err instanceof ApiError
+          ? Object.values(err.validationErrors ?? {})[0]?.[0] ??
+            `Серверийн алдаа (${err.status})`
+          : "Сүлжээний алдаа";
+      pushToast(`Файл байршуулж чадсангүй: ${message}`, "danger");
+    } finally {
+      setUploading(false);
+    }
+  };
+  const removeDocument = (index: number) => {
+    actions.mutate((next) => {
+      next.media.documents.splice(index, 1);
+    });
   };
   const addPhotoByUrl = () => {
     const url = urlInput.trim();
@@ -4156,21 +4762,15 @@ function MediaSection({ draft, actions }: { draft: SmartDraft; actions: DraftAct
               <div
                 key={photo.id}
                 className={cn(
-                  "relative aspect-square overflow-hidden rounded-md border-2 bg-[linear-gradient(135deg,#123c69,#c9a227)]",
+                  "relative aspect-square overflow-hidden rounded-md border-2 bg-muted",
                   isCover ? "border-accent" : "border-border"
                 )}
               >
-                {photo.url ? (
-                  <div
-                    className="absolute inset-0 bg-cover bg-center"
-                    style={{ backgroundImage: `url("${photo.url}")` }}
-                  />
-                ) : null}
-                <div className="absolute inset-0 bg-black/10" />
+                <PhotoTileImage url={photo.url ? normalizeMediaUrl(photo.url) : ""} alt={photo.category} />
                 <Button
                   type="button"
                   size="xs"
-                  variant="secondary"
+                  variant={isCover ? "default" : "secondary"}
                   onClick={() => actions.setPath("media.coverIndex", index)}
                   className="absolute left-1 top-1 h-6"
                 >
@@ -4191,6 +4791,20 @@ function MediaSection({ draft, actions }: { draft: SmartDraft; actions: DraftAct
               </div>
             );
           })}
+          {pending.map((p) => (
+            <div
+              key={p.id}
+              className="relative aspect-square overflow-hidden rounded-md border-2 border-dashed border-primary/50 bg-muted"
+            >
+              {p.url ? (
+                <img src={p.url} alt="" className="absolute inset-0 h-full w-full object-cover opacity-50" />
+              ) : null}
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-black/40 text-white">
+                <Loader2 className="size-5 animate-spin" />
+                <span className="text-[10px] font-semibold">Байршуулж байна…</span>
+              </div>
+            </div>
+          ))}
           {draft.media.photos.length < 15 ? (
             <label className="flex aspect-square cursor-pointer items-center justify-center rounded-md border border-dashed text-muted-foreground hover:border-primary hover:text-primary">
               <input
@@ -4245,10 +4859,76 @@ function MediaSection({ draft, actions }: { draft: SmartDraft; actions: DraftAct
             placeholder="https://..."
           />
         </Field>
+
+        <div className="space-y-2 border-t pt-4">
+          <div className="flex items-center gap-1.5 text-sm font-semibold">
+            <FileText className="size-4 text-accent" />
+            Танилцуулга, баримт бичиг (PDF)
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Брошур/танилцуулга, гэрээ/баримт, гэрчилгээг PDF (эсвэл DOC) хэлбэрээр хавсаргана. Дээд хэмжээ 25MB.
+          </p>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+            {DOCUMENT_CATEGORIES.map((category) => {
+              const count = draft.media.documents.filter((d) => d.category === category).length;
+              return (
+                <label
+                  key={category}
+                  className={cn(
+                    "lp-upload-card cursor-pointer",
+                    uploading && "pointer-events-none opacity-60"
+                  )}
+                >
+                  <input
+                    type="file"
+                    multiple
+                    accept="application/pdf,.pdf,.doc,.docx"
+                    className="sr-only"
+                    disabled={uploading}
+                    onChange={(event) => {
+                      void handleDocuments(category, event.target.files);
+                      event.target.value = "";
+                    }}
+                  />
+                  <Upload className="size-4" />
+                  <div className="lp-upload-title">{DOCUMENT_LABELS[category]}</div>
+                  <div className="lp-upload-count">{count} файл</div>
+                </label>
+              );
+            })}
+          </div>
+          {draft.media.documents.length ? (
+            <ul className="divide-y rounded-md border">
+              {draft.media.documents.map((doc, index) => (
+                <li key={doc.id} className="flex items-center gap-2 px-3 py-2 text-sm">
+                  <FileText className="size-4 shrink-0 text-muted-foreground" />
+                  <span className="truncate">{doc.name}</span>
+                  <Badge variant="outline" className="ml-auto shrink-0 rounded-full text-[10px]">
+                    {DOCUMENT_LABELS[doc.category]}
+                  </Badge>
+                  <Button
+                    type="button"
+                    size="icon-sm"
+                    variant="ghost"
+                    onClick={() => removeDocument(index)}
+                  >
+                    <Trash2 className="size-3.5" />
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </div>
       </CardContent>
     </Card>
   );
 }
+
+const DOCUMENT_LABELS: Record<DocumentCategory, string> = {
+  brochure: "Танилцуулга / брошур",
+  document: "Гэрээ / баримт",
+  certificate: "Гэрчилгээ",
+};
 
 function StepFive({
   draft,

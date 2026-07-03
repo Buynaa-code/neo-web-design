@@ -1,164 +1,156 @@
-# NEOMAP — Зар оруулах wizard-ийн UX сайжруулалтад шаардагдах backend requirement
+# NEOMAP — Backend API шаардлага (зар оруулах wizard)
 
-> **Огноо:** 2026-07-01
-> **Хамрах хүрээ:** `POST /listings`, `PUT /listings/{id}`, `PATCH /listings/{id}/draft`,
-> `POST /media`, `GET /listings/form-options`. Wizard-ийн UX/бүтцийн шинэчлэлээс үүссэн
-> backend-ийн **дутуу талбар/endpoint**-уудыг энд бүртгэв.
+> **Огноо:** 2026-07-02 · **Хамрах endpoint:** `POST /listings`, `PUT /listings/{id}`,
+> `PATCH /listings/{id}/draft`, `POST /media`, `GET /listings/form-options`,
+> address cascade (`/address/*`).
 >
-> **Одоогийн байдал:** `StoreListingRequest`/`UpdateListingRequest` нь 120 талбартай бөгөөд
-> хаяг (street_number, zipcode_id, street_id), давхрын бүтэц (basement/main/total_floor_count,
-> selected_floor, floor_type), гэрчилгээ (certificate_status, property_registration_number),
-> ашиглалт (commissioned_status, commissioned_year, expected_commission_date), төлбөр
-> (sale_payment_terms[], payment_schedule[], rent_*), VAT (vat_included, provides_vat_ebarimt),
-> amenities[]/included_items[]/infrastructure[] (дурын string хүлээж авдаг), room_details[]
-> зэргийг **аль хэдийн дэмждэг**. Доорх 6 зүйл л дутуу байна.
+> Энэ баримт нь 2 хэсэгтэй:
+> **A.** Frontend одоо юу илгээж/хүлээж байгаа (backend хүлээж авдаг байх ёстой).
+> **B.** Backend дээр ДУТУУ, шинээр нэмэх шаардлагатай зүйлс (эрэмбэтэй).
+>
+> `StoreListingRequest`/`UpdateListingRequest` нь 120 талбартай бөгөөд доорхийн ихэнхийг
+> **аль хэдийн дэмждэг**. Зөвхөн B хэсгийн зүйлс дутуу байна.
 
 ---
 
-## 1. Түрээсийн гэрээлэх хугацаа (lease term) — ДУТУУ
+## ⚡ 2026-07-03 live тестийн шинэчлэл (production дээр бодит бичилтээр)
 
-**UX:** Түрээсийн зар дээр "Гэрээлэх хугацаа" (доод/дээд хязгаар эсвэл тодорхой саруудаар)
-сонгодог талбар шаардлагатай. Одоо wizard-д огт байхгүй, backend-д ч талбар алга.
+`document.json` (шинэ spec) гарсны дараа live smoke test хийж дараах зүйлсийг **батлав**:
 
-**Санал (StoreListingRequest / UpdateListingRequest / ListingResource):**
-```
-min_lease_months        integer|null   # хамгийн богино гэрээлэх хугацаа (сар)
-max_lease_months        integer|null   # хамгийн урт (null = хязгааргүй)
-# эсвэл нэг талбар:
-lease_term_months       integer|null   # тохиролцсон тодорхой хугацаа
-lease_term_note         string|null    # чөлөөт тайлбар ("6 сараас дээш" гэх мэт)
-```
+**Хийгдсэн / нээгдсэн:**
+- ✅ **`GET /listings/tags?group=amenities|included|infrastructure&q=`** ажиллаж байна (B#7). Frontend
+  custom-tag санал болголтыг үүн рүү холбосон. (Одоохондоо `data: []` — өгөгдөл ороогүй.)
+- ✅ **`POST /media` category-д `brochure`/`document`/`certificate` нэмэгдсэн** (B#2). `StoreListingRequest`-д
+  `brochure_ids`, `document_ids` link талбарууд байна. Frontend PDF upload + линк хийсэн.
+- ✅ Custom string tag (`amenities: ["balcony","Миний нэмсэн"]`) `POST /listings`-д **хадгалагдана** — A-контракт зөв.
 
-**Validation:** `mode=rent` үед л хамаарна; `min_lease_months >= 1`, `max >= min`.
-
-**Гаралт (ListingResource):** `minLeaseMonths`, `maxLeaseMonths` (camelCase).
-
----
-
-## 2. Tag / дагалдах зүйл тус бүрийн нэмэлт тайлбар — ДУТУУ
-
-**UX (07, 08-р алхам):** Хэрэглэгч сонгосон amenity / included-item / infrastructure item
-**тус бүр дээр нэмэлт тайлбар** бичдэг байх (LinkedIn skills дээр тайлбар нэмдэг шиг).
-Одоо эдгээр нь зөвхөн `string[]` тул тайлбар хадгалах бүтэц алга (ганц ерөнхий
-`infrastructure_description` л бий).
-
-**Санал — сонголт A (илүү тохиромжтой):** массивыг objects болгох, эсвэл зэрэгцээ
-`*_details` талбар нэмэх:
-```
-amenities_details        array<{ key: string, note: string|null }> | null
-included_items_details   array<{ key: string, note: string|null }> | null
-infrastructure_details   array<{ key: string, note: string|null }> | null
-```
-`amenities`/`included_items`/`infrastructure` (string[]) хэвээр үлдэж, `*_details` нь
-тайлбартай зүйлсийг л агуулна (буцаж нийцтэй).
-
-**Санал — сонголт B (хямд):** одоогийн string массив дотор `"key::тайлбар"` форматаар
-кодлох. Гэхдээ query/filter хийхэд эвгүй тул A-г зөвлөж байна.
-
-**Гаралт:** ListingResource дээр `amenitiesDetails` гэх мэтээр буцаах.
+**Шинэ асуудал (backend анхаарах):**
+- 🔴 **B#6 (lat/lng) ХАГАС л зассан.** `POST /listings/register` нь WGS84 lat/lng-г (47.9077/106.8832)
+  **хадгалдаг болсон**. Гэвч **`POST /listings` (үндсэн create) нь lat/lng-г ХЭВЭЭР УСТГАДАГ** (GET-д `lat:null`).
+  Wizard баялаг өгөгдлийн улмаас `POST /listings`-г ашигладаг тул **`POST /listings`-д lat/lng WGS84-ээр
+  нэмэх шаардлагатай** хэвээр байна. Одоо frontend зөвхөн `google_map_link`-ээр байршил дамжуулна.
+- 🔴 **`POST /listings/register` нь lossy** — amenities, infrastructure, included_items, certificate_status,
+  commissioned_status, төлбөрийн нөхцөл, VAT-г **хадгалдаггүй** (тест: бүгд хоосон/null). Тиймээс wizard
+  register руу шилжсэнгүй, `POST /listings`-д үлдсэн. Хэрэв register-ийг үндсэн болгох бол дээрх талбаруудыг
+  нэмэх ёстой.
+- 🔴 **Хаягийн cascade өөрчлөгдсөн ба хоосон.** Шинэ бүтэц:
+  `province → district(province_id) → khoroo(district_id) → {street, khoroolol, khotkon, building}(khoroo_id)`.
+  Хуучин `/address/{countries,cities,zipcodes,complexes,building-blocks}` **устсан**;
+  `districts` param `city_id`→**`province_id`** болсон. Frontend-г шинэ cascade руу шилжүүлсэн.
+  **ГЭХДЭЭ `GET /address/provinces` одоо `[]` буцаана — хүснэгтүүд seed хийгдээгүй.** Seed хийх шаардлагатай.
+  Мөн `ListingResource.addressMasterIds` нь `{provinceId, districtId, khorooId, khoroololId, khotkonId,
+  streetId, buildingId}` буцаадаг тул create payload-д `province_id/district_id/khoroo_id/khoroolol_id/
+  khotkon_id/street_id/building_id` илгээхээр шинэчилсэн.
 
 ---
 
-## 3. Зургийг өрөөгөөр tag-лах (photo ↔ room холбоо) — ДУТУУ
+## A. Frontend одоогийн payload (backend анхаарах контракт)
 
-**UX:** Дотор зураг оруулсны дараа "энэ зураг ямар өрөөнийх вэ" гэдгийг нэмсэн
-өрөөнүүдээсээ **1-3 өрөөгөөр** tag-лаж болдог байх (нэг зураг олон өрөө хамарч болно).
-Одоо `MediaResource`-д өрөөтэй холбогдох талбар алга, `room_details[]` нь зурагт
-холбогддоггүй.
+Эдгээр нь одоо ажиллаж байгаа тул backend validation нь эдгээрийг **татгалзахгүй** байх ёстой:
 
-**Санал — сонголт A:** media дээр өрөөний холбоо:
-```
-# StoreMediaRequest / update-media дээр
-room_keys        array<string> | null    # эсвэл room_details доторх өрөөний id/uid
-# MediaResource гаралт дээр
-roomKeys         array<string>
-```
-
-**Санал — сонголт B:** `room_details[]` элемент бүр дээр зургийн id:
-```
-room_details[].image_ids   array<integer>   # тухайн өрөөнд хамаарах media id-ууд
-```
-Frontend талд өрөөг локал `uid`-аар зохицуулдаг тул **сонголт B** (room → image_ids)
-хэрэгжүүлэхэд ойлгомжтой. Аль нэгийг сонгоно уу.
+| Талбар | Төрөл | Тэмдэглэл |
+|--------|-------|-----------|
+| `amenities[]`, `included_items[]`, `infrastructure[]` | `string[]` | **Дурын string** хүлээж авна — хэрэглэгчийн нэмсэн custom tag багтана (07/08 «Өөрийн сонголт нэмэх»). Урьдчилан тодорхойлсон enum-оор хатуу шалгаж болохгүй. |
+| `infrastructure[]` дотор Internet/IPTV | `string[]` | Олон провайдер (multi-select): жишээ `["Univision","Mobinet"]`. |
+| `infrastructure[]` дотор «Бусад» | `string` | Хэрэглэгч чөлөөт текст бичиж болно (жишээ цахилгаан/халуун усны «Бусад: дизель+нар»). |
+| `total_price` / `monthly_total_price` | `integer` | Frontend таслалгүй **цэвэр бүхэл тоо** илгээнэ (UI дээр л 450,000,000 гэж харагдана). |
+| `selected_floor` | `string` | Нэг давхар «F01» ЭСВЭЛ **давхрын муж «F01-F02»** (нэгж олон давхарт). Хатуу нэг утгаар шалгаж болохгүй. |
+| `room_details[]` | `object[]` | Өрөө бүр: `{ typeKey/label, floor, area, windows, tags[], note }`. `floor` нь нэгжийн сонгосон давхруудын нэг. |
+| `commissioned_status` + (`commissioned_year` ЭСВЭЛ `expected_commission_date`) | — | «Ашиглалтад орсон» бол он, ороогүй бол огноо. Нэгээс нь л ирнэ. |
+| `certificate_status` | `string` | «Ашиглалтад ороогүй» үед `certificate_ready` (Бэлэн гэрчилгээ) **ирэхгүй** (frontend хориглосон). |
+| `google_map_link` | `string` | Газрын зураг дээр цэг тавихад **автоматаар** `https://www.google.com/maps?q=<lat>,<lng>` үүснэ. |
+| `vat_included`, `provides_vat_ebarimt` | `boolean` | НӨАТ / и-баримт. |
 
 ---
 
-## 4. Танилцуулга / брошур файл (PDF) байршуулах — ДУТУУ
+## B. Backend дээр ДУТУУ (нэмэх шаардлагатай)
 
-**UX:** Зарт **танилцуулга/брошур**-ыг файлаар (ихэвчлэн PDF) хавсаргах хэсэг.
-Одоо `POST /media` зөвхөн зураг/бичлэг хүлээж авдаг (jpeg/png/webp ≤8MB,
-mp4/webm ≤100MB); PDF болон "document/brochure" category алга.
-
-**Санал:**
+### 1. Түрээсийн гэрээлэх хугацаа (lease term) — Өндөр
+Түрээсийн зар дээр «гэрээлэх хугацаа» талбар одоо байхгүй.
 ```
-# form-options.enumOptions.photo_categories (эсвэл шинэ media_categories) дээр:
-brochure | document
-
-# POST /media validation дээр:
-category = brochure/document үед  →  mime: application/pdf (+ magadgui doc/docx),
-                                     size ≤ 25MB (тохируулж болно)
-
-# listing-д холбох талбар:
-brochure_ids   array<integer> | null   # (одоогийн *_image_ids[] загвартай ижил)
+min_lease_months   integer|null
+max_lease_months   integer|null   # null = хязгааргүй
+# эсвэл:
+lease_term_months  integer|null
+lease_term_note    string|null
 ```
+`mode=rent` үед хамаарна. Гаралт: `minLeaseMonths`/`maxLeaseMonths` (camelCase).
 
-**Гаралт:** `ListingResource.brochures` (URL/мета) эсвэл `brochureIds`.
-
----
-
-## 5. Хэрэглэгчийн нэмсэн custom tag-уудыг сануулах — ХЭСЭГЧЛЭН
-
-**UX:** Хэрэглэгч 07/08-д **өөрийн tag нэмж** болдог (энэ нь одоо ажиллана — `amenities`,
-`included_items`, `infrastructure` нь дурын string хүлээж авдаг ✅). Гэхдээ "өмнө
-нэмэгдсэн tag-уудыг дараагийн хэрэглэгчдэд санал болгох" бол сервер тал шаардна.
-
-**Санал (заавал биш — эхэндээ frontend localStorage-оор шийднэ):**
+### 2. Медиа — брошур/танилцуулга/гэрчилгээ (PDF/document) — Дунд
+Одоо `POST /media` зөвхөн зураг/бичлэг (jpeg/png/webp ≤8MB, mp4/webm ≤100MB). Дараах хэрэгтэй:
+- **Танилцуулга/брошур** файл (ихэвчлэн PDF).
+- **Гэрчилгээ / гэрээ хавсаргах** файл (одоо зөвхөн toggle flag).
 ```
-GET /listings/tags?group=amenities|included|infrastructure&q=<хайлт>
-    → { data: [{ key, label, usage_count }] }   # түгээмэл/өмнө хэрэглэгдсэн tag-ууд
+# form-options.enumOptions.photo_categories (эсвэл шинэ media_categories):
+brochure | document | certificate
+# POST /media validation:
+category ∈ {brochure,document,certificate} → mime: application/pdf (+doc/docx), size ≤ 25MB
+# listing-д холбох:
+brochure_ids  array<integer>|null
+document_ids  array<integer>|null
 ```
-Хэрэв backend хийхгүй бол frontend localStorage дээр хэрэглэгчийн нэмсэн tag-уудыг
-хадгалж, зөвхөн тухайн төхөөрөмж дээр санал болгоно (доогуур чанар).
+Гаралт: `ListingResource.brochures` / `documents` (URL+мета).
 
----
-
-## 6. lat/lng — WGS84 координатыг татгалздаг BUG (мэдэгдэл)
-
-**Одоогийн байдал:** `POST /listings` дээр `lat`/`lng`-ийг **"0-1 хооронд"** гэж
-шалгадаг тул бодит Улаанбаатарын координат (47.9x, 106.9x) татгалзагддаг (backend bug).
-Google map зөв ажиллаж, зураг дээрх байршил хадгалагдахад **энэ validation-ийг WGS84
-хүрээнд (lat −90..90, lng −180..180) засах** шаардлагатай.
-
----
-
-## 7. Хаяг/zip-ийн координат (газрын зургийг байршил руу дүхэх) — ДУТУУ
-
-**UX:** Хэрэглэгч дүүрэг/хороо/zip сонгоход газрын зураг тухайн байршил руу автоматаар
-дүхэж (center), дараа нь хэрэглэгч цэгээ нарийвчилдаг. Одоо **district-ийн ойролцоо
-координатаар** (frontend hardcode) төвлөрүүлж байгаа. Zip/хороо түвшний нарийвчлалд
-`AddressOptionResource` (khoroo/zipcode) дээр **координат байхгүй**.
-
-**Санал:** address cascade-ийн resource-уудад төв цэгийн координат нэмэх:
+### 3. Tag / included / infra тус бүрийн нэмэлт тайлбар — Дунд
+07/08-д tag тус бүрт тайлбар бичих (одоо `string[]` тул бүтэцтэй тайлбар алга).
 ```
-# AddressOptionResource (district/khoroo/zipcode) дээр
+amenities_details        array<{ key: string, note: string|null }>|null
+included_items_details   array<{ key: string, note: string|null }>|null
+infrastructure_details   array<{ key: string, note: string|null }>|null
+```
+(`amenities[]` г.м string массив хэвээр үлдэж, тайлбартайг нь л `*_details` агуулна.)
+
+### 4. Зураг ↔ өрөө холбоо — Дунд
+Дотор зургийг «аль өрөөнийх» болохыг 1-3 өрөөгөөр tag-лах.
+```
+# сонголт A: room_details[] дээр
+room_details[].image_ids   array<integer>
+# сонголт B: media дээр
+room_keys                  array<string>   # room_details-ийн id/uid
+```
+Frontend room-уудыг локал `id`-аар зохицуулдаг тул **A** илүү тохиромжтой.
+
+### 5. Хаяг/zip-ийн координат (газрын зургийг байршилруу дүхэх) — Дунд
+Дүүрэг/хороо/zip сонгоход газрын зургийг тухайн байршил руу төвлөрүүлэхэд координат хэрэгтэй.
+Одоо frontend зөвхөн **district-ийн ойролцоо** координатаар (hardcode) төвлөрүүлдэг.
+```
+# AddressOptionResource (district/khoroo/zipcode) дээр:
 center_lat   number|null
 center_lng   number|null
 ```
-Байвал frontend сонгосон хороо/zip-ийн center рүү газрын зургийг дүхнэ.
+Мөн **zip дэлгэцэнд «нэр /код/» хослолоор** харуулахад (жишээ «13-р хороолол-2 /14220/») zipcode
+resource-д нэр + код 2уул ирэх шаардлагатай.
+
+### 6. lat/lng WGS84 validation BUG — Өндөр
+`POST /listings` дээр `lat`/`lng`-ийг **«0-1 хооронд»** гэж шалгадаг тул бодит УБ координат
+(47.9x, 106.9x) татгалзагддаг. Frontend одоо lat/lng-ийг **top-level payload-д илгээхгүй**
+(зөвхөн `google_map_link`). Backend газрын зургийн бодит координатыг хадгалахыг хүсвэл
+validation-ийг **WGS84 (lat −90..90, lng −180..180)** болгож засах хэрэгтэй.
+
+### 7. Custom tag санал болгох (заавал биш) — Бага
+07/08-д хэрэглэгчийн нэмсэн tag-уудыг **дараагийн хэрэглэгчдэд санал болгох** бол:
+```
+GET /listings/tags?group=amenities|included|infrastructure&q=<хайлт>
+    → { data: [{ key, label, usage_count }] }
+```
+Хэрэв backend хийхгүй бол frontend одоо localStorage-оор (зөвхөн тухайн төхөөрөмж дээр) санал болгож байгаа.
+
+### 8. MediaPolicy (сануулга — өмнө засагдсан) — DONE
+`POST /media` нь `App\Models\Customer`-ыг хүлээж авдаг болсон (2026-06-29 засвар). Хэвээр байгаа эсэхийг баталгаажуулах.
+
+---
 
 ## Хураангуй — backend TODO
 
 | # | Зүйл | Төрөл | Тэргүүлэх |
 |---|------|-------|-----------|
-| 1 | Түрээсийн lease term талбар(ууд) | шинэ талбар | Өндөр |
-| 2 | amenities/included/infra тус бүрийн тайлбар (`*_details`) | шинэ талбар | Дунд |
-| 3 | Зураг↔өрөө холбоо (`room_details[].image_ids`) | шинэ талбар | Дунд |
-| 4 | Брошур/PDF category + `brochure_ids[]` | media + талбар | Дунд |
-| 5 | Custom tag санал болгох endpoint | шинэ endpoint | Бага (frontend түр шийднэ) |
+| 1 | Түрээсийн lease term талбар | шинэ талбар | Өндөр |
+| 2 | Брошур/document/certificate PDF байршуулалт + `*_ids[]` | media + талбар | Дунд |
+| 3 | amenities/included/infra тус бүрийн тайлбар (`*_details`) | шинэ талбар | Дунд |
+| 4 | Зураг↔өрөө холбоо (`room_details[].image_ids`) | шинэ талбар | Дунд |
+| 5 | Address resource-д center координат + zip нэр/код | шинэ талбар | Дунд |
 | 6 | lat/lng WGS84 validation засвар | bug fix | Өндөр |
-| 7 | Address resource-д center координат (zip-ээр дүхэх) | шинэ талбар | Дунд |
+| 7 | Custom tag санал болгох endpoint | шинэ endpoint | Бага |
 
-> Дээрх 6-гаас бусад бүх wizard сайжруулалт (гарчиг салгах, scroll-top, давхар dropdown,
-> өрөө нэмэх popup, гэрчилгээ/ашиглалт conditional, төлбөр logic, амениети multi-select
-> + collapsible, хаяг цэгцлэх, Миний зар Үзэх/Засах г.м) **одоогийн API дээр frontend-ээр
-> хийгдэнэ** — backend хүлээх шаардлагагүй.
+> **A хэсэг (одоогийн payload)-ыг backend татгалзахгүй байх нь хамгийн чухал** — ялангуяа
+> custom string tag-ууд, internet олон утга, `selected_floor` муж, таслалгүй үнэ.

@@ -150,6 +150,29 @@ export async function submitListing(
   return listingEnvelopeSchema.parse({ data: res.listing }).data;
 }
 
+export type TagGroup = "amenities" | "included" | "infrastructure";
+export interface TagSuggestion {
+  key: string;
+  label: string;
+  usage_count: number;
+}
+
+/**
+ * GET /listings/tags — server-side custom-tag suggestions for a group,
+ * optionally filtered by a query string. Backed by tags other listings have
+ * used, so custom tags become discoverable across users.
+ */
+export async function listTags(
+  group: TagGroup,
+  q?: string
+): Promise<TagSuggestion[]> {
+  const res = (await apiFetch("/listings/tags", {
+    query: { group, q: q || undefined },
+    skipAuth: true,
+  })) as { data?: TagSuggestion[] };
+  return Array.isArray(res.data) ? res.data : [];
+}
+
 /** POST /listings/register — multi-step wizard endpoint (step 1..5). */
 export async function registerListingStep(
   body: Record<string, unknown>

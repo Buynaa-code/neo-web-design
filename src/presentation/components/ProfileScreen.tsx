@@ -6,6 +6,7 @@ import Link from "next/link";
 import {
   Bell,
   CalendarCheck,
+  Eye,
   Heart,
   HelpCircle,
   LayoutDashboard,
@@ -317,23 +318,35 @@ function MyListings({ isLoggedIn }: { isLoggedIn: boolean }) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
       {listings.map((listing) => (
-        <div key={listing.id} className="relative">
+        <div key={listing.id} className="relative flex flex-col">
           <ListingCard listing={listing} />
-          <button
-            type="button"
-            onClick={() =>
-              onDelete(listing.id, listing.khotkhon || listing.district || "Зар")
-            }
-            className="absolute top-2 left-2 z-10 w-8 h-8 rounded-full flex items-center justify-center"
-            style={{
-              background: "var(--surface)",
-              border: "1px solid var(--border-strong)",
-              color: "var(--danger)",
-            }}
-            aria-label="Устгах"
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
+          <div className="mt-2 flex gap-2">
+            <Link
+              href={`/property/${listing.id}`}
+              className="btn btn-secondary flex-1 justify-center text-sm"
+            >
+              <Eye className="w-4 h-4" />
+              Үзэх
+            </Link>
+            <Link
+              href={`/list-property?edit=${listing.id}`}
+              className="btn btn-secondary flex-1 justify-center text-sm"
+            >
+              <Pencil className="w-4 h-4" />
+              Засах
+            </Link>
+            <button
+              type="button"
+              onClick={() =>
+                onDelete(listing.id, listing.khotkhon || listing.district || "Зар")
+              }
+              className="btn btn-secondary justify-center text-sm"
+              style={{ color: "var(--danger)" }}
+              aria-label="Устгах"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       ))}
     </div>

@@ -9,8 +9,7 @@ import {
   updateProfile,
 } from "@/infrastructure/api/auth";
 import {
-  listCountries,
-  listCities,
+  listProvinces,
   listDistricts,
   listKhoroos,
 } from "@/infrastructure/api/address";
@@ -25,7 +24,7 @@ import {
   updateListing,
 } from "@/infrastructure/api/listings";
 import { apiFetch, ApiError } from "@/infrastructure/api/http";
-import { customerEnvelopeSchema } from "@/domain/schemas/api";
+import { customerEnvelopeSchema, optionName } from "@/domain/schemas/api";
 
 /**
  * Realistic authenticated write lifecycle against the live backend. It walks a
@@ -44,14 +43,14 @@ const NEW_PASSWORD = "NewPassword456!";
 const email = `smoke_${Date.now()}_${Math.floor(Math.random() * 1e6)}@example.invalid`;
 const createdListingIds: number[] = [];
 
-/** Real address chain (Mongolia → Ulaanbaatar → district → khoroo), resolved
- *  from the live API in beforeAll so the listing is geographically valid. */
+/** Real address chain (Province → District → Khoroo), resolved from the live
+ *  API in beforeAll so the listing is geographically valid. The address tables
+ *  may be unseeded (provinces == []), in which case ids stay 0 and the create
+ *  falls back to free-string district/khotkhon (still accepted by the backend). */
 const addr = {
-  countryId: 0,
-  cityId: 0,
+  provinceId: 0,
   districtId: 0,
   khorooId: 0,
-  country: "",
   city: "",
   district: "",
   khoroo: "",
@@ -64,12 +63,11 @@ function listingPayload(): Record<string, unknown> {
     property_category: "apartment",
     property_subtype: "standard_apartment",
     mode: "sale",
-    country_id: addr.countryId,
-    city_id: addr.cityId,
-    district_id: addr.districtId,
-    khoroo_id: addr.khorooId,
-    district: addr.district,
-    khoroo: addr.khoroo,
+    province_id: addr.provinceId || undefined,
+    district_id: addr.districtId || undefined,
+    khoroo_id: addr.khorooId || undefined,
+    district: addr.district || "Сүхбаатар",
+    khoroo: addr.khoroo || "1-р хороо",
     khotkhon: "Зайсан Хилл Residence",
     street_number: "12",
     unit_number: "504",
@@ -125,7 +123,6 @@ function listingPayload(): Record<string, unknown> {
 function submitPayload(): Record<string, unknown> {
   return {
     ...listingPayload(),
-    country: addr.country,
     city: addr.city,
   };
 }
@@ -140,19 +137,23 @@ describe.skipIf(!ENABLED)("realistic lifecycle (live, WRITES to server)", () => 
     });
     expect(res.tokenType).toBe("Bearer");
 
-    // Resolve a real address chain from the API.
-    const [country] = await listCountries();
-    addr.countryId = Number(country.id);
-    addr.country = country.name_mn ?? "Монгол";
-    const [city] = await listCities(addr.countryId);
-    addr.cityId = Number(city.id);
-    addr.city = city.name_mn ?? "Улаанбаатар";
-    const [district] = await listDistricts(addr.cityId);
-    addr.districtId = Number(district.id);
-    addr.district = district.name_mn ?? "Баянзүрх";
-    const [khoroo] = await listKhoroos(addr.districtId);
-    addr.khorooId = Number(khoroo.id);
-    addr.khoroo = khoroo.name_mn ?? "1-р хороо";
+    // Resolve a real address chain from the API. The tables may be unseeded
+    // (provinces == []); if so we leave ids at 0 and rely on free-string names.
+    const [province] = await listProvinces();
+    if (province) {
+      addr.provinceId = Number(province.id) || 0;
+      addr.city = optionName(province);
+      const [district] = await listDistricts(province.id);
+      if (district) {
+        addr.districtId = Number(district.id) || 0;
+        addr.district = optionName(district);
+        const [khoroo] = await listKhoroos(district.id);
+        if (khoroo) {
+          addr.khorooId = Number(khoroo.id) || 0;
+          addr.khoroo = optionName(khoroo);
+        }
+      }
+    }
   });
 
   afterAll(async () => {

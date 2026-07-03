@@ -12,16 +12,20 @@ export const queryKeys = {
   formOptions: ["form-options"] as const,
   listingFlow: ["listing-flow"] as const,
   propertyCategories: ["property-categories"] as const,
-  countries: ["address", "countries"] as const,
-  cities: (countryId?: number) => ["address", "cities", countryId ?? null] as const,
-  districts: (cityId?: number) => ["address", "districts", cityId ?? null] as const,
-  khoroos: (districtId?: number) => ["address", "khoroos", districtId ?? null] as const,
-  zipcodes: (khorooId?: number) => ["address", "zipcodes", khorooId ?? null] as const,
-  streets: (khorooId?: number) => ["address", "streets", khorooId ?? null] as const,
-  complexes: (khorooId?: number, streetId?: number) =>
-    ["address", "complexes", khorooId ?? null, streetId ?? null] as const,
-  buildingBlocks: (complexId?: number) =>
-    ["address", "building-blocks", complexId ?? null] as const,
+  tags: (group: string, q: string) => ["listing-tags", group, q] as const,
+  provinces: ["address", "provinces"] as const,
+  districts: (provinceId?: string | number) =>
+    ["address", "districts", provinceId ?? null] as const,
+  khoroos: (districtId?: string | number) =>
+    ["address", "khoroos", districtId ?? null] as const,
+  streets: (khorooId?: string | number) =>
+    ["address", "streets", khorooId ?? null] as const,
+  khoroolols: (khorooId?: string | number) =>
+    ["address", "khoroolols", khorooId ?? null] as const,
+  khotkhons: (khorooId?: string | number) =>
+    ["address", "khotkhons", khorooId ?? null] as const,
+  buildings: (khorooId?: string | number) =>
+    ["address", "buildings", khorooId ?? null] as const,
 
   // Dynamic data (short staleTime, not persisted)
   listings: (params: ListListingsParams) => ["listings", params] as const,

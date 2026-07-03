@@ -1,49 +1,48 @@
 import { describe, expect, it } from "vitest";
 import {
-  listBuildingBlocks,
-  listCities,
-  listComplexes,
-  listCountries,
+  listBuildings,
   listDistricts,
+  listKhoroolols,
   listKhoroos,
+  listKhotkhons,
+  listProvinces,
   listStreets,
-  listZipcodes,
 } from "@/infrastructure/api/address";
 import { addressOptionSchema } from "@/domain/schemas/api";
 
 /**
- * Live contract smoke tests against http://core.neomap.mn/api.
+ * Live contract smoke tests against https://core.neomap.mn/api.
  * They validate that every address endpoint still returns the
- * `AddressOptionResource` shape the UI/adapter depends on.
+ * `AddressOptionResource` shape the UI/adapter depends on, for the live
+ * cascade Province → District → Khoroo → {Street, Khoroolol, Khotkhon, Building}.
+ *
+ * NOTE: the address tables may be unseeded (provinces == []). The tests assert
+ * the contract (arrays of the right shape), not that data exists.
  */
 describe("address endpoints (live)", () => {
-  it("countries returns AddressOption[]", async () => {
-    const countries = await listCountries();
-    expect(Array.isArray(countries)).toBe(true);
-    expect(countries.length).toBeGreaterThan(0);
-    for (const c of countries) expect(() => addressOptionSchema.parse(c)).not.toThrow();
+  it("provinces returns AddressOption[]", async () => {
+    const provinces = await listProvinces();
+    expect(Array.isArray(provinces)).toBe(true);
+    for (const p of provinces) expect(() => addressOptionSchema.parse(p)).not.toThrow();
   });
 
-  it("cascades country -> city -> district -> khoroo", async () => {
-    const [country] = await listCountries();
-    expect(country).toBeDefined();
+  it("cascades province -> district -> khoroo", async () => {
+    const [province] = await listProvinces();
+    if (!province) return; // provinces unseeded — nothing to cascade into
 
-    const cities = await listCities(Number(country.id));
-    expect(Array.isArray(cities)).toBe(true);
-    if (cities.length === 0) return; // nothing to cascade into
-
-    const districts = await listDistricts(Number(cities[0].id));
+    const districts = await listDistricts(province.id);
     expect(Array.isArray(districts)).toBe(true);
     if (districts.length === 0) return;
 
-    const khoroos = await listKhoroos(Number(districts[0].id));
+    const khoroos = await listKhoroos(districts[0].id);
     expect(Array.isArray(khoroos)).toBe(true);
-  });
+    if (khoroos.length === 0) return;
 
-  it("leaf endpoints accept an empty parent and return arrays", async () => {
-    for (const fn of [listZipcodes, listStreets, listComplexes, listBuildingBlocks]) {
-      const result = await (fn as () => Promise<unknown[]>)();
+    const kid = khoroos[0].id;
+    for (const fn of [listStreets, listKhoroolols, listKhotkhons, listBuildings]) {
+      const result = await fn(kid);
       expect(Array.isArray(result)).toBe(true);
+      for (const o of result) expect(() => addressOptionSchema.parse(o)).not.toThrow();
     }
   });
 });

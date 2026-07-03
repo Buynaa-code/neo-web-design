@@ -20,14 +20,22 @@ const nullableNumber = z.number().nullable();
 /* -------------------------------------------------------------------------- */
 
 export const addressOptionSchema = z.object({
-  // The OpenAPI doc types `id` as string, but the live server returns an
-  // integer. Accept both and let callers coerce.
+  // `id` may arrive as a string (new /address/* cascade) or an integer
+  // (older reference endpoints). Accept both and let callers coerce.
   id: z.union([z.string(), z.number()]),
-  code: nullableString,
-  name_mn: nullableString,
-  name_en: nullableString,
+  // New cascade returns a single `name`. Older shape used code/name_mn/name_en.
+  // All optional so both contracts parse; read via `optionName()`.
+  name: nullableString.optional(),
+  code: nullableString.optional(),
+  name_mn: nullableString.optional(),
+  name_en: nullableString.optional(),
 });
 export type AddressOption = z.infer<typeof addressOptionSchema>;
+
+/** Display label for an address option across old and new response shapes. */
+export function optionName(o: AddressOption): string {
+  return o.name ?? o.name_mn ?? o.name_en ?? String(o.id);
+}
 
 export const addressOptionListSchema = z.object({
   data: z.array(addressOptionSchema),
@@ -117,16 +125,20 @@ const agentSchema = z
   })
   .nullable();
 
-const addressMasterIdsSchema = z.object({
-  countryId: nullableInt,
-  cityId: nullableInt,
-  districtId: nullableInt,
-  khorooId: nullableInt,
-  zipcodeId: nullableInt,
-  streetId: nullableInt,
-  complexId: nullableInt,
-  buildingBlockId: nullableInt,
-});
+// Live cascade master ids (2026-07 backend). Keys are optional + nullable so a
+// listing never fails to parse over an address id — the old shape
+// (countryId/cityId/zipcodeId/complexId/buildingBlockId) was replaced by this.
+const addressMasterIdsSchema = z
+  .object({
+    provinceId: nullableInt.optional(),
+    districtId: nullableInt.optional(),
+    khorooId: nullableInt.optional(),
+    khoroololId: nullableInt.optional(),
+    khotkonId: nullableInt.optional(),
+    streetId: nullableInt.optional(),
+    buildingId: nullableInt.optional(),
+  })
+  .passthrough();
 
 const salePricingSchema = z.object({
   totalPrice: nullableInt,
