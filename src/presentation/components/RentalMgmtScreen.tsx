@@ -43,7 +43,27 @@ import type {
   RentalContract,
   RentalTenant,
 } from "@/domain/schemas/api";
+import { ApiError } from "@/infrastructure/api/http";
 import { cn } from "@/lib/utils";
+
+/** Compact MNT amount, e.g. 7650000 → "7.65сая ₮", 0 → "0₮". */
+function formatTugrikShort(amount: number): string {
+  if (!amount) return "0₮";
+  if (amount >= 1_000_000) {
+    const m = amount / 1_000_000;
+    return `${m.toFixed(2).replace(/\.?0+$/, "")}сая ₮`;
+  }
+  return `${amount.toLocaleString("en-US")}₮`;
+}
+
+/** First server-side validation message, if the error is an ApiError. */
+function firstApiError(err: unknown, fallback: string): string {
+  if (err instanceof ApiError) {
+    const first = Object.values(err.validationErrors ?? {})[0]?.[0];
+    return first ?? err.message ?? fallback;
+  }
+  return err instanceof Error ? err.message : fallback;
+}
 
 type TenantTone = "success" | "warning" | "danger";
 
@@ -227,6 +247,18 @@ function StatCard({
 function Overview({ onTab }: { onTab: (t: Tab) => void }) {
   const pushToast = useStore((s) => s.pushToast);
   const { data: tenants = [] } = useRentalTenants();
+  const { data: contracts = [] } = useRentalContracts();
+
+  // Real KPIs derived from the live tenant/contract data.
+  const activeTenants = tenants.filter((t) => t.status === "active");
+  const rentedListings = new Set(
+    tenants.map((t) => t.listingId).filter((id): id is number => id != null)
+  ).size;
+  const monthlyIncome = activeTenants.reduce((sum, t) => sum + (t.rentAmount ?? 0), 0);
+  const attention =
+    tenants.filter((t) => t.status === "pending").length +
+    contracts.filter((c) => c.status === "draft").length;
+
   const events: { icon: LucideIcon; t: string; sub: string; d: string; col: string }[] = [
     { icon: Banknote, t: "Бат-Эрдэнэ — 5-р сарын түрээс төлсөн", sub: "+1,800,000₮", d: "өнөөдөр", col: "success" },
     { icon: UserPlus, t: "Сараа — гэрээ шинэчиллээ", sub: "12 сар", d: "өчигдөр", col: "primary" },
@@ -243,10 +275,10 @@ function Overview({ onTab }: { onTab: (t: Tab) => void }) {
   return (
     <>
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-        <StatCard icon={HomeIcon} label="Идэвхтэй зар" value="3" sub="Сүүлийн 30 хоног" tone="primary" />
-        <StatCard icon={Users} label="Түрээслэгч" value="3" sub="Гэрээтэй" tone="success" />
-        <StatCard icon={Banknote} label="Энэ сарын орлого" value="7.65сая ₮" sub="+12.5%" tone="gold" />
-        <StatCard icon={AlertCircle} label="Анхаарах" value="2" sub="Хугацаа дуусаж байна" tone="warning" />
+        <StatCard icon={HomeIcon} label="Түрээслэгдсэн зар" value={String(rentedListings)} sub="Түрээслэгчтэй" tone="primary" />
+        <StatCard icon={Users} label="Түрээслэгч" value={String(tenants.length)} sub={`${activeTenants.length} идэвхтэй`} tone="success" />
+        <StatCard icon={Banknote} label="Сарын орлого" value={formatTugrikShort(monthlyIncome)} sub={`${activeTenants.length} идэвхтэй гэрээ`} tone="gold" />
+        <StatCard icon={AlertCircle} label="Анхаарах" value={String(attention)} sub="Хүлээгдэж буй / ноорог" tone="warning" />
       </div>
 
       <div className="grid lg:grid-cols-3 gap-4">
@@ -665,7 +697,9 @@ function TenantFormModal({ tenant }: { tenant?: RentalTenant }) {
       : "active") as TenantInput["status"]
   );
 
-  const save = () => {
+  const saving = createTenant.isPending || updateTenant.isPending;
+
+  const save = async () => {
     if (!name.trim()) {
       pushToast("Нэр оруулна уу", "danger");
       return;
@@ -679,14 +713,18 @@ function TenantFormModal({ tenant }: { tenant?: RentalTenant }) {
       rent_amount: rent.trim() ? toInt(rent) : null,
       status,
     };
-    if (editing) {
-      updateTenant.mutate({ id: tenant.id, input });
-      pushToast("Түрээслэгч шинэчлэгдлээ", "success");
-    } else {
-      createTenant.mutate(input);
-      pushToast("Түрээслэгч нэмэгдлээ", "success");
+    try {
+      if (editing) {
+        await updateTenant.mutateAsync({ id: tenant.id, input });
+        pushToast("Түрээслэгч шинэчлэгдлээ", "success");
+      } else {
+        await createTenant.mutateAsync(input);
+        pushToast("Түрээслэгч нэмэгдлээ", "success");
+      }
+      closeModal();
+    } catch (err) {
+      pushToast(firstApiError(err, "Хадгалахад алдаа гарлаа"), "danger");
     }
-    closeModal();
   };
 
   return (
@@ -759,11 +797,11 @@ function TenantFormModal({ tenant }: { tenant?: RentalTenant }) {
         className="p-5 flex gap-2 justify-end"
         style={{ borderTop: "1px solid var(--border)" }}
       >
-        <button type="button" className="btn btn-secondary" onClick={closeModal}>
+        <button type="button" className="btn btn-secondary" onClick={closeModal} disabled={saving}>
           Болих
         </button>
-        <button type="button" className="btn btn-primary" onClick={save}>
-          Хадгалах
+        <button type="button" className="btn btn-primary" onClick={save} disabled={saving}>
+          {saving ? "Хадгалж байна…" : "Хадгалах"}
         </button>
       </div>
     </div>
@@ -786,20 +824,25 @@ function DeleteTenantConfirm({ tenant }: { tenant: RentalTenant }) {
         className="p-5 flex gap-2 justify-end"
         style={{ borderTop: "1px solid var(--border)" }}
       >
-        <button type="button" className="btn btn-secondary" onClick={closeModal}>
+        <button type="button" className="btn btn-secondary" onClick={closeModal} disabled={removeTenant.isPending}>
           Болих
         </button>
         <button
           type="button"
           className="btn"
           style={{ background: "var(--danger)", color: "#fff" }}
-          onClick={() => {
-            removeTenant.mutate(tenant.id);
-            closeModal();
-            pushToast("Түрээслэгч устгагдлаа", "danger");
+          disabled={removeTenant.isPending}
+          onClick={async () => {
+            try {
+              await removeTenant.mutateAsync(tenant.id);
+              pushToast("Түрээслэгч устгагдлаа", "danger");
+              closeModal();
+            } catch (err) {
+              pushToast(firstApiError(err, "Устгахад алдаа гарлаа"), "danger");
+            }
           }}
         >
-          Устгах
+          {removeTenant.isPending ? "Устгаж байна…" : "Устгах"}
         </button>
       </div>
     </div>
@@ -830,7 +873,9 @@ function ContractFormModal({ contract }: { contract?: RentalContract }) {
       : "active") as ContractInput["status"]
   );
 
-  const save = () => {
+  const saving = createContract.isPending || updateContract.isPending;
+
+  const save = async () => {
     const common = {
       listing_id: listingId ? toInt(listingId) : null,
       start: toIso(start),
@@ -838,19 +883,23 @@ function ContractFormModal({ contract }: { contract?: RentalContract }) {
       amount: amount.trim() ? toInt(amount) : null,
       status,
     };
-    if (editing) {
-      updateContract.mutate({ id: contract.id, input: common });
-      pushToast("Гэрээ шинэчлэгдлээ", "success");
-    } else {
-      const tid = toInt(tenantId);
-      if (tid == null) {
-        pushToast("Түрээслэгч сонгоно уу", "danger");
-        return;
+    try {
+      if (editing) {
+        await updateContract.mutateAsync({ id: contract.id, input: common });
+        pushToast("Гэрээ шинэчлэгдлээ", "success");
+      } else {
+        const tid = toInt(tenantId);
+        if (tid == null) {
+          pushToast("Түрээслэгч сонгоно уу", "danger");
+          return;
+        }
+        await createContract.mutateAsync({ tenant_id: tid, ...common });
+        pushToast("Гэрээ үүслээ", "success");
       }
-      createContract.mutate({ tenant_id: tid, ...common });
-      pushToast("Гэрээ үүслээ", "success");
+      closeModal();
+    } catch (err) {
+      pushToast(firstApiError(err, "Хадгалахад алдаа гарлаа"), "danger");
     }
-    closeModal();
   };
 
   return (
@@ -922,11 +971,11 @@ function ContractFormModal({ contract }: { contract?: RentalContract }) {
         className="p-5 flex gap-2 justify-end"
         style={{ borderTop: "1px solid var(--border)" }}
       >
-        <button type="button" className="btn btn-secondary" onClick={closeModal}>
+        <button type="button" className="btn btn-secondary" onClick={closeModal} disabled={saving}>
           Болих
         </button>
-        <button type="button" className="btn btn-primary" onClick={save}>
-          Хадгалах
+        <button type="button" className="btn btn-primary" onClick={save} disabled={saving}>
+          {saving ? "Хадгалж байна…" : "Хадгалах"}
         </button>
       </div>
     </div>

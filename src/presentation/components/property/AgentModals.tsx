@@ -15,6 +15,9 @@ import {
 import { useStore } from "@/infrastructure/store";
 import { listingPriceShort } from "@/infrastructure/data/formatters";
 import { photoUrl } from "@/infrastructure/data/listings";
+import { useConversationMutations } from "@/application/queries/activity";
+import { getToken } from "@/infrastructure/api/token";
+import { ApiError } from "@/infrastructure/api/http";
 import type { Agent, Listing } from "@/domain/types";
 
 const REVIEW_BUCKET: { score: number; text: string; author: string; date: string }[] = [
@@ -137,18 +140,39 @@ export function AgentMessageModal({
 
   const [body, setBody] = useState(aiBody);
   const hasLead = !!aiQuery;
+  const { start } = useConversationMutations();
 
-  const send = () => {
+  const send = async () => {
     if (!body.trim()) {
       pushToast("Мессеж бичнэ үү", "danger");
       return;
     }
-    closeModal();
-    pushToast(
-      hasLead ? "Lead summary-тай мессеж илгээгдлээ" : "Мессеж илгээгдлээ",
-      "success"
-    );
-    setTimeout(() => router.push("/activity"), 400);
+    if (!getToken()) {
+      pushToast("Мессеж илгээхийн тулд нэвтэрнэ үү", "danger");
+      closeModal();
+      router.push("/auth?next=%2Fmessages");
+      return;
+    }
+    try {
+      const conversation = await start.mutateAsync({
+        agent_id: agent.id,
+        listing_id: listing?.id ?? null,
+        body: body.trim(),
+      });
+      closeModal();
+      pushToast(
+        hasLead ? "Lead summary-тай мессеж илгээгдлээ" : "Мессеж илгээгдлээ",
+        "success"
+      );
+      router.push(`/messages?c=${conversation.id}`);
+    } catch (err) {
+      pushToast(
+        err instanceof ApiError
+          ? Object.values(err.validationErrors ?? {})[0]?.[0] ?? err.message
+          : "Мессеж илгээхэд алдаа гарлаа",
+        "danger"
+      );
+    }
   };
 
   return (
@@ -217,11 +241,11 @@ export function AgentMessageModal({
         className="p-4 flex gap-2 justify-end"
         style={{ borderTop: "1px solid var(--border)", background: "var(--surface-2)" }}
       >
-        <button type="button" onClick={closeModal} className="btn btn-secondary">
+        <button type="button" onClick={closeModal} className="btn btn-secondary" disabled={start.isPending}>
           Цуцлах
         </button>
-        <button type="button" onClick={send} className="btn btn-primary">
-          <Send className="w-4 h-4" /> Илгээх
+        <button type="button" onClick={send} className="btn btn-primary" disabled={start.isPending}>
+          <Send className="w-4 h-4" /> {start.isPending ? "Илгээж байна…" : "Илгээх"}
         </button>
       </div>
     </div>

@@ -22,6 +22,7 @@ import {
   GraduationCap,
   Handshake,
   Heart,
+  ListPlus,
   Image as ImageIcon,
   MapPin,
   MessageCircle,
@@ -60,6 +61,7 @@ import {
   type ListingDetail,
 } from "@/infrastructure/data/listing-detail";
 import { ResultsMap } from "@/components/results/ResultsMap";
+import { AddToListModal } from "@/components/results/SavedListModals";
 import { openLightbox } from "@/components/property/Lightbox";
 import { LoanApplyModal, LoanCompareModal } from "@/components/property/LoanModals";
 import {
@@ -419,6 +421,14 @@ export function PropertyDetail({ listing }: { listing: Listing }) {
             >
               <Heart className="size-4" fill={isSaved ? "currentColor" : "none"} />
               Хадгалах
+            </button>
+            <button
+              type="button"
+              className="bm-btn-outline justify-center"
+              onClick={() => openModal(<AddToListModal listingId={listing.id} />, "sm")}
+            >
+              <ListPlus className="size-4" />
+              Жагсаалтад нэмэх
             </button>
           </div>
 

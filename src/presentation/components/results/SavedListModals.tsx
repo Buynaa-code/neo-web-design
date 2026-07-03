@@ -1,10 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { Bookmark, Heart, Home, MapPin, Star } from "lucide-react";
+import { Bookmark, Check, Heart, Home, MapPin, Plus, Star } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useStore } from "@/infrastructure/store";
-import { useSavedListMutations } from "@/application/queries/saved";
+import { useSavedListMutations, useSavedLists } from "@/application/queries/saved";
 import type { SavedList } from "@/domain/schemas/api";
 import { cn } from "@/lib/utils";
 
@@ -157,6 +157,143 @@ export function EditListModal({ list }: { list: SavedList }) {
         </button>
         <button type="button" onClick={save} className="btn btn-primary">
           Хадгалах
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Add/remove a single listing to/from the user's saved lists. Each list is a
+ * toggle row (checked = the listing is already in it); a new list can be created
+ * inline and the listing is added to it immediately.
+ */
+export function AddToListModal({ listingId }: { listingId: number }) {
+  const closeModal = useStore((s) => s.closeModal);
+  const pushToast = useStore((s) => s.pushToast);
+  const { data: lists = [], isLoading } = useSavedLists();
+  const { addItem, removeItem, create } = useSavedListMutations();
+  const [busyId, setBusyId] = useState<number | null>(null);
+  const [newName, setNewName] = useState("");
+  const [creating, setCreating] = useState(false);
+
+  const toggle = async (list: SavedList) => {
+    const included = (list.listingIds ?? []).includes(listingId);
+    setBusyId(list.id);
+    try {
+      if (included) {
+        await removeItem.mutateAsync({ listId: list.id, listingId });
+        pushToast(`«${list.name}»-ээс хаслаа`, "info");
+      } else {
+        await addItem.mutateAsync({ listId: list.id, listingId });
+        pushToast(`«${list.name}»-д нэмлээ`, "success");
+      }
+    } catch {
+      pushToast("Алдаа гарлаа — дахин оролдоно уу", "danger");
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const createAndAdd = async () => {
+    const name = newName.trim();
+    if (!name) return;
+    setCreating(true);
+    try {
+      const list = await create.mutateAsync({ name, icon: LIST_ICONS[0].key });
+      await addItem.mutateAsync({ listId: list.id, listingId });
+      setNewName("");
+      pushToast(`«${name}» үүсгэж, зар нэмлээ`, "success");
+    } catch {
+      pushToast("Жагсаалт үүсгэхэд алдаа гарлаа", "danger");
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  return (
+    <div className="-m-6">
+      <div className="p-5" style={{ borderBottom: "1px solid var(--border)" }}>
+        <h3 className="font-semibold text-lg">Жагсаалтад нэмэх</h3>
+        <p className="text-xs text-[var(--text-3)] mt-0.5">
+          Энэ зарыг цуглуулгадаа хадгална
+        </p>
+      </div>
+      <div className="p-4 space-y-1.5 max-h-[46vh] overflow-y-auto">
+        {isLoading && lists.length === 0 ? (
+          <div className="p-6 text-center text-sm text-[var(--text-3)]">Ачааллаж байна…</div>
+        ) : lists.length === 0 ? (
+          <div className="px-2 py-3 text-sm text-[var(--text-3)]">
+            Жагсаалт алга. Доор шинээр үүсгэнэ үү.
+          </div>
+        ) : (
+          lists.map((list) => {
+            const included = (list.listingIds ?? []).includes(listingId);
+            const Icon = iconForKey(list.icon);
+            const busy = busyId === list.id;
+            return (
+              <button
+                key={list.id}
+                type="button"
+                disabled={busy}
+                onClick={() => toggle(list)}
+                className="w-full flex items-center gap-3 px-2 py-2 rounded-lg text-left hover:bg-[var(--surface-2)] transition disabled:opacity-60"
+              >
+                <div
+                  className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
+                  style={{ background: "var(--surface-2)", color: "var(--gold-brand)" }}
+                >
+                  <Icon className="w-4 h-4" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium truncate">{list.name}</div>
+                  <div className="text-[11px] text-[var(--text-3)]">{list.listingsCount} зар</div>
+                </div>
+                <div
+                  className="w-6 h-6 rounded-md flex items-center justify-center shrink-0"
+                  style={{
+                    background: included ? "var(--gold-brand)" : "transparent",
+                    border: included ? "none" : "1.5px solid var(--border)",
+                    color: "#fff",
+                  }}
+                >
+                  {busy ? (
+                    <span className="text-[10px] text-[var(--text-3)]">…</span>
+                  ) : included ? (
+                    <Check className="w-4 h-4" />
+                  ) : null}
+                </div>
+              </button>
+            );
+          })
+        )}
+      </div>
+      <div className="p-4 flex gap-2" style={{ borderTop: "1px solid var(--border)" }}>
+        <input
+          className="input flex-1"
+          placeholder="Шинэ жагсаалтын нэр"
+          value={newName}
+          onChange={(e) => setNewName(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              void createAndAdd();
+            }
+          }}
+        />
+        <button
+          type="button"
+          onClick={createAndAdd}
+          disabled={!newName.trim() || creating}
+          className="btn btn-secondary shrink-0"
+        >
+          <Plus className="w-4 h-4" />
+          {creating ? "…" : "Үүсгэх"}
+        </button>
+      </div>
+      <div className="px-4 pb-4 flex justify-end">
+        <button type="button" onClick={closeModal} className="btn btn-primary">
+          Болсон
         </button>
       </div>
     </div>

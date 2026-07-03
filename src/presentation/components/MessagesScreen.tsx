@@ -282,6 +282,14 @@ export function MessagesScreen() {
 
   const conversations = useMemo(() => data ?? [], [data]);
 
+  // Deep-link: /messages?c=<id> pre-selects a conversation (e.g. right after
+  // starting a new one from an agent-message modal). Runs once on mount.
+  useEffect(() => {
+    const raw = new URLSearchParams(window.location.search).get("c");
+    const id = raw ? Number(raw) : NaN;
+    if (Number.isInteger(id) && id > 0) setSelectedId(id);
+  }, []);
+
   const selected = useMemo(
     () => conversations.find((c) => c.id === selectedId) ?? null,
     [conversations, selectedId]

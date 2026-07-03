@@ -11,6 +11,7 @@ import {
   type NewConversationInput,
 } from "@/infrastructure/api/conversations";
 import { toListing } from "@/infrastructure/api/listings";
+import type { Message } from "@/domain/schemas/api";
 import { queryKeys } from "@/infrastructure/query/keys";
 
 /* -------------------------------------------------------------------------- */
@@ -60,6 +61,26 @@ export function useConversationMutations() {
   const send = useMutation({
     mutationFn: ({ conversationId, body }: { conversationId: number; body: string }) =>
       sendMessage(conversationId, body),
+    // Optimistically append the sent bubble so it shows instantly instead of
+    // waiting for the server refetch; rolled back on error.
+    onMutate: async ({ conversationId, body }) => {
+      const key = queryKeys.messages(conversationId);
+      await qc.cancelQueries({ queryKey: key });
+      const previous = qc.getQueryData<Message[]>(key);
+      const optimistic: Message = {
+        id: -Date.now(),
+        conversationId,
+        sender: "customer",
+        body,
+        readAt: null,
+        createdAt: new Date().toISOString(),
+      };
+      qc.setQueryData<Message[]>(key, [...(previous ?? []), optimistic]);
+      return { key, previous };
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.previous) qc.setQueryData(ctx.key, ctx.previous);
+    },
     onSuccess: (_data, { conversationId }) => {
       invalidate();
       qc.invalidateQueries({ queryKey: queryKeys.messages(conversationId) });

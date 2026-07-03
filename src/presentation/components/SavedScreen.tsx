@@ -17,7 +17,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { useStore } from "@/infrastructure/store";
-import { photoUrl } from "@/infrastructure/data/listings";
+import { photoUrl, getListing } from "@/infrastructure/data/listings";
 import { listingPriceShort } from "@/infrastructure/data/formatters";
 import { cn } from "@/lib/utils";
 import type { Listing, ListingMode, SavedSearch } from "@/domain/types";
@@ -34,11 +34,13 @@ import {
   SaveSearchModal,
 } from "@/components/results/SavedSearchModals";
 import {
+  AddToListModal,
   CreateListModal,
   DeleteListConfirm,
   EditListModal,
   iconForKey,
 } from "@/components/results/SavedListModals";
+import { useSavedListMutations } from "@/application/queries/saved";
 
 /**
  * Maps the backend `SavedSearch` wire shape onto the UI domain `SavedSearch`
@@ -240,6 +242,7 @@ export function SavedScreen({ initialTab }: { initialTab?: "listings" | "searche
                 <SavedListCard
                   key={sl.id}
                   sl={sl}
+                  onOpen={() => openModal(<ListDetailModal listId={sl.id} />, "md")}
                   onEdit={() => openModal(<EditListModal list={sl} />, "sm")}
                   onDelete={() =>
                     openModal(<DeleteListConfirm id={sl.id} name={sl.name} />, "sm")
@@ -288,6 +291,7 @@ function TabButton({
 }
 
 function SavedListingCard({ l, onUnsave }: { l: Listing; onUnsave: () => void }) {
+  const openModal = useStore((s) => s.openModal);
   return (
     <div className="card overflow-hidden">
       <Link
@@ -313,6 +317,20 @@ function SavedListingCard({ l, onUnsave }: { l: Listing; onUnsave: () => void })
         >
           <Heart className="w-3.5 h-3.5" />
         </button>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            openModal(<AddToListModal listingId={l.id} />, "sm");
+          }}
+          className="absolute top-2.5 right-2.5 w-8 h-8 rounded-full flex items-center justify-center backdrop-blur"
+          style={{ background: "rgba(0,0,0,0.45)", color: "#fff" }}
+          aria-label="Жагсаалтад нэмэх"
+          title="Жагсаалтад нэмэх"
+        >
+          <ListPlus className="w-4 h-4" />
+        </button>
       </Link>
       <Link href={`/property/${l.id}`} className="block p-3">
         <div className="font-semibold text-sm truncate">{l.khotkhon}</div>
@@ -332,10 +350,12 @@ function SavedListingCard({ l, onUnsave }: { l: Listing; onUnsave: () => void })
 
 function SavedListCard({
   sl,
+  onOpen,
   onEdit,
   onDelete,
 }: {
   sl: SavedList;
+  onOpen: () => void;
   onEdit: () => void;
   onDelete: () => void;
 }) {
@@ -343,16 +363,22 @@ function SavedListCard({
   const Icon = iconForKey(sl.icon);
   return (
     <div className="card p-4 flex items-center gap-3 relative">
-      <div
-        className="w-11 h-11 rounded-lg flex items-center justify-center shrink-0"
-        style={{ background: "var(--surface-2)", color: "var(--gold-brand)" }}
+      <button
+        type="button"
+        onClick={onOpen}
+        className="flex items-center gap-3 flex-1 min-w-0 text-left"
       >
-        <Icon className="w-5 h-5" />
-      </div>
-      <div className="flex-1 min-w-0">
-        <div className="font-semibold text-sm truncate">{sl.name}</div>
-        <div className="text-xs text-[var(--text-3)] mt-0.5">{sl.listingsCount} зар</div>
-      </div>
+        <div
+          className="w-11 h-11 rounded-lg flex items-center justify-center shrink-0"
+          style={{ background: "var(--surface-2)", color: "var(--gold-brand)" }}
+        >
+          <Icon className="w-5 h-5" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="font-semibold text-sm truncate">{sl.name}</div>
+          <div className="text-xs text-[var(--text-3)] mt-0.5">{sl.listingsCount} зар</div>
+        </div>
+      </button>
       <div className="shrink-0">
         <button
           type="button"
@@ -480,6 +506,105 @@ function SavedSearchRow({
           aria-label="Delete"
         >
           <Trash2 className="w-3.5 h-3.5" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Shows the listings inside a saved list (resolved from `listingIds` against the
+ * bootstrapped LISTINGS), with per-item remove. Reads the list fresh from
+ * `useSavedLists` so removals reflect immediately after the mutation.
+ */
+function ListDetailModal({ listId }: { listId: number }) {
+  const closeModal = useStore((s) => s.closeModal);
+  const pushToast = useStore((s) => s.pushToast);
+  const { data: lists = [] } = useSavedLists();
+  const { removeItem } = useSavedListMutations();
+  const [busyId, setBusyId] = useState<number | null>(null);
+
+  const list = lists.find((l) => l.id === listId);
+  const ids = list?.listingIds ?? [];
+  const Icon = iconForKey(list?.icon);
+
+  const remove = async (listingId: number) => {
+    setBusyId(listingId);
+    try {
+      await removeItem.mutateAsync({ listId, listingId });
+      pushToast("Жагсаалтаас хаслаа", "info");
+    } catch {
+      pushToast("Хасахад алдаа гарлаа", "danger");
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  return (
+    <div className="-m-6">
+      <div className="p-5 flex items-center gap-3" style={{ borderBottom: "1px solid var(--border)" }}>
+        <div
+          className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
+          style={{ background: "var(--surface-2)", color: "var(--gold-brand)" }}
+        >
+          <Icon className="w-4 h-4" />
+        </div>
+        <div className="min-w-0">
+          <h3 className="font-semibold text-lg truncate">{list?.name ?? "Жагсаалт"}</h3>
+          <p className="text-xs text-[var(--text-3)]">{ids.length} зар</p>
+        </div>
+      </div>
+      <div className="p-4 space-y-2 max-h-[56vh] overflow-y-auto">
+        {ids.length === 0 ? (
+          <div className="px-2 py-8 text-center text-sm text-[var(--text-3)]">
+            Энэ жагсаалтад одоогоор зар алга. Зар дээрх <ListPlus className="inline w-3.5 h-3.5" /> товчоор нэмнэ үү.
+          </div>
+        ) : (
+          ids.map((id) => {
+            const l = getListing(id);
+            const busy = busyId === id;
+            return (
+              <div key={id} className="flex items-center gap-3 rounded-lg p-2 hover:bg-[var(--surface-2)]">
+                <Link
+                  href={`/property/${id}`}
+                  onClick={closeModal}
+                  className="flex items-center gap-3 flex-1 min-w-0"
+                >
+                  <div className="relative w-16 h-12 rounded-md overflow-hidden shrink-0 bg-[var(--surface-2)]">
+                    {l ? (
+                      <Image src={photoUrl(l, 0, "160/120")} alt={l.khotkhon} fill sizes="64px" className="object-cover" />
+                    ) : null}
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-sm font-medium truncate">{l ? l.khotkhon : `Зар #${id}`}</div>
+                    <div className="text-[11px] text-[var(--text-3)] truncate">
+                      {l ? `${l.district} · ${l.rooms}ө · ${l.area}м²` : "Дэлгэрэнгүй харах"}
+                    </div>
+                    {l ? (
+                      <div className="num text-xs font-semibold" style={{ color: "var(--gold-brand)" }}>
+                        {listingPriceShort(l)}
+                      </div>
+                    ) : null}
+                  </div>
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => remove(id)}
+                  disabled={busy}
+                  className="btn btn-ghost !text-xs !py-2 shrink-0"
+                  style={{ color: "var(--danger)" }}
+                  aria-label="Жагсаалтаас хасах"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            );
+          })
+        )}
+      </div>
+      <div className="p-4 flex justify-end" style={{ borderTop: "1px solid var(--border)" }}>
+        <button type="button" onClick={closeModal} className="btn btn-primary">
+          Хаах
         </button>
       </div>
     </div>
