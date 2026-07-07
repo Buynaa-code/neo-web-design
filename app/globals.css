@@ -3345,7 +3345,8 @@
   /* ── Results list ── */
   .results-list { display: flex; flex-direction: column; gap: 16px; }
   .results-list-grid {
-    display: grid; grid-template-columns: 1fr; gap: 14px;
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px;
+    align-items: start;
   }
   @media (min-width: 1280px) {
     .results-content { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); }
@@ -6325,6 +6326,20 @@ body[data-theme="dark"] .neo-pin-bubble .pin-area {
 .listing-card-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-top: 6px; border-top: 1px dashed var(--border); }
 .listing-card-time { font-size: 11px; color: var(--text-3); }
 .listing-card-agent { display: inline-flex; align-items: center; gap: 3px; font-size: 11px; color: var(--accent-dark); font-weight: 600; }
+
+/* On narrow screens a full-width 4:3 photo eats the whole viewport before any
+   listing info shows — switch to a compact side-by-side card instead. */
+@media (max-width: 640px) {
+  .listing-card { flex-direction: row; }
+  .listing-card-media { flex: 0 0 132px; width: 132px; aspect-ratio: 1 / 1; }
+  .listing-card-body { flex: 1; min-width: 0; padding: 10px 12px; gap: 6px; }
+  .listing-card-title { font-size: 13.5px; }
+  .listing-card-price { font-size: 13.5px; }
+  .listing-card-specs { gap: 6px 10px; }
+  .listing-card-foot { flex-wrap: wrap; row-gap: 4px; }
+  .listing-save-btn { width: 30px; height: 30px; top: 6px; right: 6px; }
+  .listing-pill { top: 6px; left: 6px; padding: 3px 8px; font-size: 10px; }
+}
 
 /* ── Modal backdrop fix (legacy hidden-by-default) ── */
 .modal-backdrop { display: none; }
