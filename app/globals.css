@@ -5705,7 +5705,7 @@
   .bk-sort-count { font-size: 13px; color: var(--text-3); }
   .bk-sort-count strong { color: var(--text); }
 
-  .bk-card { display: grid; grid-template-columns: 120px 1fr; gap: 0; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; cursor: pointer; transition: transform .28s cubic-bezier(.22,1,.36,1), box-shadow .28s ease, border-color .28s ease; margin-bottom: 10px; position: relative; }
+  .bk-card { display: grid; grid-template-columns: 120px 1fr; gap: 0 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; cursor: pointer; transition: transform .28s cubic-bezier(.22,1,.36,1), box-shadow .28s ease, border-color .28s ease; margin-bottom: 10px; position: relative; }
   .bk-card:hover { border-color: var(--gold-brand); box-shadow: 0 4px 16px rgba(18,60,105,.10); }
   /* Highlighted state — map pin hover тохирол */
   .bk-card.bk-card-active {
