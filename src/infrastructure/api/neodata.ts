@@ -1,8 +1,7 @@
-import {
-  layerCacheDataListSchema,
-  type LayerCacheDataList,
-} from "@/domain/schemas/neodata";
+import { layerCacheDataListSchema, type LayerCacheDataList } from "@/domain/schemas/neodata";
 import { apiFetch } from "./http";
+import { listDistricts, listKhoroos, listProvinces } from "./address";
+import { optionName } from "@/domain/schemas/api";
 
 /**
  * Client for the "Neodata" map/layer service (docs/document-data.json),
@@ -92,4 +91,56 @@ export async function getLayerCacheDataByBbox(
     skipAuth: true,
   });
   return layerCacheDataListSchema.parse(res);
+}
+
+export interface ResolvedCoreAddress {
+  provinceId: string | number;
+  provinceName: string;
+  districtId: string | number;
+  districtName: string;
+  khorooId: string | number;
+  khorooName: string;
+}
+
+/**
+ * Confirms a neodata bbox lookup's ids against the core Neomap API's own
+ * address cascade and returns their display names. Confirmed live
+ * 2026-07-08: neodata's `province_id`/`district_id`/`khoroo_id` are NOT a
+ * separate id space — they're the same ids as core's own
+ * `/address/provinces|districts|khoroos` (e.g. id 1/1/4 = "Улаанбаатар" /
+ * "Багануур" / "4-р хороо" in both systems). So this just looks the ids up
+ * directly by id (no name-matching, no dependency on neodata's separately-
+ * authenticated `/v1/*` endpoints at all). Returns `null` (not a throw) if
+ * any id isn't found in the core cascade, so callers can silently skip
+ * auto-fill rather than block the pin-drop flow on this being best-effort.
+ */
+export async function resolveCoreAddressFromNeodataIds(
+  provinceId: number,
+  districtId: number,
+  khorooId: number
+): Promise<ResolvedCoreAddress | null> {
+  try {
+    const provinces = await listProvinces();
+    const province = provinces.find((p) => Number(p.id) === provinceId);
+    if (!province) return null;
+
+    const districts = await listDistricts(province.id);
+    const district = districts.find((d) => Number(d.id) === districtId);
+    if (!district) return null;
+
+    const khoroos = await listKhoroos(district.id);
+    const khoroo = khoroos.find((k) => Number(k.id) === khorooId);
+    if (!khoroo) return null;
+
+    return {
+      provinceId: province.id,
+      provinceName: optionName(province),
+      districtId: district.id,
+      districtName: optionName(district),
+      khorooId: khoroo.id,
+      khorooName: optionName(khoroo),
+    };
+  } catch {
+    return null;
+  }
 }

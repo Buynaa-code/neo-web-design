@@ -387,8 +387,8 @@ function Properties() {
         return (
           <div key={l.id} className="card overflow-hidden">
             <div
-              className="aspect-[16/10] bg-cover bg-center"
-              style={{ backgroundImage: `url('${photoUrl(l, 0, "600/400")}')` }}
+              className={cn("aspect-[16/10] bg-cover bg-center", !photoUrl(l, 0) && "bg-muted")}
+              style={photoUrl(l, 0) ? { backgroundImage: `url('${photoUrl(l, 0)}')` } : undefined}
             />
             <div className="p-4">
               <div className="flex items-start justify-between mb-2">
@@ -639,8 +639,6 @@ function Contracts() {
  * Form modals (tenant + contract create/edit)                      *
  * ---------------------------------------------------------------- */
 
-const RENT_LISTINGS = LISTINGS.filter((l) => l.mode === "rent");
-
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
     <label className="block">
@@ -657,10 +655,11 @@ function ListingSelect({
   value: string;
   onChange: (v: string) => void;
 }) {
+  const rentListings = LISTINGS.filter((l) => l.mode === "rent");
   return (
     <select className="input" value={value} onChange={(e) => onChange(e.target.value)}>
       <option value="">— Сонгох —</option>
-      {RENT_LISTINGS.map((l) => (
+      {rentListings.map((l) => (
         <option key={l.id} value={l.id}>
           {l.khotkhon} · {l.district}
         </option>

@@ -24,8 +24,8 @@ export function closeLightbox() {
   listeners.forEach((l) => l(null));
 }
 
-function totalPhotos(photos: number): number {
-  return 5 + (photos % 6) + 14;
+function totalPhotos(listing: { photoUrls?: string[] }): number {
+  return listing.photoUrls?.length ?? 0;
 }
 
 export function Lightbox() {
@@ -65,14 +65,16 @@ export function Lightbox() {
 
   const listing = getListing(state.listingId);
   if (!listing) return null;
-  const total = totalPhotos(listing.photos);
+  const total = totalPhotos(listing);
+  if (total === 0) return null;
   const i = ((state.index % total) + total) % total;
 
   function move(delta: number) {
     if (!current) return;
     const listing = getListing(current.listingId);
     if (!listing) return;
-    const tot = totalPhotos(listing.photos);
+    const tot = totalPhotos(listing);
+    if (tot === 0) return;
     current = { ...current, index: (current.index + delta + tot) % tot };
     listeners.forEach((l) => l(current));
   }
@@ -139,7 +141,7 @@ export function Lightbox() {
 
       <div
         className="max-w-[1200px] max-h-[80vh] w-[92%] aspect-[4/3] bg-cover bg-center bg-no-repeat rounded-lg"
-        style={{ backgroundImage: `url('${photoUrl(listing, i, "1600/1200")}')` }}
+        style={{ backgroundImage: `url('${photoUrl(listing, i)}')` }}
         role="img"
         aria-label={`${listing.khotkhon} зураг ${i + 1}`}
       />
@@ -155,7 +157,7 @@ export function Lightbox() {
             onClick={() => jumpTo(k)}
             className="w-12 h-9 rounded shrink-0 bg-cover bg-center transition"
             style={{
-              backgroundImage: `url('${photoUrl(listing, k, "160/120")}')`,
+              backgroundImage: `url('${photoUrl(listing, k)}')`,
               opacity: k === i ? 1 : 0.45,
               outline: k === i ? "2px solid #fff" : "none",
               outlineOffset: 1,

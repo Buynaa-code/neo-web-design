@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { Bed, Heart, MapPin, Maximize, Star } from "lucide-react";
+import { Bed, Heart, ImageOff, MapPin, Maximize, Star } from "lucide-react";
 import type { Listing } from "@/domain/types";
 import { getAgent } from "@/infrastructure/data/agents";
 import { photoUrl } from "@/infrastructure/data/listings";
@@ -35,18 +35,25 @@ export function ListingCard({ listing }: { listing: Listing }) {
   };
   const agent = getAgent(listing.agentId);
   const [pillClass, pillLabel] = STATUS_PILL[listing.status] ?? ["", ""];
+  const cover = photoUrl(listing, 0);
 
   return (
     <article className="card listing-card group">
       <div className="listing-card-media">
         <Link href={`/property/${listing.id}`} className="block relative h-full w-full">
-          <Image
-            src={photoUrl(listing, 0, "560/420")}
-            alt={`${listing.khotkhon} — ${listing.district}`}
-            width={560}
-            height={420}
-            className="w-full h-full object-cover transition group-hover:scale-[1.02]"
-          />
+          {cover ? (
+            <Image
+              src={cover}
+              alt={`${listing.khotkhon} — ${listing.district}`}
+              width={560}
+              height={420}
+              className="w-full h-full object-cover transition group-hover:scale-[1.02]"
+            />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center bg-muted text-muted-foreground">
+              <ImageOff className="size-6" />
+            </div>
+          )}
           {pillLabel && (
             <span className={cn("listing-pill", pillClass)} aria-label={pillLabel}>
               {pillLabel}

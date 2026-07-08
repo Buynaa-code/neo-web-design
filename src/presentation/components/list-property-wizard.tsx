@@ -141,6 +141,14 @@ import {
 } from "@/infrastructure/api/media";
 import { ApiError } from "@/infrastructure/api/http";
 import { getToken } from "@/infrastructure/api/token";
+import {
+  getLayerCacheDataByBbox,
+  resolveCoreAddressFromNeodataIds,
+  type Bbox,
+} from "@/infrastructure/api/neodata";
+import { resolveAddressFromLayerCacheData } from "@/domain/schemas/neodata";
+import type { GeoJsonObject } from "geojson";
+import type { MapPolygon } from "@/components/place-picker/PlacePickerMap";
 import { useFormOptions } from "@/application/queries/metadata";
 import {
   useProvinces,
@@ -495,9 +503,17 @@ function buildCreateRequest(
     property_category: category,
     property_subtype: resolveSubtypeKey(category, draft.subtype, classification),
     // Live address cascade master ids (Province → District → Khoroo → …).
-    province_id: draft.address.provinceId ?? undefined,
+    // `province_id` OMITTED: the live server 500s on any create/update that
+    // includes it — SQLSTATE 42S22 "Unknown column 'province_id' in 'field
+    // list'" (the `listings` table migration for this column was never run).
+    // `khoroo_id` OMITTED too (2026-07-08, separate NEW regression): every
+    // khoroo_id — including ones confirmed working earlier the same day —
+    // now 500s with a foreign-key violation (`khoroos` table doesn't have a
+    // row for the id `/address/khoroos` itself just returned). The `khoroo`
+    // display-name string still gets sent below, so the user's selection
+    // isn't lost, just not linked by id. See
+    // docs/api-listing-wizard-requirements.md for both; re-add once fixed.
     district_id: draft.address.districtId ?? undefined,
-    khoroo_id: draft.address.khorooId ?? undefined,
     street_id: draft.address.streetId ?? undefined,
     khoroolol_id: draft.address.khoroololId ?? undefined,
     khotkon_id: draft.address.khotkonId ?? undefined,
@@ -985,17 +1001,17 @@ const groups: Array<{
 }> = [
   {
     step: 1,
-    icon: Target,
-    title: "Зорилго ба зориулалт",
-    sub: "АЛХАМ 01-03",
-    covers: ["Зорилго", "ҮХЭХ зориулалт", "Дэд зориулалт"],
+    icon: MapPin,
+    title: "Хаяг, байршил ба үзүүлэлт",
+    sub: "АЛХАМ 01-02",
+    covers: ["Гараар оруулах", "Газрын зураг", "Үзүүлэлт"],
   },
   {
     step: 2,
-    icon: MapPin,
-    title: "Хаяг, байршил ба үзүүлэлт",
-    sub: "АЛХАМ 04-05",
-    covers: ["Гараар оруулах", "Газрын зураг", "Үзүүлэлт"],
+    icon: Target,
+    title: "Зорилго ба зориулалт",
+    sub: "АЛХАМ 03-05",
+    covers: ["Зорилго", "ҮХЭХ зориулалт", "Дэд зориулалт"],
   },
   {
     step: 3,
@@ -2022,14 +2038,14 @@ function squareMeters(value: unknown) {
 
 function requiredItems(draft: SmartDraft): Requirement[] {
   return [
-    { label: "Зорилго", ok: Boolean(draft.goal), step: 1 },
-    { label: "ҮХЭХ зориулалт", ok: Boolean(draft.propertyType), step: 1 },
-    { label: "Дэд зориулалт", ok: Boolean(draft.subtype), step: 1 },
-    { label: "Дүүрэг/Сум", ok: Boolean(draft.address.district), step: 2 },
-    { label: "Хороо/Баг", ok: Boolean(draft.address.khoroo.trim()), step: 2 },
-    { label: "Хотхон, хороолол эсвэл гудамж", ok: Boolean((draft.address.khotkhon || draft.address.street).trim()), step: 2 },
-    { label: areaLabel(draft), ok: (parseFloat(draft.specs.areaCert) || 0) > 0, step: 2 },
-    { label: "Нийт өрөөний тоо", ok: !needsRooms(draft) || Boolean(draft.specs.rooms), step: 2 },
+    { label: "Зорилго", ok: Boolean(draft.goal), step: 2 },
+    { label: "ҮХЭХ зориулалт", ok: Boolean(draft.propertyType), step: 2 },
+    { label: "Дэд зориулалт", ok: Boolean(draft.subtype), step: 2 },
+    { label: "Дүүрэг/Сум", ok: Boolean(draft.address.district), step: 1 },
+    { label: "Хороо/Баг", ok: Boolean(draft.address.khoroo.trim()), step: 1 },
+    { label: "Хотхон, хороолол эсвэл гудамж", ok: Boolean((draft.address.khotkhon || draft.address.street).trim()), step: 1 },
+    { label: areaLabel(draft), ok: (parseFloat(draft.specs.areaCert) || 0) > 0, step: 1 },
+    { label: "Нийт өрөөний тоо", ok: !needsRooms(draft) || Boolean(draft.specs.rooms), step: 1 },
     { label: modeOf(draft.goal) === "sale" ? "Нийт үнэ" : "Нийт үнэ/сар", ok: priceOf(draft) > 0, step: 4 },
     { label: "Зураг", ok: draft.media.photos.length > 0, step: 5 },
     { label: "Холбоо хамаарал", ok: Boolean(draft.services.relation), step: 6 },
@@ -2791,10 +2807,16 @@ export function ListPropertyWizard() {
                   // infra/amenities/included, all optional) is "done" once the
                   // user has filled something in it OR simply reviewed it, so it
                   // can actually be checked off instead of never completing.
+                  // Also gated on `visitedSteps`: some fields (goal/propertyType/
+                  // subtype) ship with non-empty defaults so their requirements
+                  // read as satisfied from the very first render — without this
+                  // gate, that step's checkmark would show as done before the
+                  // user ever opened it.
                   const done =
-                    groupReqs.length > 0
+                    visitedSteps.has(group.step) &&
+                    (groupReqs.length > 0
                       ? groupReqs.every((item) => item.ok)
-                      : stepHasContent(draft, group.step) || visitedSteps.has(group.step);
+                      : stepHasContent(draft, group.step));
                   const active = step === group.step;
                   return (
                     <Button
@@ -2851,9 +2873,9 @@ export function ListPropertyWizard() {
           <section className="min-w-0 space-y-4">
             <StepHeader step={step} />
             {step === 1 ? (
-              <StepOne draft={draft} actions={actions} />
-            ) : step === 2 ? (
               <StepTwo draft={draft} actions={actions} selectedType={selectedType} />
+            ) : step === 2 ? (
+              <StepOne draft={draft} actions={actions} />
             ) : step === 3 ? (
               <StepThree draft={draft} actions={actions} />
             ) : step === 4 ? (
@@ -2950,7 +2972,7 @@ function StepOne({ draft, actions }: { draft: SmartDraft; actions: DraftActions 
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Target className="size-4 text-accent" />
-            01. Зар оруулах
+            03. Зар оруулах
           </CardTitle>
           <CardDescription>Худалдах эсвэл түрээслүүлэх, хөлслүүлэх зорилгоо сонгоно.</CardDescription>
         </CardHeader>
@@ -2988,7 +3010,7 @@ function StepOne({ draft, actions }: { draft: SmartDraft; actions: DraftActions 
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Building2 className="size-4 text-accent" />
-            02. Үл хөдлөх эд хөрөнгийн зориулалт
+            04. Үл хөдлөх эд хөрөнгийн зориулалт
           </CardTitle>
         </CardHeader>
         <CardContent className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
@@ -3027,7 +3049,7 @@ function StepOne({ draft, actions }: { draft: SmartDraft; actions: DraftActions 
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <GitBranch className="size-4 text-accent" />
-            03. Үл хөдлөх эд хөрөнгийн зориулалт - дэд зориулалт
+            05. Үл хөдлөх эд хөрөнгийн зориулалт - дэд зориулалт
           </CardTitle>
         </CardHeader>
         <CardContent className="flex flex-wrap gap-2">
@@ -3076,7 +3098,7 @@ function StepTwo({
             <div>
               <CardTitle className="flex items-center gap-2">
                 <MapPin className="size-4 text-accent" />
-                04. Хаяг, байршил
+                01. Хаяг, байршил
               </CardTitle>
               <CardDescription>
                 Дүүрэг, хороо, хотхон/гудамжаа бөглөөд барилга, давхар, map pin-ээ нарийвчилна.
@@ -3088,7 +3110,14 @@ function StepTwo({
             </Badge>
           </div>
         </CardHeader>
-        <CardContent className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_380px]">
+        <CardContent
+          className={
+            draft.locationTouched
+              ? "grid gap-4 xl:grid-cols-[minmax(0,1fr)_380px]"
+              : "space-y-4"
+          }
+        >
+          {!draft.locationTouched && <MapPanel draft={draft} actions={actions} compact={false} />}
           <div className="space-y-4">
             <div className="rounded-md border bg-muted/40 p-3">
               <div className="mb-3 flex flex-wrap gap-2">
@@ -3178,7 +3207,7 @@ function StepTwo({
               </div>
             </div>
           </div>
-          <MapPanel draft={draft} actions={actions} />
+          {draft.locationTouched && <MapPanel draft={draft} actions={actions} compact />}
         </CardContent>
       </Card>
 
@@ -3186,7 +3215,7 @@ function StepTwo({
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Ruler className="size-4 text-accent" />
-            05. Үзүүлэлт
+            02. Үзүүлэлт
           </CardTitle>
           <CardDescription>
             Гэрчилгээний талбай нь үнэлгээ, нэгжийн үнэ, хайлтын шүүлтэд ашиглагдана.
@@ -3444,10 +3473,20 @@ function mapsUrlFrom(lat: number, lng: number): string {
   return `https://www.google.com/maps?q=${lat.toFixed(6)},${lng.toFixed(6)}`;
 }
 
-function MapPanel({ draft, actions }: { draft: SmartDraft; actions: DraftActions }) {
+function MapPanel({
+  draft,
+  actions,
+  compact = true,
+}: {
+  draft: SmartDraft;
+  actions: DraftActions;
+  /** Big/prominent (pre-pin call-to-action) vs the small side-panel size. Default compact. */
+  compact?: boolean;
+}) {
   const hasLink = Boolean(draft.address.googleMapLink.trim());
   const manualLine = addressLine(draft) || `${draft.address.country}, ${draft.address.city}`;
   const openHref = hasLink ? draft.address.googleMapLink : mapsUrlFrom(draft.lat, draft.lng);
+  const [polygons, setPolygons] = useState<MapPolygon[]>([]);
 
   const pickLocation = (lat: number, lng: number) => {
     actions.mutate((next) => {
@@ -3459,10 +3498,91 @@ function MapPanel({ draft, actions }: { draft: SmartDraft; actions: DraftActions
     });
   };
 
+  // Once the map re-centers on the dropped pin (at zoom 18), send its real
+  // rendered bbox to the neodata layer service and try to auto-fill
+  // district/khoroo. Best-effort: the neodata bbox filter and its id->name
+  // bbox filter is currently broken server-side (see
+  // docs/api-listing-wizard-requirements.md §9), so this silently does
+  // nothing today — manual selection in <AddressCascade> still works exactly
+  // as before. Will start actually auto-filling once that's fixed — the id
+  // lookup itself (neodata ids == core address cascade ids, confirmed live)
+  // is already correct and needs no further backend fix.
+  const autoFillFromMapPin = async (bbox: Bbox) => {
+    try {
+      const result = await getLayerCacheDataByBbox(bbox, {
+        zoom: 18,
+        perPage: 50,
+        onlyHasZznm: true,
+      });
+      // Draw whatever layer polygons came back, styled with each feature's
+      // own border/fill colors from the API (not a hardcoded color) — the
+      // GIS data already encodes how each layer_type_id should look.
+      setPolygons(
+        result.data
+          .filter((item) => item.geometry != null)
+          .map((item) => ({
+            geometry: item.geometry as GeoJsonObject,
+            borderColor: item.border_color as string | null,
+            fillColor: item.fill_color as string | null,
+            fillOpacity: item.fill_opacity as number | null,
+            borderWidth: item.border_width as number | null,
+          }))
+      );
+      const neodataAddress = resolveAddressFromLayerCacheData(result.data);
+      if (!neodataAddress) return;
+      // Fill whatever building-level data the matched feature carries, even
+      // without a resolvable province/district/khoroo — only into fields the
+      // user hasn't already typed something into, so re-nudging the pin never
+      // clobbers a manual edit.
+      if (neodataAddress.objectName) {
+        actions.mutate((next) => {
+          if (!next.address.khotkhon.trim()) next.address.khotkhon = neodataAddress.objectName!;
+        });
+      }
+      if (neodataAddress.addressNo) {
+        actions.mutate((next) => {
+          if (!next.address.buildingNumber.trim()) next.address.buildingNumber = neodataAddress.addressNo!;
+        });
+      }
+      if (neodataAddress.zipCodeId != null) {
+        // No core-API zipcode lookup exists to resolve this id to a real
+        // postal code (see domain/schemas/neodata.ts) — fill the raw id
+        // anyway per product decision to surface whatever data is available,
+        // rather than leave it blank.
+        actions.mutate((next) => {
+          if (!next.address.zip.trim()) next.address.zip = String(neodataAddress.zipCodeId);
+        });
+      }
+      if (neodataAddress.provinceId == null) return;
+      const core = await resolveCoreAddressFromNeodataIds(
+        neodataAddress.provinceId,
+        neodataAddress.districtId,
+        neodataAddress.khorooId
+      );
+      if (!core) return;
+      actions.setPath("address.provinceId", String(core.provinceId));
+      actions.setPath("address.city", core.provinceName);
+      actions.setPath("address.districtId", String(core.districtId));
+      actions.setPath("address.district", core.districtName);
+      actions.setPath("address.khorooId", String(core.khorooId));
+      actions.setPath("address.khoroo", core.khorooName);
+    } catch {
+      // Best-effort — leave manual address selection untouched on any failure.
+    }
+  };
+
   return (
     <div className="lp-map-panel">
-      <div className="relative h-[360px] overflow-hidden rounded-md border bg-muted/40">
-        <WizardLocationMap lat={draft.lat} lng={draft.lng} kind="other" onPick={pickLocation} />
+      <div className={cn("relative overflow-hidden rounded-md border bg-muted/40", compact ? "h-[360px]" : "h-[560px]")}>
+        <WizardLocationMap
+          lat={draft.lat}
+          lng={draft.lng}
+          kind="other"
+          onPick={pickLocation}
+          pinZoom={18}
+          onSettled={autoFillFromMapPin}
+          polygons={polygons}
+        />
         <div className="pointer-events-none absolute left-2 top-2 z-[500] flex items-center gap-1.5 rounded-full bg-background/90 px-2.5 py-1 text-xs font-medium shadow">
           {draft.locationTouched ? (
             <CircleCheck className="size-3.5 text-emerald-600" />

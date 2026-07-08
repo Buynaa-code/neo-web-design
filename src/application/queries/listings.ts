@@ -26,10 +26,11 @@ import { queryKeys } from "@/infrastructure/query/keys";
  * keeps the previous page visible while the next page/filter loads, avoiding
  * layout flashes during pagination.
  */
-export function useListings(params: ListListingsParams = {}) {
+export function useListings(params: ListListingsParams = {}, opts: { enabled?: boolean } = {}) {
   return useQuery({
     queryKey: queryKeys.listings(params),
     queryFn: () => listListings(params),
+    enabled: opts.enabled,
     placeholderData: keepPreviousData,
     // Map wire resources to UI listings once, here, so components stay simple.
     select: (res) => ({

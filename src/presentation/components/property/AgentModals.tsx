@@ -195,8 +195,8 @@ export function AgentMessageModal({
         {listing && (
           <div className="card p-3 flex items-center gap-3" style={{ background: "var(--surface-2)" }}>
             <div
-              className="w-12 h-12 rounded-lg bg-cover bg-center shrink-0"
-              style={{ backgroundImage: `url('${photoUrl(listing, 0, "200/200")}')` }}
+              className="w-12 h-12 rounded-lg bg-cover bg-center shrink-0 bg-muted"
+              style={photoUrl(listing, 0) ? { backgroundImage: `url('${photoUrl(listing, 0)}')` } : undefined}
             />
             <div className="flex-1 min-w-0">
               <div className="font-medium text-sm truncate">

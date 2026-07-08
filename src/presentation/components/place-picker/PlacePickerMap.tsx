@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect } from "react";
-import { MapContainer, Marker, TileLayer, useMap, useMapEvents } from "react-leaflet";
+import { GeoJSON, MapContainer, Marker, TileLayer, useMap, useMapEvents } from "react-leaflet";
 import L from "leaflet";
+import type { GeoJsonObject } from "geojson";
 
 const UB_CENTER: [number, number] = [47.9077, 106.8832];
 
@@ -36,13 +37,55 @@ function MapClickHandler({
   return null;
 }
 
-function CenterOn({ lat, lng }: { lat: number; lng: number }) {
+interface Bbox {
+  minLat: number;
+  minLng: number;
+  maxLat: number;
+  maxLng: number;
+}
+
+export interface MapPolygon {
+  geometry: GeoJsonObject;
+  /** Per-feature styling from the API's own LayerCacheDataResource — not hardcoded. */
+  borderColor?: string | null;
+  fillColor?: string | null;
+  fillOpacity?: number | null;
+  borderWidth?: number | null;
+}
+
+function CenterOn({
+  lat,
+  lng,
+  zoom = 14,
+  onSettled,
+}: {
+  lat: number;
+  lng: number;
+  zoom?: number;
+  onSettled?: (bbox: Bbox) => void;
+}) {
   const map = useMap();
   useEffect(() => {
-    if (Number.isFinite(lat) && Number.isFinite(lng)) {
-      map.setView([lat, lng], Math.max(map.getZoom(), 14), { animate: true });
-    }
-  }, [lat, lng, map]);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+    map.setView([lat, lng], Math.max(map.getZoom(), zoom), { animate: true });
+    if (!onSettled) return;
+    // `moveend` fires once the pan/zoom animation finishes, when getBounds()
+    // reflects the final (real, rendered-viewport-sized) extent.
+    const handleSettled = () => {
+      const bounds = map.getBounds();
+      onSettled({
+        minLat: bounds.getSouth(),
+        minLng: bounds.getWest(),
+        maxLat: bounds.getNorth(),
+        maxLng: bounds.getEast(),
+      });
+    };
+    map.once("moveend", handleSettled);
+    return () => {
+      map.off("moveend", handleSettled);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lat, lng, zoom, map]);
   return null;
 }
 
@@ -71,11 +114,20 @@ export function PlacePickerMap({
   lng,
   kind,
   onPick,
+  pinZoom,
+  onSettled,
+  polygons,
 }: {
   lat: number;
   lng: number;
   kind: string;
   onPick: (lat: number, lng: number) => void;
+  /** Zoom level to re-center to once a pin is dropped/dragged. Default 14. */
+  pinZoom?: number;
+  /** Fires with the map's real rendered bbox once it settles after re-centering. */
+  onSettled?: (bbox: Bbox) => void;
+  /** Building/parcel outlines to draw over the map (e.g. from a neodata bbox lookup). */
+  polygons?: MapPolygon[];
 }) {
   const emoji = KIND_EMOJI[kind] ?? "📍";
   const hasMarker = Number.isFinite(lat) && Number.isFinite(lng);
@@ -93,7 +145,19 @@ export function PlacePickerMap({
       />
       <InvalidateOnMount />
       <MapClickHandler onPick={onPick} />
-      {hasMarker && <CenterOn lat={lat} lng={lng} />}
+      {hasMarker && <CenterOn lat={lat} lng={lng} zoom={pinZoom} onSettled={onSettled} />}
+      {polygons?.map((p, i) => (
+        <GeoJSON
+          key={i}
+          data={p.geometry}
+          style={{
+            color: p.borderColor || "#c9a15f",
+            weight: p.borderWidth ?? 2,
+            fillColor: p.fillColor || p.borderColor || "#c9a15f",
+            fillOpacity: p.fillOpacity ?? 0.15,
+          }}
+        />
+      ))}
       {hasMarker && (
         <Marker
           position={[lat, lng]}

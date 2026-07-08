@@ -268,6 +268,14 @@ function flattenPhotoUrls(photos: ListingResource["photos"]): string[] {
   return urls;
 }
 
+/** Pulls the first clip URL out of the grouped `photos.video` array, if present. */
+function extractVideoUrl(photos: ListingResource["photos"]): string | undefined {
+  if (!photos || typeof photos !== "object" || Array.isArray(photos)) return undefined;
+  const group = (photos as Record<string, unknown>).video;
+  const first = Array.isArray(group) ? group.find((u) => typeof u === "string" && u) : undefined;
+  return typeof first === "string" ? first : undefined;
+}
+
 /**
  * Maps the rich API `ListingResource` down to the simple `Listing` shape the
  * existing UI consumes, filling safe defaults for nullable fields. This lets us
@@ -312,5 +320,6 @@ export function toListing(r: ListingResource): Listing {
       (s): s is string | number => typeof s === "string" || typeof s === "number"
     ),
     photoUrls: flattenPhotoUrls(r.photos),
+    videoUrl: extractVideoUrl(r.photos),
   };
 }

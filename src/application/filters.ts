@@ -1,6 +1,5 @@
 import type { Listing, ListingPropertyKind } from "@/domain/types";
 import { LISTINGS } from "@/infrastructure/data/listings";
-import { AGENTS } from "@/infrastructure/data/agents";
 import { BUS_STOPS, BUS_STOP_RADIUS } from "@/infrastructure/data/bus-stops";
 import { geoDistance, pointInPolygon } from "@/lib/utils";
 
@@ -26,9 +25,9 @@ export function baseListingsForMode(mode: "sale" | "rent"): Listing[] {
   );
 }
 
-export function isListingVerified(l: Listing): boolean {
-  const ag = AGENTS.find((a) => a.id === l.agentId);
-  return !!ag?.verified;
+/** No real backend concept of a "verified agent" exists yet — always false until one does. */
+export function isListingVerified(_l: Listing): boolean {
+  return false;
 }
 
 export function hasIpoteh(l: Listing): boolean {
@@ -84,11 +83,37 @@ export interface FilterState {
   filterAreaMax: number | null;
   drawnPolygon: { x: number; y: number }[] | null;
   sortBy: "newest" | "price-asc" | "price-desc" | "area-asc" | "area-desc" | "ppm-asc";
+  /**
+   * Raw AI search bar text. `parseAIQuery()` only extracts *structured*
+   * filters it recognizes (district/rooms/price/lifestyle) — free text that
+   * doesn't match one of those patterns (e.g. a project/building name) was
+   * previously dropped on the floor, so searching for it found nothing.
+   * Substring-matched here against listing text fields to close that gap.
+   */
+  query?: string;
 }
 
-export function filteredListings(s: FilterState): Listing[] {
-  let list = baseListingsForMode(s.mode);
+/** Case-insensitive substring match of the raw search text against a listing's text fields. */
+function matchesQuery(l: Listing, query: string): boolean {
+  const haystack = [l.district, l.khoroo, l.khotkhon, l.desc ?? "", ...(l.features ?? [])]
+    .join(" ")
+    .toLowerCase();
+  return haystack.includes(query.toLowerCase());
+}
 
+/**
+ * `searchResults`: when the caller already ran the query text through the
+ * real backend `GET /listings?q=` (see `useListings` + `ResultsScreen`),
+ * pass its listings here instead of substring-matching client-side over the
+ * locally bootstrapped 100 — the server searches its full dataset, not just
+ * whatever happened to load on boot. All the other structured filters below
+ * (rooms/price/lifestyle/etc., most of which the backend doesn't support)
+ * still apply on top of that server-searched set.
+ */
+export function filteredListings(s: FilterState, searchResults?: Listing[]): Listing[] {
+  let list = searchResults ?? baseListingsForMode(s.mode);
+
+  if (!searchResults && s.query?.trim()) list = list.filter((l) => matchesQuery(l, s.query!.trim()));
   if (s.mode !== "sale" && s.filterPropertyKind)
     list = list.filter((l) => getPropertyKind(l) === s.filterPropertyKind);
   if (s.filterDistrict) list = list.filter((l) => l.district === s.filterDistrict);

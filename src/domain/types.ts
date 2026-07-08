@@ -32,6 +32,8 @@ export interface Listing {
   photoSeeds?: (string | number)[];
   /** Real photo URLs from the grouped API `photos` object, cover group first. */
   photoUrls?: string[];
+  /** The listing's walkthrough clip, from the API `photos.video` group. */
+  videoUrl?: string;
   propertyKind?: ListingPropertyKind;
 }
 

@@ -22,6 +22,7 @@ import {
   GraduationCap,
   Handshake,
   Heart,
+  ImageOff,
   ListPlus,
   Image as ImageIcon,
   MapPin,
@@ -42,7 +43,7 @@ import {
 
 import { BANKS, getBank } from "@/infrastructure/data/banks";
 import { BUS_STOPS } from "@/infrastructure/data/bus-stops";
-import { getAgent, FALLBACK_AGENT } from "@/infrastructure/data/agents";
+import { getAgent } from "@/infrastructure/data/agents";
 import { getListing, LISTINGS, photoUrl } from "@/infrastructure/data/listings";
 import {
   fmtCompact,
@@ -63,6 +64,7 @@ import {
 import { ResultsMap } from "@/components/results/ResultsMap";
 import { AddToListModal } from "@/components/results/SavedListModals";
 import { openLightbox } from "@/components/property/Lightbox";
+import { openVideoModal } from "@/components/property/VideoModal";
 import { LoanApplyModal, LoanCompareModal } from "@/components/property/LoanModals";
 import {
   AgentMessageModal,
@@ -175,7 +177,7 @@ function travelText(km: number): string {
 export function PropertyDetail({ listing }: { listing: Listing }) {
   const router = useRouter();
   const detail = getListingDetail(listing);
-  const agent = getAgent(listing.agentId) ?? FALLBACK_AGENT;
+  const agent = getAgent(listing.agentId);
   const verified = isListingVerified(listing);
   const isSaved = useStore((s) => s.savedListingIds.includes(listing.id));
   const toggleSaved = useStore((s) => s.toggleSavedListing);
@@ -244,8 +246,9 @@ export function PropertyDetail({ listing }: { listing: Listing }) {
   ].filter(Boolean).slice(0, 4);
   const propId = `RG-${String(listing.id).padStart(4, "0")}-${listing.photos * 7 + 13}`;
   const currentIndex = LISTINGS.findIndex((item) => item.id === listing.id);
-  const prev = LISTINGS[(currentIndex - 1 + LISTINGS.length) % LISTINGS.length];
-  const next = LISTINGS[(currentIndex + 1) % LISTINGS.length];
+  const prev =
+    LISTINGS.length > 1 ? LISTINGS[(currentIndex - 1 + LISTINGS.length) % LISTINGS.length] : undefined;
+  const next = LISTINGS.length > 1 ? LISTINGS[(currentIndex + 1) % LISTINGS.length] : undefined;
   const bank = getBank(loanBankId);
   const downPct = Math.max(bank.minDownPct, loanDownPct);
   const years = Math.min(bank.maxYears, loanYears);
@@ -256,10 +259,10 @@ export function PropertyDetail({ listing }: { listing: Listing }) {
   const totalInterest = totalPaid - loan;
   const compareActive = compareIds.includes(listing.id);
 
-  const openCallModal = () => openModal(<CallAgentModal agent={agent} />, "sm");
+  const openCallModal = () => agent && openModal(<CallAgentModal agent={agent} />, "sm");
   const openWhatsApp = () =>
-    openModal(<AgentMessageModal agent={agent} listing={listing} />, "md");
-  const openReviews = () => openModal(<ReviewsModal agent={agent} />, "md");
+    agent && openModal(<AgentMessageModal agent={agent} listing={listing} />, "md");
+  const openReviews = () => agent && openModal(<ReviewsModal agent={agent} />, "md");
 
   const openScheduleModal = () => {
     setScheduleListingId(listing.id);
@@ -308,60 +311,78 @@ export function PropertyDetail({ listing }: { listing: Listing }) {
           <ChevronRight className="sep size-3.5" />
           <span className="text-[color:var(--text)]">{propProject}</span>
         </div>
-        <div className="flex items-center gap-3 text-sm">
-          <Link href={`/property/${prev.id}`} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[color:var(--text-2)] hover:bg-[color:var(--surface-2)]">
-            <ChevronLeft className="size-4" />
-            Буцах
-          </Link>
-          <Link href={`/property/${next.id}`} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[color:var(--text-2)] hover:bg-[color:var(--surface-2)]">
-            Дараагийн зар
-            <ChevronRight className="size-4" />
-          </Link>
-        </div>
+        {(prev || next) && (
+          <div className="flex items-center gap-3 text-sm">
+            {prev && (
+              <Link href={`/property/${prev.id}`} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[color:var(--text-2)] hover:bg-[color:var(--surface-2)]">
+                <ChevronLeft className="size-4" />
+                Буцах
+              </Link>
+            )}
+            {next && (
+              <Link href={`/property/${next.id}`} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[color:var(--text-2)] hover:bg-[color:var(--surface-2)]">
+                Дараагийн зар
+                <ChevronRight className="size-4" />
+              </Link>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="mb-8 grid gap-6 lg:grid-cols-[1.35fr_1fr]">
         <div className="bm-gallery">
-          <button
-            type="button"
-            onClick={() => openLightbox(listing.id, 0)}
-            className="bm-gallery-hero cursor-zoom-in"
-            style={{ backgroundImage: `url('${photoUrl(listing, 0, "900/680")}')` }}
-            aria-label="Зургийг томруулж харах"
-          >
-            {verified ? (
-              <span className="bm-verified">
-                <BadgeCheck className="size-3" />
-                Verified
-              </span>
-            ) : null}
-            <div className="bm-gallery-overlay-tag">
-              <ImageIcon className="size-3.5" />
-              {listing.photos} зураг
-            </div>
-          </button>
-          <div className="bm-gallery-side">
+          {photoUrl(listing, 0) ? (
             <button
               type="button"
-              onClick={() => openLightbox(listing.id, 1)}
-              className="bm-gallery-thumb cursor-zoom-in"
-              style={{ backgroundImage: `url('${photoUrl(listing, 1, "300/200")}')` }}
-              aria-label="Видеог нээх"
+              onClick={() => openLightbox(listing.id, 0)}
+              className="bm-gallery-hero cursor-zoom-in"
+              style={{ backgroundImage: `url('${photoUrl(listing, 0)}')` }}
+              aria-label="Зургийг томруулж харах"
             >
-              <div className="absolute inset-0 grid place-items-center bg-black/30 text-white">
-                <PlayCircle className="size-9" />
+              {verified ? (
+                <span className="bm-verified">
+                  <BadgeCheck className="size-3" />
+                  Verified
+                </span>
+              ) : null}
+              <div className="bm-gallery-overlay-tag">
+                <ImageIcon className="size-3.5" />
+                {listing.photoUrls?.length ?? 0} зураг
               </div>
             </button>
-            {[2, 3, 4].map((index) => (
+          ) : (
+            <div className="bm-gallery-hero grid place-items-center bg-muted text-muted-foreground">
+              <ImageOff className="size-8" />
+            </div>
+          )}
+          <div className="bm-gallery-side">
+            {listing.videoUrl && (
               <button
-                key={index}
                 type="button"
-                onClick={() => openLightbox(listing.id, index)}
+                onClick={() => openVideoModal(listing.id)}
                 className="bm-gallery-thumb cursor-zoom-in"
-                style={{ backgroundImage: `url('${photoUrl(listing, index, "300/200")}')` }}
-                aria-label={`${index + 1}-р зураг`}
-              />
-            ))}
+                style={photoUrl(listing, 1) ? { backgroundImage: `url('${photoUrl(listing, 1)}')` } : undefined}
+                aria-label="Видео тоглуулах"
+              >
+                <div className="absolute inset-0 grid place-items-center bg-black/30 text-white">
+                  <PlayCircle className="size-9" />
+                </div>
+              </button>
+            )}
+            {[1, 2, 3, 4]
+              .filter(
+                (index) => !(index === 1 && listing.videoUrl) && index < (listing.photoUrls?.length ?? 0)
+              )
+              .map((index) => (
+                <button
+                  key={index}
+                  type="button"
+                  onClick={() => openLightbox(listing.id, index)}
+                  className="bm-gallery-thumb cursor-zoom-in"
+                  style={{ backgroundImage: `url('${photoUrl(listing, index)}')` }}
+                  aria-label={`${index + 1}-р зураг`}
+                />
+              ))}
           </div>
         </div>
 
@@ -403,10 +424,12 @@ export function PropertyDetail({ listing }: { listing: Listing }) {
           </div>
 
           <div className="mb-4 flex flex-wrap gap-2.5">
-            <button type="button" className="bm-btn-gold flex-1 justify-center" onClick={openCallModal}>
-              <Phone className="size-4" />
-              Холбоо барих
-            </button>
+            {agent && (
+              <button type="button" className="bm-btn-gold flex-1 justify-center" onClick={openCallModal}>
+                <Phone className="size-4" />
+                Холбоо барих
+              </button>
+            )}
             <button type="button" className="bm-btn-navy justify-center" onClick={openScheduleModal}>
               <Calendar className="size-4" />
               Үзлэг товлох
@@ -596,57 +619,59 @@ export function PropertyDetail({ listing }: { listing: Listing }) {
         </div>
 
         <aside className="space-y-4">
-          <section className="bm-agent">
-            <div className="mb-3 text-xs font-semibold text-[color:var(--text-3)]">Зарын эзэн / Зуучлагч</div>
-            <div className="mb-4 flex items-center gap-3">
-              <div className="bm-agent-avatar">{agent.initials}</div>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-1 text-sm font-semibold">
-                  {agent.name}
-                  {agent.verified ? <BadgeCheck className="size-4 text-[color:var(--gold-brand)]" /> : null}
+          {agent && (
+            <section className="bm-agent">
+              <div className="mb-3 text-xs font-semibold text-[color:var(--text-3)]">Зарын эзэн / Зуучлагч</div>
+              <div className="mb-4 flex items-center gap-3">
+                <div className="bm-agent-avatar">{agent.initials}</div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1 text-sm font-semibold">
+                    {agent.name}
+                    {agent.verified ? <BadgeCheck className="size-4 text-[color:var(--gold-brand)]" /> : null}
+                  </div>
+                  <div className="text-xs text-[color:var(--text-3)]">{agent.agency}</div>
+                  <div className="mt-1 flex items-center gap-2">
+                    {agent.verified ? (
+                      <span className="flex items-center gap-1 text-[10px] text-[color:var(--success)]">
+                        <BadgeCheck className="size-3" />
+                        Verified
+                      </span>
+                    ) : null}
+                    <span className="text-[10px] text-[color:var(--gold-brand)]">NEOMAP Partner</span>
+                  </div>
                 </div>
-                <div className="text-xs text-[color:var(--text-3)]">{agent.agency}</div>
-                <div className="mt-1 flex items-center gap-2">
-                  {agent.verified ? (
-                    <span className="flex items-center gap-1 text-[10px] text-[color:var(--success)]">
-                      <BadgeCheck className="size-3" />
-                      Verified
-                    </span>
-                  ) : null}
-                  <span className="text-[10px] text-[color:var(--gold-brand)]">NEOMAP Partner</span>
+              </div>
+              <button
+                type="button"
+                onClick={openReviews}
+                className="mb-4 flex items-center gap-2 text-sm hover:underline cursor-pointer"
+              >
+                <span className="text-[color:var(--gold-brand)]">★★★★★</span>
+                <span className="font-semibold">{agent.rating.toFixed(1)}</span>
+                <span className="text-xs text-[color:var(--text-3)]">({agent.reviewCount} үнэлгээ)</span>
+              </button>
+              <div className="mb-4 grid grid-cols-2 gap-3 border-t border-[color:var(--border)] pt-4 text-center">
+                <div>
+                  <div className="text-xs text-[color:var(--text-3)]">Нийт зар</div>
+                  <div className="num text-base font-bold">{agent.listings}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-[color:var(--text-3)]">Амжилттай борлуулалт</div>
+                  <div className="num text-base font-bold">96%</div>
                 </div>
               </div>
-            </div>
-            <button
-              type="button"
-              onClick={openReviews}
-              className="mb-4 flex items-center gap-2 text-sm hover:underline cursor-pointer"
-            >
-              <span className="text-[color:var(--gold-brand)]">★★★★★</span>
-              <span className="font-semibold">{agent.rating.toFixed(1)}</span>
-              <span className="text-xs text-[color:var(--text-3)]">({agent.reviewCount} үнэлгээ)</span>
-            </button>
-            <div className="mb-4 grid grid-cols-2 gap-3 border-t border-[color:var(--border)] pt-4 text-center">
-              <div>
-                <div className="text-xs text-[color:var(--text-3)]">Нийт зар</div>
-                <div className="num text-base font-bold">{agent.listings}</div>
+              <div className="space-y-2">
+                <button type="button" className="bm-btn-gold w-full justify-center" onClick={openCallModal}>
+                  <Phone className="size-4" />
+                  Холбоо барих
+                </button>
+                <button type="button" className="bm-btn-navy w-full justify-center" onClick={openWhatsApp}>
+                  <MessageCircle className="size-4" />
+                  WhatsApp чат
+                </button>
               </div>
-              <div>
-                <div className="text-xs text-[color:var(--text-3)]">Амжилттай борлуулалт</div>
-                <div className="num text-base font-bold">96%</div>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <button type="button" className="bm-btn-gold w-full justify-center" onClick={openCallModal}>
-                <Phone className="size-4" />
-                Холбоо барих
-              </button>
-              <button type="button" className="bm-btn-navy w-full justify-center" onClick={openWhatsApp}>
-                <MessageCircle className="size-4" />
-                WhatsApp чат
-              </button>
-            </div>
-          </section>
+            </section>
+          )}
 
           <section className="bm-side-block flex items-start gap-3 border-[rgba(201,163,95,.3)]">
             <ShieldCheck className="mt-0.5 size-5 shrink-0 text-[color:var(--gold-brand)]" />

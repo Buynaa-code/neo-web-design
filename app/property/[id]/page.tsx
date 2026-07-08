@@ -41,7 +41,7 @@ export async function generateMetadata({ params }: PropertyPageProps): Promise<M
   const description =
     listing.desc ??
     `${listing.district} дүүрэг, ${listing.khotkhon}. ${listing.rooms} өрөө, ${listing.area}м², ${fmtFullPrice(listing.price, listing.mode)}.`;
-  const image = photoUrl(listing, 0, "1200/630");
+  const image = photoUrl(listing, 0);
   const canonical = `/property/${listing.id}`;
 
   return {
@@ -53,13 +53,15 @@ export async function generateMetadata({ params }: PropertyPageProps): Promise<M
       url: `${BASE_URL}${canonical}`,
       title,
       description,
-      images: [{ url: image, width: 1200, height: 630, alt: `${listing.khotkhon}, ${listing.district}` }],
+      images: image
+        ? [{ url: image, width: 1200, height: 630, alt: `${listing.khotkhon}, ${listing.district}` }]
+        : [],
     },
     twitter: {
       card: "summary_large_image",
       title,
       description,
-      images: [image],
+      images: image ? [image] : [],
     },
   };
 }
@@ -76,7 +78,7 @@ export default async function PropertyPage({ params }: PropertyPageProps) {
     name: `${listing.khotkhon}, ${listing.district}`,
     description: listing.desc ?? `${listing.rooms} өрөө, ${listing.area}м²`,
     url: `${BASE_URL}/property/${listing.id}`,
-    image: [photoUrl(listing, 0, "1200/630")],
+    ...(photoUrl(listing, 0) ? { image: [photoUrl(listing, 0)] } : {}),
     datePosted: listing.priceHistory?.[listing.priceHistory.length - 1]?.d,
     offers: {
       "@type": "Offer",

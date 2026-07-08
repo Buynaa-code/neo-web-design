@@ -9,6 +9,7 @@ import { Toast } from "@/components/Toast";
 import { CmdPalette } from "@/components/CmdPalette";
 import { PlacePicker } from "@/components/PlacePicker";
 import { Lightbox } from "@/components/property/Lightbox";
+import { VideoModal } from "@/components/property/VideoModal";
 import { FooterShell } from "@/components/FooterShell";
 import { FloatingAIChat } from "@/components/FloatingAIChat";
 import { BrandLogoSymbol } from "@/components/BrandLogo";
@@ -141,6 +142,7 @@ export default function RootLayout({
           <CmdPalette />
           <PlacePicker />
           <Lightbox />
+          <VideoModal />
           <FloatingAIChat />
         </ThemeProvider>
         </QueryProvider>

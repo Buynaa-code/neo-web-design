@@ -6,6 +6,7 @@ import Image from "next/image";
 import {
   Bell,
   Heart,
+  ImageOff,
   ListPlus,
   Mail,
   MessageSquare,
@@ -292,19 +293,26 @@ function TabButton({
 
 function SavedListingCard({ l, onUnsave }: { l: Listing; onUnsave: () => void }) {
   const openModal = useStore((s) => s.openModal);
+  const cover = photoUrl(l, 0);
   return (
     <div className="card overflow-hidden">
       <Link
         href={`/property/${l.id}`}
         className="block relative aspect-[16/10] cursor-pointer"
       >
-        <Image
-          src={photoUrl(l, 0, "600/400")}
-          alt={l.khotkhon}
-          fill
-          sizes="(max-width:1024px) 50vw, 33vw"
-          className="object-cover"
-        />
+        {cover ? (
+          <Image
+            src={cover}
+            alt={l.khotkhon}
+            fill
+            sizes="(max-width:1024px) 50vw, 33vw"
+            className="object-cover"
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center bg-muted text-muted-foreground">
+            <ImageOff className="size-6" />
+          </div>
+        )}
         <button
           type="button"
           onClick={(e) => {
@@ -571,8 +579,8 @@ function ListDetailModal({ listId }: { listId: number }) {
                   className="flex items-center gap-3 flex-1 min-w-0"
                 >
                   <div className="relative w-16 h-12 rounded-md overflow-hidden shrink-0 bg-[var(--surface-2)]">
-                    {l ? (
-                      <Image src={photoUrl(l, 0, "160/120")} alt={l.khotkhon} fill sizes="64px" className="object-cover" />
+                    {l && photoUrl(l, 0) ? (
+                      <Image src={photoUrl(l, 0)!} alt={l.khotkhon} fill sizes="64px" className="object-cover" />
                     ) : null}
                   </div>
                   <div className="min-w-0">

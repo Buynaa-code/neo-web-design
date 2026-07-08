@@ -86,9 +86,9 @@ function ViewingRow({
   return (
     <div className="card p-4 flex items-center gap-4">
       <div className="relative w-14 h-14 rounded-lg overflow-hidden shrink-0 bg-[var(--surface-2)]">
-        {listing ? (
+        {listing && photoUrl(listing, 0) ? (
           <Image
-            src={photoUrl(listing, 0, "200/200")}
+            src={photoUrl(listing, 0)!}
             alt={title}
             fill
             sizes="56px"
@@ -201,13 +201,15 @@ export function ActivityScreen() {
             {recentlyViewed.map((listing) => (
               <div key={listing.id} className="card p-4 flex items-center gap-4">
                 <div className="relative w-14 h-14 rounded-lg overflow-hidden shrink-0 bg-[var(--surface-2)]">
-                  <Image
-                    src={photoUrl(listing, 0, "200/200")}
-                    alt={listing.khotkhon || "Зар"}
-                    fill
-                    sizes="56px"
-                    className="object-cover"
-                  />
+                  {photoUrl(listing, 0) ? (
+                    <Image
+                      src={photoUrl(listing, 0)!}
+                      alt={listing.khotkhon || "Зар"}
+                      fill
+                      sizes="56px"
+                      className="object-cover"
+                    />
+                  ) : null}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="font-semibold text-sm truncate">

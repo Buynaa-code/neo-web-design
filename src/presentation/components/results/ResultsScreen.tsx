@@ -17,6 +17,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { useStore } from "@/infrastructure/store";
+import { useListings } from "@/application/queries/listings";
 import { filteredListings, baseListingsForMode } from "@/application/filters";
 import { fmtCompact } from "@/infrastructure/data/formatters";
 import { FilterSidebar } from "./FilterSidebar";
@@ -25,7 +26,6 @@ import { ResultsList } from "./ResultsList";
 import { ResultsMap } from "./ResultsMap";
 import { SortBar } from "./SortBar";
 import { AdvancedFiltersModal } from "./AdvancedFiltersModal";
-import { AISearchBar } from "./AISearchBar";
 import { SaveSearchModal } from "./SavedSearchModals";
 import { DetailedStatsModal } from "./DetailedStatsModal";
 
@@ -57,6 +57,10 @@ export function ResultsScreen() {
       filterPropertyKind: s.filterPropertyKind,
       drawnPolygon: s.drawnPolygon,
       sortBy: s.sortBy,
+      // Free-text search bar query — substring-matched against listing text
+      // fields in filteredListings(), since parseAIQuery() only extracts
+      // structured filters and drops anything else (e.g. a project name).
+      query: s.aiQuery,
       // Re-run filtering when real listings replace the seed dataset.
       listingsVersion: s.listingsVersion,
     }))
@@ -78,7 +82,19 @@ export function ResultsScreen() {
     }
   }, [params, mode, setMode]);
 
-  const listings = useMemo(() => filteredListings(state), [state]);
+  // Real backend search: a non-empty query hits GET /listings?q= (confirmed
+  // live to full-text search the server's whole dataset), instead of only
+  // ever substring-matching the ~100 listings bootstrapped on app boot.
+  const searchQuery = state.query?.trim() ?? "";
+  const { data: searchData } = useListings(
+    { q: searchQuery, mode: state.mode, perPage: 100 },
+    { enabled: Boolean(searchQuery) }
+  );
+
+  const listings = useMemo(
+    () => filteredListings(state, searchQuery ? searchData?.listings : undefined),
+    [state, searchQuery, searchData]
+  );
 
   const stats = useMemo(() => {
     const base = baseListingsForMode(state.mode).filter(
@@ -120,7 +136,6 @@ export function ResultsScreen() {
 
   return (
     <div className={`results-shell${fullMap ? " full-map" : ""}`}>
-      <AISearchBar />
       <div className="results-hero">
         <div>
           <h1 className="results-title">Хайлтын үр дүн</h1>

@@ -36,6 +36,7 @@ import type { Listing } from "@/domain/types";
 import { ResultsMap } from "@/components/results/ResultsMap";
 import { DualRangeSlider } from "@/components/DualRangeSlider";
 import { HomeAIChat } from "@/components/HomeAIChat";
+import { AISearchBar } from "@/components/results/AISearchBar";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -173,7 +174,9 @@ export function HomeSplitScreen() {
   };
 
   return (
-    <section className="home-split home-split-next" aria-label="NEOMAP нүүр">
+    <>
+      <AISearchBar />
+      <section className="home-split home-split-next" aria-label="NEOMAP нүүр">
       <aside className="home-filter-col" aria-label="Шүүлтүүр">
         <div className="home-panel-top">
           <div className="bk-mode-pill" role="tablist" aria-label="Зарын төрөл">
@@ -323,7 +326,8 @@ export function HomeSplitScreen() {
         </div>
         <HomeAIChat />
       </div>
-    </section>
+      </section>
+    </>
   );
 }
 
@@ -588,8 +592,8 @@ function HomeListingRow({ listing }: { listing: Listing }) {
       style={{ cursor: "pointer" }}
     >
       <div
-        className="bk-card-img"
-        style={{ backgroundImage: `url('${photoUrl(listing, 0, "300/300")}')` }}
+        className={cn("bk-card-img", !photoUrl(listing, 0) && "bg-muted")}
+        style={photoUrl(listing, 0) ? { backgroundImage: `url('${photoUrl(listing, 0)}')` } : undefined}
       />
       <div className="bk-card-body bm-listing-row-body">
         <div className="bm-listing-row-top">

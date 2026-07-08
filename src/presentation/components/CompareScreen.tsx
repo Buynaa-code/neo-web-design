@@ -138,14 +138,16 @@ export function CompareScreen() {
               className="p-3"
               style={{ borderBottom: "1px solid var(--border)" }}
             >
-              <div className="relative aspect-[4/3] rounded-lg overflow-hidden mb-2">
-                <Image
-                  src={photoUrl(l, 0, "400/300")}
-                  alt={l.khotkhon}
-                  fill
-                  sizes="240px"
-                  className="object-cover"
-                />
+              <div className="relative aspect-[4/3] rounded-lg overflow-hidden mb-2 bg-muted">
+                {photoUrl(l, 0) ? (
+                  <Image
+                    src={photoUrl(l, 0)!}
+                    alt={l.khotkhon}
+                    fill
+                    sizes="240px"
+                    className="object-cover"
+                  />
+                ) : null}
                 <button
                   type="button"
                   onClick={() => toggleCompare(l.id)}
