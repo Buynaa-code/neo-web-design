@@ -64,6 +64,7 @@ import {
   Paperclip,
   ParkingCircle,
   Pencil,
+  PlayCircle,
   PlugZap,
   Plus,
   Rocket,
@@ -4697,6 +4698,58 @@ function PhotoTileImage({ url, alt }: { url: string; alt: string }) {
   );
 }
 
+/**
+ * Video tile — a plain <img> can't decode a video file (it just fires
+ * onError and falls back to "зураг алга"), so the uploaded clip needs its
+ * own preview: the video itself as the thumbnail (browsers show its first
+ * frame) with a play-icon overlay, click-to-toggle playback.
+ */
+function VideoTile({ url }: { url: string }) {
+  const ref = useRef<HTMLVideoElement>(null);
+  const [playing, setPlaying] = useState(false);
+  if (!url) {
+    return (
+      <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 text-muted-foreground">
+        <Video className="size-5" />
+        <span className="text-[10px]">бичлэг алга</span>
+      </div>
+    );
+  }
+  return (
+    <button
+      type="button"
+      className="absolute inset-0"
+      onClick={() => {
+        const video = ref.current;
+        if (!video) return;
+        if (video.paused) {
+          void video.play();
+          setPlaying(true);
+        } else {
+          video.pause();
+          setPlaying(false);
+        }
+      }}
+    >
+      <video
+        ref={ref}
+        src={url}
+        muted
+        playsInline
+        preload="metadata"
+        loop
+        className="absolute inset-0 h-full w-full object-cover"
+        onPause={() => setPlaying(false)}
+      />
+      {!playing && (
+        <div className="absolute inset-0 grid place-items-center bg-black/30 text-white">
+          <PlayCircle className="size-8" />
+        </div>
+      )}
+    </button>
+  );
+}
+
 function MediaSection({ draft, actions }: { draft: SmartDraft; actions: DraftActions }) {
   const [urlInput, setUrlInput] = useState("");
   const [urlCategory, setUrlCategory] = useState(mediaCategories[0]);
@@ -4890,16 +4943,22 @@ function MediaSection({ draft, actions }: { draft: SmartDraft; actions: DraftAct
                   isCover ? "border-accent" : "border-border"
                 )}
               >
-                <PhotoTileImage url={photo.url ? normalizeMediaUrl(photo.url) : ""} alt={photo.category} />
-                <Button
-                  type="button"
-                  size="xs"
-                  variant={isCover ? "default" : "secondary"}
-                  onClick={() => actions.setPath("media.coverIndex", index)}
-                  className="absolute left-1 top-1 h-6"
-                >
-                  {isCover ? "Нүүр" : "Сонгох"}
-                </Button>
+                {photo.category === "Бичлэг" ? (
+                  <VideoTile url={photo.url ? normalizeMediaUrl(photo.url) : ""} />
+                ) : (
+                  <PhotoTileImage url={photo.url ? normalizeMediaUrl(photo.url) : ""} alt={photo.category} />
+                )}
+                {photo.category !== "Бичлэг" && (
+                  <Button
+                    type="button"
+                    size="xs"
+                    variant={isCover ? "default" : "secondary"}
+                    onClick={() => actions.setPath("media.coverIndex", index)}
+                    className="absolute left-1 top-1 h-6"
+                  >
+                    {isCover ? "Нүүр" : "Сонгох"}
+                  </Button>
+                )}
                 <Button
                   type="button"
                   size="icon-sm"
