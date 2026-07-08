@@ -154,3 +154,81 @@ GET /listings/tags?group=amenities|included|infrastructure&q=<хайлт>
 
 > **A хэсэг (одоогийн payload)-ыг backend татгалзахгүй байх нь хамгийн чухал** — ялангуяа
 > custom string tag-ууд, internet олон утга, `selected_floor` муж, таслалгүй үнэ.
+
+---
+
+## C. Neodata (`data.neomap.mn`) — bbox-оор давхаргын мэдээлэл авах (2026-07-08 амьд тест)
+
+Зорилго: wizard-ын байршил алхамд хэрэглэгч барилга дээр тэмдэг тавихад, газрын зургийг
+zoom 18-д төвлөрүүлээд, харагдаж буй 4 булан (bbox)-г `GET /layer-cache-data`-д илгээж, тухайн
+цэг дээрх бүх давхаргын (тэр дундаа дүүрэг/хороо) мэдээллийг автоматаар бөглөх зорилготой.
+Live тестээр дараах зөрүүнүүд илэрсэн:
+
+### 9. `bbox` шүүлт бодит датад ажиллахгүй байна — **Блоклогч (Өндөр)**
+`bbox`-гүйгээр (жишээ нь `?per_page=1`) хүсэлт явуулахад нийт **325,494** мөр байгаа нь
+харагдсан (жинхэнэ polygon geometry-тэй). Гэвч тэдгээрийн аль нэгийг **яг агуулсан bbox**
+явуулахад ч (жишээ нь: sample мөрийн `geometry.coordinates`-ийн цэгийг багтаасан
+`bbox=47.930,108.455,47.938,108.468`) `meta.total = 0` буцаж байна — өөрөөр хэлбэл `bbox`
+шүүлт **hit өгдөггүй**. Маш том bbox (дэлхий даяар) илгээхэд 500 (timeout шиг) өгсөн — учир нь
+docstring-д дурдсанчлан bbox шүүлтийг геометрийг PHP талд бүгдийг нь татаад шалгадаг
+(`LayerCacheData::intersectsBbox()`), тэгэхээр энэ функц эсвэл candidate-шүүх query нь буруу
+бичигдсэн байх магадлалтай. **Энэ засагдахгүй бол wizard-ын bbox→хороо/дүүрэг автомат бөглөлт
+ажиллахгүй.**
+
+**Хуулбарлаад шууд ажиллуулж болох repro (curl):**
+
+```bash
+# 1) bbox-гүйгээр эхний мөрийг татаад бодит координат/khoroo_id-г харах —
+#    датаг байгааг батлах (нийт 325,494 мөр).
+curl -s "https://data.neomap.mn/api/layer-cache-data?per_page=1" | python3 -m json.tool
+# → data[0].geometry.coordinates дотор жишээ нь [108.46138681, 47.93389904] (lng,lat),
+#   khoroo_id: 4, district_id: 1
+
+# 2) Тэр цэг дээр газрын зургийг ZOOM 18-д төвлөрүүлэхэд Leaflet-ийн
+#    map.getBounds() ямар bbox буцаах байсныг Web Mercator-ийн
+#    "meters/pixel" томьёогоор тооцоолов (800x500px харагдах цонх, буюу
+#    ердийн wizard map панелийн хэмжээ). Энэ бол ЯГ 2 БУЛАН (SW+NE) —
+#    ~320м x 200м реал талбай:
+curl -s "https://data.neomap.mn/api/layer-cache-data?bbox=47.933001,108.459241,47.934798,108.463533&per_page=5" \
+  | python3 -m json.tool
+# → Хүлээгдэж буй: дээрх мөрийг агуулсан жагсаалт (total >= 1) — учир нь
+#   энэ bbox нь 1-р алхамд гарсан цэгийг (47.93389904, 108.46138681) бүрэн багтаасан.
+# → Бодит байдалд: "data": [], "meta": {"total": 0, ...}
+```
+
+Энэ bbox нь санамсаргүй том муж биш — яг zoom 18 дээрх бодит map viewport-той тэнцэх хэмжээтэй
+(2 булан: SW/NE), Wizard-ын жинхэнэ хэрэглээнд ирэх утгатай ижил төрлийн bbox. `bboxFromCenterZoom()`
+функц (`src/infrastructure/api/neodata.ts`) нь яг энэ тооцоог хийдэг.
+
+### 10. `only_has_zznm` boolean encoding — Бага (баримтжуулаагүй, олдсон)
+`only_has_zznm=true`/`false` (string) илгээхэд `422 "The only has zznm field must be true or
+false."` буцдаг; зөвхөн `1`/`0` хэлбэрээр ажилладаг. Frontend клиент тал засварлаж ашигласан
+(`only_has_zznm=1|0`), гэхдээ Laravel `boolean` rule нь ердийн байдлаар `"true"/"false"`-г ч
+хүлээж авдаг тул энэ бол backend талын validation дүрмийн зөрүү (магадгүй custom rule).
+
+### 11. `LayerCacheDataResource.district`/`khoroo`/`province` хэзээ ч ирдэггүй — Дунд
+OpenAPI spec-д эдгээр талбарууд `$ref` (embedded object) байдлаар зарлагдсан ч, `only_has_zznm=1`
+үед ч гэсэн бодит хариунд огт ирэхгүй байна — зөвхөн `khoroo_id`/`district_id`/`zip_code_id`
+(тоон id) ирдэг, нэр биш. Иймд нэрийг (дүүрэг/хорооны нэр) авахын тулд эдгээр id-г өөр
+lookup-тэй тааруулах шаардлагатай.
+
+### 12. `/v1/districts`, `/v1/khoroos`, `/v1/buildings`, `/v1/khotkons` — 500 "Route [login] not defined" — Дунд
+Эдгээр endpoint-үүд (ямар ч Authorization header-гүйгээр ч) auth guard-аас `login`-руу
+redirect хийхийг оролдоод, тухайн named route байхгүй тул 500 шидэж байна (API-only app-д
+`web`-ийн auth guard тохируулагдсан бололтой). Иймд `khoroo_id`/`district_id`-г нэр рүү
+хөрвүүлэх боломжгүй байгаа тул одоогоор зөвхөн id хэлбэрээр л ашиглах боломжтой (жишээ нь
+core API-гийн address cascade-той тааруулах оролдлого хийхээс өмнө эдгээрийг эхлээд засах
+хэрэгтэй).
+
+**Дүгнэлт:** `layer-cache-data` endpoint-ийн response бүтэц (`data/links/meta`,
+`LayerCacheDataResource` талбарууд) зөв ажиллаж байгаа ч, **bbox шүүлт (#9) засагдахгүй бол**
+энэ feature-ийг бодит байдлаар нэвтрүүлэх боломжгүй. Frontend клиент (`infrastructure/api/neodata.ts`)
+болон contract зохих смоук тест (`tests/api/neodata.smoke.test.ts`) бэлдсэн — bbox засагдмагц
+UI wiring (map zoom-to-18 → bbox → auto-fill district/khoroo) хийхэд бэлэн.
+
+| # | Зүйл | Төрөл | Тэргүүлэх |
+|---|------|-------|-----------|
+| 9 | `layer-cache-data` bbox шүүлт hit өгдөггүй | bug fix | **Өндөр (блоклогч)** |
+| 10 | `only_has_zznm` зөвхөн 1/0 хүлээж авдаг (true/false биш) | bug fix | Бага |
+| 11 | `district`/`khoroo`/`province` embed хэзээ ч ирдэггүй | bug fix эсвэл спек засвар | Дунд |
+| 12 | `/v1/districts,khoroos,buildings,khotkons` auth guard 500 | bug fix | Дунд |

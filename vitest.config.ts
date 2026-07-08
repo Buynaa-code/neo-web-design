@@ -25,6 +25,8 @@ export default defineConfig({
     env: {
       NEXT_PUBLIC_API_URL:
         process.env.NEXT_PUBLIC_API_URL ?? "https://core.neomap.mn/api",
+      NEXT_PUBLIC_NEODATA_API_URL:
+        process.env.NEXT_PUBLIC_NEODATA_API_URL ?? "https://data.neomap.mn/api",
     },
   },
 });
