@@ -2678,6 +2678,10 @@ export function ListPropertyWizard() {
     setDraft(next);
     setSubmitted(null);
     setSavedAt(null);
+    // Otherwise a step visited in the previous listing (e.g. step 2 — goal/
+    // category, whose fields ship with non-empty defaults) stays marked done
+    // in the sidebar for the brand-new draft, before the user has touched it.
+    setVisitedSteps(new Set([1]));
     try {
       window.localStorage.removeItem(SMART_LIST_PROP_DRAFT_KEY);
     } catch {
