@@ -2576,7 +2576,6 @@ export function ListPropertyWizard() {
   // Start from defaults on both server and client so the initial render matches;
   // the persisted draft is loaded in an effect below to avoid a hydration mismatch.
   const [draft, setDraft] = useState<SmartDraft>(createDefaultDraft);
-  const [submitted, setSubmitted] = useState<SubmissionPayload | null>(null);
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -2654,7 +2653,6 @@ export function ListPropertyWizard() {
     setDraft((current) => {
       const next = cloneDraft(current);
       recipe(next);
-      setSubmitted(null);
       return next;
     });
   };
@@ -2704,7 +2702,6 @@ export function ListPropertyWizard() {
   const resetDraft = () => {
     const next = createDefaultDraft();
     setDraft(next);
-    setSubmitted(null);
     setSavedAt(null);
     // Otherwise a step visited in the previous listing (e.g. step 2 — goal/
     // category, whose fields ship with non-empty defaults) stays marked done
@@ -2763,20 +2760,15 @@ export function ListPropertyWizard() {
       } else {
         await submitListingDraft(payload);
       }
-      // Persist to local history + show the success banner ONLY after the server
-      // accepted it. resetDraft() nulls `submitted`, so set it again afterwards.
+      // Persist to local history + notify only after the server accepted it.
       storeSubmission(payload);
       pushToast(editId != null ? "Зар амжилттай шинэчлэгдлээ" : "Зар амжилттай илгээгдлээ", "success");
-      if (editId != null) {
-        // Editing an existing listing: the caches are already invalidated by
-        // the mutation hooks above, so "Миний зарууд" shows the fresh data —
-        // send the user back there instead of leaving them on the wizard.
-        router.push("/profile");
-        return;
-      }
       resetDraft();
-      setSubmitted(payload);
-      setStep(1);
+      // Both create and edit leave the wizard on success — editing already
+      // invalidates the relevant caches via the mutation hooks above, so
+      // "Миний зарууд"/Home show the fresh data immediately.
+      router.push(editId != null ? "/profile" : "/");
+      return;
     } catch (err) {
       const message =
         err instanceof ApiError
@@ -2836,7 +2828,7 @@ export function ListPropertyWizard() {
                 : "Зар оруулах 13 алхмын мэдээлэл, логик, баталгаажуулалтыг 6 хэсэгт нэгтгэсэн хялбар урсгал."}
             </p>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Badge variant="outline" className="h-8 rounded-full px-3">
               {isRent ? <KeyRound className="size-3.5" /> : <Banknote className="size-3.5" />}
               {isRent ? "Түрээс / хөлслүүлэх" : "Худалдаа"}
@@ -2845,6 +2837,28 @@ export function ListPropertyWizard() {
               <SelectedTypeIcon className="size-3.5" />
               {selectedType.label}
             </Badge>
+            <Button
+              type="button"
+              variant="outline"
+              className="h-8 rounded-full px-3 text-muted-foreground hover:text-destructive"
+              onClick={() => {
+                if (
+                  typeof window !== "undefined" &&
+                  !window.confirm(
+                    editId != null
+                      ? "Засварыг цуцлах уу? Хадгалаагүй өөрчлөлт устана."
+                      : "Зар оруулахыг цуцлах уу? Хадгалаагүй мэдээлэл устана."
+                  )
+                ) {
+                  return;
+                }
+                if (editId == null) resetDraft();
+                router.push(editId != null ? "/profile" : "/");
+              }}
+            >
+              <X className="size-3.5" />
+              Цуцлах
+            </Button>
           </div>
         </header>
 
@@ -3007,16 +3021,6 @@ export function ListPropertyWizard() {
                 )}
               </div>
             </div>
-            {submitted ? (
-              <Card className="rounded-md border-emerald-600 bg-emerald-50 text-emerald-950">
-                <CardContent className="flex items-start gap-3 py-4">
-                  <BadgeCheck className="mt-0.5 size-5 shrink-0" />
-                  <span className="text-sm font-medium">
-                    Зар нийтлэх хүсэлт бэлэн боллоо. #{submitted.id} draft хадгалагдсан ба дэлгэрэнгүй мэдээллийн бүх задаргаа багтсан.
-                  </span>
-                </CardContent>
-              </Card>
-            ) : null}
             {submitError ? (
               <Card className="rounded-md border-destructive bg-destructive/10 text-destructive">
                 <CardContent className="flex items-start gap-3 py-4">
