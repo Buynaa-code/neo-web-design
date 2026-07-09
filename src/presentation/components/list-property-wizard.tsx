@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import dynamic from "next/dynamic";
+import { useRouter } from "next/navigation";
 import {
   type MouseEvent,
   type ReactNode,
@@ -52,6 +53,7 @@ import {
   MapPinned,
   Maximize2,
   Megaphone,
+  Minimize2,
   Minus,
   MonitorCog,
   MousePointerClick,
@@ -127,13 +129,13 @@ import {
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import { submitListingDraft, type TagGroup } from "@/infrastructure/api/listings";
 import {
-  createListing,
-  updateListing,
-  submitListingDraft,
-  type TagGroup,
-} from "@/infrastructure/api/listings";
-import { useTagSuggestions, useListing } from "@/application/queries/listings";
+  useCreateListing,
+  useUpdateListing,
+  useTagSuggestions,
+  useListing,
+} from "@/application/queries/listings";
 import {
   uploadMedia,
   DOCUMENT_CATEGORIES,
@@ -2565,6 +2567,9 @@ export function ListPropertyWizard() {
   const isLoggedIn = useStore((s) => s.isLoggedIn);
   const formOptions = useFormOptions();
   const editListing = useListing(editId);
+  const router = useRouter();
+  const createListingMutation = useCreateListing();
+  const updateListingMutation = useUpdateListing(editId ?? 0);
 
   useEffect(() => {
     const raw = new URLSearchParams(window.location.search).get("edit");
@@ -2706,9 +2711,9 @@ export function ListPropertyWizard() {
           formOptions.data?.enumOptions
         );
         if (editId != null) {
-          await updateListing(editId, body);
+          await updateListingMutation.mutateAsync(body);
         } else {
-          await createListing(body);
+          await createListingMutation.mutateAsync(body);
         }
       } else {
         await submitListingDraft(payload);
@@ -2716,10 +2721,17 @@ export function ListPropertyWizard() {
       // Persist to local history + show the success banner ONLY after the server
       // accepted it. resetDraft() nulls `submitted`, so set it again afterwards.
       storeSubmission(payload);
-      if (editId == null) resetDraft();
+      pushToast(editId != null ? "Зар амжилттай шинэчлэгдлээ" : "Зар амжилттай илгээгдлээ", "success");
+      if (editId != null) {
+        // Editing an existing listing: the caches are already invalidated by
+        // the mutation hooks above, so "Миний зарууд" shows the fresh data —
+        // send the user back there instead of leaving them on the wizard.
+        router.push("/profile");
+        return;
+      }
+      resetDraft();
       setSubmitted(payload);
       setStep(1);
-      pushToast(editId != null ? "Зар амжилттай шинэчлэгдлээ" : "Зар амжилттай илгээгдлээ", "success");
     } catch (err) {
       const message =
         err instanceof ApiError
@@ -3094,6 +3106,20 @@ function StepTwo({
       ? `${draft.specs.rooms} өрөө`
       : "Сонгоогүй"
     : selectedType.label;
+  // Map stays large by default even after a pin is dropped; the user can
+  // still shrink it back down via the toggle in MapPanel's corner.
+  const [mapExpanded, setMapExpanded] = useState(true);
+  // Below the xl breakpoint the map and address fields stack in a single
+  // column, so the address form can end up far under the fold once a pin is
+  // dropped — auto-scroll down to it so mobile users see it update.
+  const addressSectionRef = useRef<HTMLDivElement>(null);
+  const scrollToAddressOnMobile = () => {
+    if (typeof window === "undefined") return;
+    if (!window.matchMedia("(max-width: 1279px)").matches) return;
+    window.setTimeout(() => {
+      addressSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 150);
+  };
 
   return (
     <div className="space-y-4">
@@ -3122,8 +3148,16 @@ function StepTwo({
               : "space-y-4"
           }
         >
-          {!draft.locationTouched && <MapPanel draft={draft} actions={actions} compact={false} />}
-          <div className="space-y-4">
+          {!draft.locationTouched && (
+            <MapPanel
+              draft={draft}
+              actions={actions}
+              expanded={mapExpanded}
+              onToggleExpanded={() => setMapExpanded((v) => !v)}
+              onLocationPicked={scrollToAddressOnMobile}
+            />
+          )}
+          <div ref={addressSectionRef} className="space-y-4">
             <div className="rounded-md border bg-muted/40 p-3">
               <div className="mb-3 flex flex-wrap gap-2">
                 <Badge variant="outline" className="rounded-full">
@@ -3212,7 +3246,15 @@ function StepTwo({
               </div>
             </div>
           </div>
-          {draft.locationTouched && <MapPanel draft={draft} actions={actions} compact />}
+          {draft.locationTouched && (
+            <MapPanel
+              draft={draft}
+              actions={actions}
+              expanded={mapExpanded}
+              onToggleExpanded={() => setMapExpanded((v) => !v)}
+              onLocationPicked={scrollToAddressOnMobile}
+            />
+          )}
         </CardContent>
       </Card>
 
@@ -3481,12 +3523,17 @@ function mapsUrlFrom(lat: number, lng: number): string {
 function MapPanel({
   draft,
   actions,
-  compact = true,
+  expanded,
+  onToggleExpanded,
+  onLocationPicked,
 }: {
   draft: SmartDraft;
   actions: DraftActions;
-  /** Big/prominent (pre-pin call-to-action) vs the small side-panel size. Default compact. */
-  compact?: boolean;
+  /** Large by default; the user can shrink it back down via onToggleExpanded. */
+  expanded: boolean;
+  onToggleExpanded: () => void;
+  /** Fired after a pin is dropped — used to auto-scroll to the address fields on mobile. */
+  onLocationPicked?: () => void;
 }) {
   const hasLink = Boolean(draft.address.googleMapLink.trim());
   const manualLine = addressLine(draft) || `${draft.address.country}, ${draft.address.city}`;
@@ -3501,6 +3548,7 @@ function MapPanel({
       // Auto-fill a shareable Google Maps link from the dropped pin.
       next.address.googleMapLink = mapsUrlFrom(lat, lng);
     });
+    onLocationPicked?.();
   };
 
   // Once the map re-centers on the dropped pin (at zoom 18), send its real
@@ -3578,7 +3626,7 @@ function MapPanel({
 
   return (
     <div className="lp-map-panel">
-      <div className={cn("relative overflow-hidden rounded-md border bg-muted/40", compact ? "h-[360px]" : "h-[560px]")}>
+      <div className={cn("relative overflow-hidden rounded-md border bg-muted/40", expanded ? "h-[560px]" : "h-[280px]")}>
         <WizardLocationMap
           lat={draft.lat}
           lng={draft.lng}
@@ -3596,6 +3644,15 @@ function MapPanel({
           )}
           {draft.locationTouched ? "Байршил тэмдэглэсэн" : "Зураг дээр дарж цэг тавина"}
         </div>
+        <button
+          type="button"
+          onClick={onToggleExpanded}
+          className="absolute right-2 top-2 z-[500] flex items-center gap-1.5 rounded-full bg-background/90 px-2.5 py-1 text-xs font-medium shadow hover:bg-background"
+          title={expanded ? "Газрын зургийг жижигрүүлэх" : "Газрын зургийг томруулах"}
+        >
+          {expanded ? <Minimize2 className="size-3.5" /> : <Maximize2 className="size-3.5" />}
+          {expanded ? "Жижигрүүлэх" : "Томруулах"}
+        </button>
       </div>
       <div className="lp-map-meta">
         <MetaTile label="Гараар оруулсан хаяг" value={manualLine} icon={MapPinned} />

@@ -31,6 +31,7 @@ import {
 } from "@/application/queries/auth";
 import { useDeleteListing, useMyListings } from "@/application/queries/listings";
 import { ApiError } from "@/infrastructure/api/http";
+import { cn } from "@/lib/utils";
 import { ListingCard } from "./ListingCard";
 
 type MenuKey =
@@ -184,46 +185,48 @@ export function ProfileScreen() {
           )}
         </aside>
 
-        <div className="card p-6 flex flex-col items-center justify-center text-center">
-          <div className="relative mb-4">
-            <div
-              className="w-24 h-24 rounded-full text-white font-semibold flex items-center justify-center text-2xl"
-              style={{
-                background: "linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%)",
-                boxShadow: "0 8px 24px rgba(18,60,105,.18)",
-              }}
-            >
-              {initials}
+        {tab === "profile" && (
+          <div className="card p-6 flex flex-col items-center justify-center text-center">
+            <div className="relative mb-4">
+              <div
+                className="w-24 h-24 rounded-full text-white font-semibold flex items-center justify-center text-2xl"
+                style={{
+                  background: "linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%)",
+                  boxShadow: "0 8px 24px rgba(18,60,105,.18)",
+                }}
+              >
+                {initials}
+              </div>
+              <button
+                type="button"
+                onClick={openEdit}
+                className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full flex items-center justify-center"
+                style={{
+                  background: "var(--surface)",
+                  border: "1px solid var(--border-strong)",
+                  color: "var(--text-2)",
+                }}
+                aria-label="Засах"
+              >
+                <Pencil className="w-4 h-4" />
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={openEdit}
-              className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full flex items-center justify-center"
-              style={{
-                background: "var(--surface)",
-                border: "1px solid var(--border-strong)",
-                color: "var(--text-2)",
-              }}
-              aria-label="Засах"
-            >
-              <Pencil className="w-4 h-4" />
-            </button>
-          </div>
-          <div className="font-semibold text-base text-[var(--text)] truncate max-w-full">
-            {userLoading && !storeUser ? "Уншиж байна…" : name}
-          </div>
-          <div className="text-xs text-[var(--text-3)] mt-1 truncate max-w-full">
-            {email || phone || "Холбоо барих мэдээлэл алга"}
-          </div>
+            <div className="font-semibold text-base text-[var(--text)] truncate max-w-full">
+              {userLoading && !storeUser ? "Уншиж байна…" : name}
+            </div>
+            <div className="text-xs text-[var(--text-3)] mt-1 truncate max-w-full">
+              {email || phone || "Холбоо барих мэдээлэл алга"}
+            </div>
 
-          {!isLoggedIn && (
-            <Link href="/auth" className="btn btn-cta mt-4">
-              Нэвтрэх
-            </Link>
-          )}
-        </div>
+            {!isLoggedIn && (
+              <Link href="/auth" className="btn btn-cta mt-4">
+                Нэвтрэх
+              </Link>
+            )}
+          </div>
+        )}
 
-        <div className="lg:col-span-2">
+        <div className={cn(tab === "profile" ? "lg:col-span-2" : "lg:col-span-3")}>
           {tab === "profile" ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {cards.map((c) => (
@@ -316,35 +319,35 @@ function MyListings({ isLoggedIn }: { isLoggedIn: boolean }) {
   }
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
       {listings.map((listing) => (
         <div key={listing.id} className="relative flex flex-col">
           <ListingCard listing={listing} />
           <div className="mt-2 flex gap-2">
             <Link
               href={`/property/${listing.id}`}
-              className="btn btn-secondary flex-1 justify-center text-sm"
+              className="btn btn-secondary min-w-0 flex-1 justify-center text-sm"
             >
-              <Eye className="w-4 h-4" />
-              Үзэх
+              <Eye className="w-4 h-4 shrink-0" />
+              <span className="truncate">Үзэх</span>
             </Link>
             <Link
               href={`/list-property?edit=${listing.id}`}
-              className="btn btn-secondary flex-1 justify-center text-sm"
+              className="btn btn-secondary min-w-0 flex-1 justify-center text-sm"
             >
-              <Pencil className="w-4 h-4" />
-              Засах
+              <Pencil className="w-4 h-4 shrink-0" />
+              <span className="truncate">Засах</span>
             </Link>
             <button
               type="button"
               onClick={() =>
                 onDelete(listing.id, listing.khotkhon || listing.district || "Зар")
               }
-              className="btn btn-secondary justify-center text-sm"
+              className="btn btn-secondary shrink-0 justify-center text-sm"
               style={{ color: "var(--danger)" }}
               aria-label="Устгах"
             >
-              <Trash2 className="w-4 h-4" />
+              <Trash2 className="w-4 h-4 shrink-0" />
             </button>
           </div>
         </div>
