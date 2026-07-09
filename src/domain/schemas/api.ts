@@ -110,6 +110,10 @@ export function paginatedSchema<T extends z.ZodTypeAny>(item: T) {
 /* ListingResource (rich wire shape)                                          */
 /* -------------------------------------------------------------------------- */
 
+// Confirmed live (2026-07, via /conversations): the embedded agent object
+// omits `activity`/`listings` entirely and sends `rating` as a formatted
+// string ("4.80"), not a number — both optional/coerced here so a real agent
+// on a conversation or listing doesn't fail to parse.
 const agentSchema = z
   .object({
     id: z.number().int(),
@@ -118,9 +122,13 @@ const agentSchema = z
     agency: nullableString,
     verified: z.boolean(),
     phone: nullableString,
-    activity: nullableString,
-    listings: z.number().int(),
-    rating: nullableNumber,
+    activity: nullableString.optional(),
+    listings: z.number().int().optional(),
+    rating: z
+      .union([z.string(), z.number()])
+      .nullable()
+      .optional()
+      .transform((v) => (v == null ? null : Number(v))),
     reviewCount: z.number().int(),
   })
   .nullable();

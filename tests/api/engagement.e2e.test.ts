@@ -24,7 +24,13 @@ import {
   updateAppointment,
 } from "@/infrastructure/api/appointments";
 import { listViews, recordView } from "@/infrastructure/api/views";
-import { listConversations } from "@/infrastructure/api/conversations";
+import {
+  createConversation,
+  listConversations,
+  listMessages,
+  markConversationRead,
+  sendMessage,
+} from "@/infrastructure/api/conversations";
 import { getPreferences, updatePreferences } from "@/infrastructure/api/preferences";
 import {
   createRentalTenant,
@@ -120,8 +126,44 @@ describe.skipIf(!ENABLED)("engagement lifecycle (live, WRITES to server)", () =>
     expect(Array.isArray(items)).toBe(true);
   });
 
-  it("conversations: list returns an array", async () => {
-    expect(Array.isArray(await listConversations())).toBe(true);
+  it("conversations: send → list → read lifecycle", async () => {
+    // No /agents endpoint exists yet and every real listing currently has
+    // agentId: null (see docs/api-listing-wizard-requirements.md), so there is
+    // no reliable way to discover a valid agent_id to start a NEW thread from
+    // scratch. Best-effort: reuse an existing conversation if the throwaway
+    // user already has one; otherwise try the commonly-seeded test agent (id
+    // 1, per docs/api-missing-spec.md) and skip the write assertions if the
+    // backend rejects it rather than failing the whole suite.
+    let conversations = await listConversations();
+    expect(Array.isArray(conversations)).toBe(true);
+
+    let conversationId = conversations[0]?.id;
+    if (conversationId == null) {
+      try {
+        const created = await createConversation({
+          agent_id: 1,
+          listing_id: listingId || undefined,
+          body: "Сайн байна уу, энэ байрны талаар асуух зүйл байна.",
+        });
+        conversationId = created.id;
+      } catch (err) {
+        expect(err).toBeInstanceOf(ApiError);
+        // No seedable agent reachable in this environment — nothing further
+        // to assert until the backend seeds real agents.
+        return;
+      }
+    }
+
+    const sent = await sendMessage(conversationId, "Тест зурвас — автомат шалгалт.");
+    expect(sent.body).toBe("Тест зурвас — автомат шалгалт.");
+
+    const messages = await listMessages(conversationId);
+    expect(messages.some((m) => m.id === sent.id)).toBe(true);
+
+    await expect(markConversationRead(conversationId)).resolves.toBeUndefined();
+
+    conversations = await listConversations();
+    expect(conversations.some((c) => c.id === conversationId)).toBe(true);
   });
 
   it("preferences: get → update round-trips", async () => {
