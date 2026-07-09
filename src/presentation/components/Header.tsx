@@ -248,6 +248,10 @@ export function BottomTab() {
   const pathname = usePathname();
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
+  // The list-property wizard has its own step navigation (sidebar list of
+  // steps) — the global bottom tab bar would otherwise float on top of it
+  // and get confused for wizard navigation.
+  if (pathname?.startsWith("/list-property")) return null;
   const items = [
     { href: "/", label: "Хайх", icon: Search },
     { href: "/interests", label: "Хүсэл", icon: Sparkles },

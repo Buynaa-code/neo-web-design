@@ -948,7 +948,7 @@ type SmartDraft = {
   locationTouched: boolean;
 };
 
-type Requirement = { label: string; ok: boolean; step: number };
+type Requirement = { id: string; label: string; ok: boolean; step: number };
 type OptionalItem = { label: string; ok: boolean };
 type SubmissionPayload = {
   id: number;
@@ -999,6 +999,8 @@ const groups: Array<{
   step: number;
   icon: LucideIcon;
   title: string;
+  /** Short 1-word label for space-constrained UI (mobile bottom step bar). */
+  shortTitle: string;
   sub: string;
   covers: string[];
 }> = [
@@ -1006,6 +1008,7 @@ const groups: Array<{
     step: 1,
     icon: MapPin,
     title: "Хаяг, байршил ба үзүүлэлт",
+    shortTitle: "Байршил",
     sub: "АЛХАМ 01-02",
     covers: ["Гараар оруулах", "Газрын зураг", "Үзүүлэлт"],
   },
@@ -1013,6 +1016,7 @@ const groups: Array<{
     step: 2,
     icon: Target,
     title: "Зорилго ба зориулалт",
+    shortTitle: "Зорилго",
     sub: "АЛХАМ 03-05",
     covers: ["Зорилго", "ҮХЭХ зориулалт", "Дэд зориулалт"],
   },
@@ -1020,6 +1024,7 @@ const groups: Array<{
     step: 3,
     icon: Sparkles,
     title: "Дэд бүтэц ба дагалдах зүйлс",
+    shortTitle: "Дэд бүтэц",
     sub: "АЛХАМ 06-08",
     covers: ["Дэд бүтэц", "Дундын хэрэглээ", "Үнэд багтсан"],
   },
@@ -1027,6 +1032,7 @@ const groups: Array<{
     step: 4,
     icon: Banknote,
     title: "Төлөв ба үнэ",
+    shortTitle: "Үнэ",
     sub: "АЛХАМ 09-10",
     covers: ["ҮХЭХ төлөв", "Үнэ, төлбөрийн нөхцөл"],
   },
@@ -1034,6 +1040,7 @@ const groups: Array<{
     step: 5,
     icon: Images,
     title: "Зураг, бичлэг",
+    shortTitle: "Зураг",
     sub: "АЛХАМ 11",
     covers: ["Зураг", "Бичлэг", "Танилцуулга"],
   },
@@ -1041,6 +1048,7 @@ const groups: Array<{
     step: 6,
     icon: ShieldCheck,
     title: "Шалгах, баталгаажуулах",
+    shortTitle: "Шалгах",
     sub: "АЛХАМ 12-13",
     covers: ["Баталгаажуулах", "Verified", "Brokerage"],
   },
@@ -2041,20 +2049,30 @@ function squareMeters(value: unknown) {
 
 function requiredItems(draft: SmartDraft): Requirement[] {
   return [
-    { label: "Зорилго", ok: Boolean(draft.goal), step: 2 },
-    { label: "ҮХЭХ зориулалт", ok: Boolean(draft.propertyType), step: 2 },
-    { label: "Дэд зориулалт", ok: Boolean(draft.subtype), step: 2 },
-    { label: "Дүүрэг/Сум", ok: Boolean(draft.address.district), step: 1 },
-    { label: "Хороо/Баг", ok: Boolean(draft.address.khoroo.trim()), step: 1 },
-    { label: "Хотхон, хороолол эсвэл гудамж", ok: Boolean((draft.address.khotkhon || draft.address.street).trim()), step: 1 },
-    { label: areaLabel(draft), ok: (parseFloat(draft.specs.areaCert) || 0) > 0, step: 1 },
-    { label: "Нийт өрөөний тоо", ok: !needsRooms(draft) || Boolean(draft.specs.rooms), step: 1 },
-    { label: modeOf(draft.goal) === "sale" ? "Нийт үнэ" : "Нийт үнэ/сар", ok: priceOf(draft) > 0, step: 4 },
-    { label: "Зураг", ok: draft.media.photos.length > 0, step: 5 },
-    { label: "Холбоо хамаарал", ok: Boolean(draft.services.relation), step: 6 },
-    { label: "Дээрх мэдээлэл үнэн зөв", ok: draft.declarations.truth, step: 6 },
-    { label: "Эрх бүхий этгээд", ok: draft.declarations.authority, step: 6 },
-    { label: "Үйлчилгээний нөхцөл зөвшөөрөх", ok: draft.declarations.terms, step: 6 },
+    { id: "goal", label: "Зорилго", ok: Boolean(draft.goal), step: 2 },
+    { id: "propertyType", label: "ҮХЭХ зориулалт", ok: Boolean(draft.propertyType), step: 2 },
+    { id: "subtype", label: "Дэд зориулалт", ok: Boolean(draft.subtype), step: 2 },
+    { id: "district", label: "Дүүрэг/Сум", ok: Boolean(draft.address.district), step: 1 },
+    { id: "khoroo", label: "Хороо/Баг", ok: Boolean(draft.address.khoroo.trim()), step: 1 },
+    {
+      id: "khotkhonOrStreet",
+      label: "Хотхон, хороолол эсвэл гудамж",
+      ok: Boolean((draft.address.khotkhon || draft.address.street).trim()),
+      step: 1,
+    },
+    { id: "areaCert", label: areaLabel(draft), ok: (parseFloat(draft.specs.areaCert) || 0) > 0, step: 1 },
+    { id: "rooms", label: "Нийт өрөөний тоо", ok: !needsRooms(draft) || Boolean(draft.specs.rooms), step: 1 },
+    {
+      id: "price",
+      label: modeOf(draft.goal) === "sale" ? "Нийт үнэ" : "Нийт үнэ/сар",
+      ok: priceOf(draft) > 0,
+      step: 4,
+    },
+    { id: "photos", label: "Зураг", ok: draft.media.photos.length > 0, step: 5 },
+    { id: "relation", label: "Холбоо хамаарал", ok: Boolean(draft.services.relation), step: 6 },
+    { id: "truth", label: "Дээрх мэдээлэл үнэн зөв", ok: draft.declarations.truth, step: 6 },
+    { id: "authority", label: "Эрх бүхий этгээд", ok: draft.declarations.authority, step: 6 },
+    { id: "terms", label: "Үйлчилгээний нөхцөл зөвшөөрөх", ok: draft.declarations.terms, step: 6 },
   ];
 }
 
@@ -2135,18 +2153,20 @@ function buildSubmission(draft: SmartDraft): SubmissionPayload {
 }
 
 function Field({
+  id,
   label,
   required,
   children,
   hint,
 }: {
+  id?: string;
   label: string;
   required?: boolean;
   children: ReactNode;
   hint?: string;
 }) {
   return (
-    <div className="min-w-0 space-y-1.5">
+    <div id={id} className="min-w-0 scroll-mt-24 space-y-1.5">
       <Label className="text-xs text-muted-foreground">
         {label}
         {required ? (
@@ -2222,6 +2242,7 @@ function ToggleChip({
 }
 
 function NumberStepper({
+  id,
   label,
   value,
   onChange,
@@ -2235,6 +2256,7 @@ function NumberStepper({
   quickSuffix = "",
   hint,
 }: {
+  id?: string;
   label: string;
   value: string | number | null;
   onChange: (value: string) => void;
@@ -2252,7 +2274,7 @@ function NumberStepper({
   const numeric = parseFloat(rawValue);
   return (
     <div className="lp-step-control">
-      <Field label={label} required={required} hint={hint}>
+      <Field id={id} label={label} required={required} hint={hint}>
         <div className="lp-stepper">
           <button
             type="button"
@@ -2466,7 +2488,7 @@ function AddressCascade({
           </p>
         ) : null}
       </Field>
-      <Field label="Дүүрэг / Сум" required>
+      <Field id="field-district" label="Дүүрэг / Сум" required>
         <NativeSelect
           value={address.districtId != null ? String(address.districtId) : ""}
           options={toOptions(districts.data)}
@@ -2483,7 +2505,7 @@ function AddressCascade({
           }}
         />
       </Field>
-      <Field label="Хороо / Баг" required>
+      <Field id="field-khoroo" label="Хороо / Баг" required>
         <NativeSelect
           value={address.khorooId != null ? String(address.khorooId) : ""}
           options={toOptions(khoroos.data)}
@@ -2695,8 +2717,31 @@ export function ListPropertyWizard() {
     }
   };
 
+  /**
+   * Jumps to a missing required field's step, scrolls it into view, and
+   * flashes it — used whenever the user tries to move on (Next / Submit)
+   * without satisfying a requirement, instead of just leaving a disabled
+   * button with no explanation.
+   */
+  const focusMissingField = (item: Requirement) => {
+    setStep(item.step);
+    if (typeof window === "undefined") return;
+    window.setTimeout(() => {
+      const el = document.getElementById(`field-${item.id}`);
+      if (!el) return;
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      el.classList.add("lp-field-flash");
+      window.setTimeout(() => el.classList.remove("lp-field-flash"), 1600);
+    }, 80);
+  };
+
   const submit = async () => {
-    if (missing.length || submitting) return;
+    if (submitting) return;
+    if (missing.length) {
+      pushToast(`«${missing[0].label}» талбарыг бөглөнө үү`, "danger");
+      focusMissingField(missing[0]);
+      return;
+    }
     const payload = buildSubmission(draft);
     setSubmitError(null);
     setSubmitting(true);
@@ -2747,11 +2792,19 @@ export function ListPropertyWizard() {
     }
   };
 
-  const goNext = () => setStep((current) => Math.min(6, current + 1));
+  const goNext = () => {
+    const blocking = missing.find((item) => item.step === step);
+    if (blocking) {
+      pushToast(`«${blocking.label}» талбарыг бөглөнө үү`, "danger");
+      focusMissingField(blocking);
+      return;
+    }
+    setStep((current) => Math.min(6, current + 1));
+  };
   const goBack = () => setStep((current) => Math.max(1, current - 1));
 
   return (
-    <div className="lp-shadcn min-h-screen px-4 py-5 lg:px-8">
+    <div className="lp-shadcn min-h-screen px-4 py-5 pb-24 lg:px-8 lg:pb-5">
       <div className="mx-auto max-w-7xl">
         <header className="mb-5 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
@@ -2796,7 +2849,7 @@ export function ListPropertyWizard() {
         </header>
 
         <div className="grid gap-5 lg:grid-cols-[300px_minmax(0,1fr)]">
-          <aside className="space-y-3 lg:sticky lg:top-5 lg:self-start">
+          <aside className="hidden space-y-3 lg:block lg:sticky lg:top-5 lg:self-start">
             <Card className="rounded-md">
               <CardHeader>
                 <div className="flex items-center justify-between gap-3">
@@ -2914,7 +2967,7 @@ export function ListPropertyWizard() {
                 optional={optional}
                 price={price}
                 selectedType={selectedType}
-                goStep={setStep}
+                onJumpToMissing={focusMissingField}
               />
             )}
 
@@ -2932,17 +2985,14 @@ export function ListPropertyWizard() {
               <div className="flex flex-col gap-2 sm:items-end">
                 {savedAt ? <span className="text-xs text-muted-foreground">Draft: {savedAt}</span> : null}
                 {step < 6 ? (
-                  <Button
-                    onClick={goNext}
-                    disabled={missing.some((item) => item.step === step)}
-                  >
+                  <Button onClick={goNext}>
                     Дараагийнх
                     <ChevronRight className="size-4" />
                   </Button>
                 ) : (
                   <Button
                     onClick={submit}
-                    disabled={missing.length > 0 || submitting}
+                    disabled={submitting}
                     className="bg-primary text-primary-foreground"
                   >
                     <Send className="size-4" />
@@ -2978,6 +3028,47 @@ export function ListPropertyWizard() {
           </section>
         </div>
       </div>
+
+      {/* Mobile-only: replaces the app's global bottom tab bar with the
+          wizard's own step navigation, since the sidebar step list above is
+          hidden below the lg breakpoint. */}
+      <nav
+        className="fixed inset-x-0 bottom-0 z-40 flex items-stretch gap-0.5 overflow-x-auto border-t bg-background/95 px-1 py-1.5 backdrop-blur-md lg:hidden"
+        style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 6px)" }}
+      >
+        {groups.map((group) => {
+          const Icon = group.icon;
+          const groupReqs = required.filter((item) => item.step === group.step);
+          const done =
+            visitedSteps.has(group.step) &&
+            (groupReqs.length > 0
+              ? groupReqs.every((item) => item.ok)
+              : stepHasContent(draft, group.step));
+          const active = step === group.step;
+          return (
+            <button
+              key={group.step}
+              type="button"
+              onClick={() => setStep(group.step)}
+              className={cn(
+                "flex min-w-16 flex-1 flex-col items-center gap-0.5 rounded-md px-1 py-1.5 text-[10px] font-medium text-muted-foreground",
+                active && "bg-primary/10 text-primary"
+              )}
+            >
+              <span
+                className={cn(
+                  "flex size-6 items-center justify-center rounded-full border bg-background",
+                  active && "border-primary bg-primary text-primary-foreground",
+                  done && !active && "border-emerald-600 bg-emerald-50 text-emerald-700"
+                )}
+              >
+                {done && !active ? <Check className="size-3.5" /> : <Icon className="size-3.5" />}
+              </span>
+              <span className="w-full truncate text-center leading-none">{group.shortTitle}</span>
+            </button>
+          );
+        })}
+      </nav>
     </div>
   );
 }
@@ -2985,7 +3076,7 @@ export function ListPropertyWizard() {
 function StepOne({ draft, actions }: { draft: SmartDraft; actions: DraftActions }) {
   return (
     <div className="space-y-4">
-      <Card className="rounded-md">
+      <Card id="field-goal" className="scroll-mt-24 rounded-md">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Target className="size-4 text-accent" />
@@ -3023,7 +3114,7 @@ function StepOne({ draft, actions }: { draft: SmartDraft; actions: DraftActions 
         </CardContent>
       </Card>
 
-      <Card className="rounded-md">
+      <Card id="field-propertyType" className="scroll-mt-24 rounded-md">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Building2 className="size-4 text-accent" />
@@ -3062,7 +3153,7 @@ function StepOne({ draft, actions }: { draft: SmartDraft; actions: DraftActions 
         </CardContent>
       </Card>
 
-      <Card className="rounded-md">
+      <Card id="field-subtype" className="scroll-mt-24 rounded-md">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <GitBranch className="size-4 text-accent" />
@@ -3107,19 +3198,10 @@ function StepTwo({
       : "Сонгоогүй"
     : selectedType.label;
   // Map stays large by default even after a pin is dropped; the user can
-  // still shrink it back down via the toggle in MapPanel's corner.
+  // still shrink it back down via the toggle in MapPanel's corner. It always
+  // renders in the same spot (above the address form) so picking a pin never
+  // reflows the page or moves the map out from under the user.
   const [mapExpanded, setMapExpanded] = useState(true);
-  // Below the xl breakpoint the map and address fields stack in a single
-  // column, so the address form can end up far under the fold once a pin is
-  // dropped — auto-scroll down to it so mobile users see it update.
-  const addressSectionRef = useRef<HTMLDivElement>(null);
-  const scrollToAddressOnMobile = () => {
-    if (typeof window === "undefined") return;
-    if (!window.matchMedia("(max-width: 1279px)").matches) return;
-    window.setTimeout(() => {
-      addressSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-    }, 150);
-  };
 
   return (
     <div className="space-y-4">
@@ -3148,16 +3230,20 @@ function StepTwo({
               : "space-y-4"
           }
         >
-          {!draft.locationTouched && (
+          <div className="space-y-2">
             <MapPanel
               draft={draft}
               actions={actions}
               expanded={mapExpanded}
               onToggleExpanded={() => setMapExpanded((v) => !v)}
-              onLocationPicked={scrollToAddressOnMobile}
             />
-          )}
-          <div ref={addressSectionRef} className="space-y-4">
+            <p className="flex items-start gap-1.5 text-xs text-muted-foreground">
+              <MapPin className="mt-0.5 size-3.5 shrink-0 text-accent" />
+              Байршлаа тодорхойлохын тулд газрын зураг дээр дараад pin байрлуулна уу. Хаягийн талбарууд
+              автоматаар бөглөгдөнө.
+            </p>
+          </div>
+          <div className="space-y-4">
             <div className="rounded-md border bg-muted/40 p-3">
               <div className="mb-3 flex flex-wrap gap-2">
                 <Badge variant="outline" className="rounded-full">
@@ -3174,7 +3260,7 @@ function StepTwo({
                 Үндсэн байршил
               </div>
               <AddressCascade address={draft.address} setPath={actions.setPath} />
-              <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              <div id="field-khotkhonOrStreet" className="mt-3 grid scroll-mt-24 gap-3 sm:grid-cols-2">
                 <Field label="Хотхон, хороолол" required hint="Гудамжтай бол хоосон үлдээж болно.">
                   <Input
                     value={draft.address.khotkhon}
@@ -3246,15 +3332,6 @@ function StepTwo({
               </div>
             </div>
           </div>
-          {draft.locationTouched && (
-            <MapPanel
-              draft={draft}
-              actions={actions}
-              expanded={mapExpanded}
-              onToggleExpanded={() => setMapExpanded((v) => !v)}
-              onLocationPicked={scrollToAddressOnMobile}
-            />
-          )}
         </CardContent>
       </Card>
 
@@ -3277,6 +3354,7 @@ function StepTwo({
               </div>
               <div className="grid gap-3 md:grid-cols-2">
                 <NumberStepper
+                  id="field-areaCert"
                   label={`${areaLabel(draft)} (м²)`}
                   required
                   value={draft.specs.areaCert}
@@ -3348,6 +3426,7 @@ function StepTwo({
               </div>
               <div className="grid gap-3 md:grid-cols-3">
                 <NumberStepper
+                  id="field-rooms"
                   label="Нийт өрөөний тоо"
                   required
                   value={draft.specs.rooms}
@@ -3525,15 +3604,12 @@ function MapPanel({
   actions,
   expanded,
   onToggleExpanded,
-  onLocationPicked,
 }: {
   draft: SmartDraft;
   actions: DraftActions;
   /** Large by default; the user can shrink it back down via onToggleExpanded. */
   expanded: boolean;
   onToggleExpanded: () => void;
-  /** Fired after a pin is dropped — used to auto-scroll to the address fields on mobile. */
-  onLocationPicked?: () => void;
 }) {
   const hasLink = Boolean(draft.address.googleMapLink.trim());
   const manualLine = addressLine(draft) || `${draft.address.country}, ${draft.address.city}`;
@@ -3548,7 +3624,6 @@ function MapPanel({
       // Auto-fill a shareable Google Maps link from the dropped pin.
       next.address.googleMapLink = mapsUrlFrom(lat, lng);
     });
-    onLocationPicked?.();
   };
 
   // Once the map re-centers on the dropped pin (at zoom 18), send its real
@@ -4612,7 +4687,7 @@ function PricingSection({
   return (
     <CollapsibleGroup icon={Banknote} title="10. Үнэ, төлбөрийн нөхцөл">
         <div className="grid gap-3 md:grid-cols-2">
-          <Field label={isRent ? "Нийт үнэ/сар (₮)" : "Нийт үнэ (₮)"} required>
+          <Field id="field-price" label={isRent ? "Нийт үнэ/сар (₮)" : "Нийт үнэ (₮)"} required>
             <Input
               type="text"
               inputMode="numeric"
@@ -4951,7 +5026,7 @@ function MediaSection({ draft, actions }: { draft: SmartDraft; actions: DraftAct
   };
 
   return (
-    <Card className="rounded-md">
+    <Card id="field-photos" className="scroll-mt-24 rounded-md">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Images className="size-4 text-accent" />
@@ -5177,7 +5252,7 @@ function StepFive({
   optional,
   price,
   selectedType,
-  goStep,
+  onJumpToMissing,
 }: {
   draft: SmartDraft;
   selectedType: (typeof propertyTypes)[number];
@@ -5185,7 +5260,7 @@ function StepFive({
   missing: Requirement[];
   optional: OptionalItem[];
   actions: DraftActions;
-  goStep: (step: number) => void;
+  onJumpToMissing: (item: Requirement) => void;
 }) {
   const suggested = optional.filter((item) => !item.ok).slice(0, 4);
   const review = [
@@ -5231,7 +5306,7 @@ function StepFive({
                     type="button"
                     variant="destructive"
                     size="sm"
-                    onClick={() => goStep(item.step)}
+                    onClick={() => onJumpToMissing(item)}
                     className="h-auto min-h-7 whitespace-normal"
                   >
                     {item.label}
@@ -5253,24 +5328,30 @@ function StepFive({
             </div>
           ) : null}
           <div className="space-y-2">
-            <CheckboxRow
-              checked={draft.declarations.truth}
-              onChange={(value) => actions.setPath("declarations.truth", value)}
-              title="Дээрх мэдээлэл үнэн зөв"
-              sub="Дээрх мэдээлэл нь үнэн зөв, бүрэн, бодитой гэдгийг би баталж байна."
-            />
-            <CheckboxRow
-              checked={draft.declarations.authority}
-              onChange={(value) => actions.setPath("declarations.authority", value)}
-              title="Эрх бүхий этгээд мөн"
-              sub="Би энэхүү зарыг оруулж, олон нийтэд мэдээлэх эрх бүхий этгээд мөн гэдгийг баталж байна."
-            />
-            <CheckboxRow
-              checked={draft.declarations.terms}
-              onChange={(value) => actions.setPath("declarations.terms", value)}
-              title="Үйлчилгээний нөхцөл зөвшөөрөх"
-              sub="www.neomap.mn веб сайтын ҮЙЛЧИЛГЭЭНИЙ НӨХЦӨЛ-ийг бүрэн уншиж танилцсан бөгөөд бүрэн хүлээн зөвшөөрч байна."
-            />
+            <div id="field-truth" className="scroll-mt-24">
+              <CheckboxRow
+                checked={draft.declarations.truth}
+                onChange={(value) => actions.setPath("declarations.truth", value)}
+                title="Дээрх мэдээлэл үнэн зөв"
+                sub="Дээрх мэдээлэл нь үнэн зөв, бүрэн, бодитой гэдгийг би баталж байна."
+              />
+            </div>
+            <div id="field-authority" className="scroll-mt-24">
+              <CheckboxRow
+                checked={draft.declarations.authority}
+                onChange={(value) => actions.setPath("declarations.authority", value)}
+                title="Эрх бүхий этгээд мөн"
+                sub="Би энэхүү зарыг оруулж, олон нийтэд мэдээлэх эрх бүхий этгээд мөн гэдгийг баталж байна."
+              />
+            </div>
+            <div id="field-terms" className="scroll-mt-24">
+              <CheckboxRow
+                checked={draft.declarations.terms}
+                onChange={(value) => actions.setPath("declarations.terms", value)}
+                title="Үйлчилгээний нөхцөл зөвшөөрөх"
+                sub="www.neomap.mn веб сайтын ҮЙЛЧИЛГЭЭНИЙ НӨХЦӨЛ-ийг бүрэн уншиж танилцсан бөгөөд бүрэн хүлээн зөвшөөрч байна."
+              />
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -5306,7 +5387,7 @@ function StepFive({
               Та энэхүү зарыг SPONSORED болгохыг хүсэж байна уу? ТЭГЬЕ.
             </ToggleChip>
           </div>
-          <Field label="Та энэ үл хөдлөх эд хөрөнгөтэй ямар холбоотой вэ?" required>
+          <Field id="field-relation" label="Та энэ үл хөдлөх эд хөрөнгөтэй ямар холбоотой вэ?" required>
             <div className="flex flex-wrap gap-2">
               {relations.map((relation) => (
                 <ToggleChip
