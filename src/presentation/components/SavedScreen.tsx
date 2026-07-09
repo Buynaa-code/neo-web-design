@@ -49,7 +49,7 @@ import { useSavedListMutations } from "@/application/queries/saved";
  * not carry (districts/rooms/priceRange) are derived from the free-form
  * `filters` object with sensible fallbacks.
  */
-function toUiSavedSearch(s: ApiSavedSearch): SavedSearch {
+export function toUiSavedSearch(s: ApiSavedSearch): SavedSearch {
   const f = (s.filters ?? {}) as Record<string, unknown>;
 
   const asStringArray = (v: unknown): string[] => {
@@ -438,7 +438,7 @@ function SavedListCard({
   );
 }
 
-function SavedSearchRow({
+export function SavedSearchRow({
   s,
   onEdit,
   onDelete,

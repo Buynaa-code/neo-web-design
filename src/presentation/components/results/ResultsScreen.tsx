@@ -17,7 +17,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { useStore } from "@/infrastructure/store";
-import { useListings } from "@/application/queries/listings";
+import { useSearchListings } from "@/application/queries/listings";
 import { filteredListings, baseListingsForMode } from "@/application/filters";
 import { fmtCompact } from "@/infrastructure/data/formatters";
 import { FilterSidebar } from "./FilterSidebar";
@@ -82,11 +82,11 @@ export function ResultsScreen() {
     }
   }, [params, mode, setMode]);
 
-  // Real backend search: a non-empty query hits GET /listings?q= (confirmed
-  // live to full-text search the server's whole dataset), instead of only
+  // Real backend search: a non-empty query hits GET /listings/search
+  // (MeiliSearch, full-text over the server's whole dataset), instead of only
   // ever substring-matching the ~100 listings bootstrapped on app boot.
   const searchQuery = state.query?.trim() ?? "";
-  const { data: searchData } = useListings(
+  const { data: searchData } = useSearchListings(
     { q: searchQuery, mode: state.mode, perPage: 100 },
     { enabled: Boolean(searchQuery) }
   );
@@ -98,7 +98,7 @@ export function ResultsScreen() {
 
   const stats = useMemo(() => {
     const base = baseListingsForMode(state.mode).filter(
-      (l) => !state.filterDistrict || l.district === state.filterDistrict
+      (l) => !state.filterDistrict?.length || state.filterDistrict.includes(l.district)
     );
     if (!base.length) return { avgPrice: 0, count: 0, avgPpm: 0 };
     const avgPrice = Math.round(base.reduce((s, l) => s + l.price, 0) / base.length);
@@ -108,7 +108,9 @@ export function ResultsScreen() {
     return { avgPrice, count: base.length, avgPpm };
   }, [state.mode, state.filterDistrict]);
 
-  const districtLabel = state.filterDistrict ?? "Бүх дүүрэг";
+  const districtLabel = state.filterDistrict?.length
+    ? state.filterDistrict.join(", ")
+    : "Бүх дүүрэг";
   const pushToast = useStore((s) => s.pushToast);
   const openModal = useStore((s) => s.openModal);
   const openAdvanced = () => openModal(<AdvancedFiltersModal />, "lg");
@@ -279,7 +281,7 @@ export function ResultsScreen() {
                       onClick={() =>
                         openModal(
                           <DetailedStatsModal
-                            initialDistrict={state.filterDistrict ?? "all"}
+                            initialDistrict={state.filterDistrict?.[0] ?? "all"}
                           />,
                           "lg"
                         )

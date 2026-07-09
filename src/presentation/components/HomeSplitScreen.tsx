@@ -21,7 +21,6 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import { DISTRICTS } from "@/infrastructure/data/constants";
 import {
   fmtCompact,
   fmtPpm,
@@ -29,6 +28,7 @@ import {
   listingPrice,
 } from "@/infrastructure/data/formatters";
 import { baseListingsForMode, filteredListings, hasIpoteh, isListingVerified, isNewProject } from "@/application/filters";
+import { useSearchListings } from "@/application/queries/listings";
 import { useStore } from "@/infrastructure/store";
 import { cn } from "@/lib/utils";
 import { photoUrl } from "@/infrastructure/data/listings";
@@ -36,7 +36,6 @@ import type { Listing } from "@/domain/types";
 import { ResultsMap } from "@/components/results/ResultsMap";
 import { DualRangeSlider } from "@/components/DualRangeSlider";
 import { HomeAIChat } from "@/components/HomeAIChat";
-import { AISearchBar } from "@/components/results/AISearchBar";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -103,6 +102,8 @@ export function HomeSplitScreen() {
   const openPlacePicker = useStore((s) => s.openPlacePicker);
   const myPlaces = useStore((s) => s.myPlaces);
   const listingsVersion = useStore((s) => s.listingsVersion);
+  const aiQuery = useStore((s) => s.aiQuery);
+  const setAiQuery = useStore((s) => s.setAiQuery);
 
   const snapshot = useMemo<FilterSnapshot>(
     () => ({
@@ -125,6 +126,7 @@ export function HomeSplitScreen() {
       filterPropertyKind,
       drawnPolygon,
       sortBy,
+      query: aiQuery,
     }),
     [
       listingsVersion,
@@ -146,10 +148,23 @@ export function HomeSplitScreen() {
       filterPropertyKind,
       drawnPolygon,
       sortBy,
+      aiQuery,
     ]
   );
 
-  const listings = useMemo(() => filteredListings(snapshot), [snapshot]);
+  // Sidebar search box: a non-empty query hits the real MeiliSearch backend
+  // (GET /listings/search) instead of only substring-matching the ~100
+  // listings bootstrapped on app boot.
+  const searchQuery = aiQuery?.trim() ?? "";
+  const { data: searchData, isFetching: isSearching } = useSearchListings(
+    { q: searchQuery, mode, perPage: 100 },
+    { enabled: Boolean(searchQuery) }
+  );
+
+  const listings = useMemo(
+    () => filteredListings(snapshot, searchQuery ? searchData?.listings : undefined),
+    [snapshot, searchQuery, searchData]
+  );
   const baseListings = useMemo(
     () => baseListingsForMode(mode),
     [mode, listingsVersion]
@@ -157,7 +172,7 @@ export function HomeSplitScreen() {
 
   const activeFilterCount = [
     filterPropertyKind,
-    filterDistrict,
+    filterDistrict?.length,
     filterRooms?.length,
     filterPriceMin || filterPriceMax,
     filterVerified,
@@ -175,7 +190,6 @@ export function HomeSplitScreen() {
 
   return (
     <>
-      <AISearchBar />
       <section className="home-split home-split-next" aria-label="NEOMAP нүүр">
       <aside className="home-filter-col" aria-label="Шүүлтүүр">
         <div className="home-panel-top">
@@ -216,6 +230,11 @@ export function HomeSplitScreen() {
         ) : null}
 
         <aside className="bk-sidebar" aria-label="Шүүлтүүрийн самбар">
+          <SidebarSearchBox
+            value={aiQuery}
+            onChange={setAiQuery}
+            isSearching={isSearching}
+          />
           <div className="bk-side-title">Шүүх:</div>
           <DistrictFilter baseListings={baseListings} />
           <RoomFilter
@@ -331,19 +350,87 @@ export function HomeSplitScreen() {
   );
 }
 
+/**
+ * Free-text search box that hits the real MeiliSearch backend. Debounced so
+ * it doesn't fire a request on every keystroke; empty value falls back to the
+ * regular client-side filtered listings.
+ */
+function SidebarSearchBox({
+  value,
+  onChange,
+  isSearching,
+}: {
+  value: string;
+  onChange: (q: string) => void;
+  isSearching: boolean;
+}) {
+  const [draft, setDraft] = useState(value);
+
+  useEffect(() => {
+    setDraft(value);
+  }, [value]);
+
+  useEffect(() => {
+    const id = setTimeout(() => {
+      if (draft !== value) onChange(draft);
+    }, 300);
+    return () => clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draft]);
+
+  return (
+    <div className="relative mb-3">
+      <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-[color:var(--text-3)]" />
+      <input
+        value={draft}
+        onChange={(event) => setDraft(event.target.value)}
+        className="bk-smart-input !min-h-0 !py-2 !pl-8 !pr-8"
+        placeholder="Хайх (жишээ: Хан-Уул 3 өрөө)"
+        aria-label="Зар хайх"
+      />
+      {draft ? (
+        <button
+          type="button"
+          onClick={() => setDraft("")}
+          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[color:var(--text-3)]"
+          title="Цэвэрлэх"
+        >
+          <X className="size-3.5" />
+        </button>
+      ) : null}
+      {isSearching ? (
+        <div className="mt-1 text-[10px] text-[color:var(--text-3)]">Хайж байна…</div>
+      ) : null}
+    </div>
+  );
+}
+
 function DistrictFilter({ baseListings }: { baseListings: Listing[] }) {
   const [query, setQuery] = useState("");
-  const filterDistrict = useStore((s) => s.filterDistrict);
+  const filterDistrict = useStore((s) => s.filterDistrict) ?? [];
   const setFilterDistrict = useStore((s) => s.setFilterDistrict);
-  const districts = DISTRICTS.map((district) => ({
-    district,
-    count: baseListings.filter((listing) => listing.district === district).length,
-  })).filter((item) => item.count > 0 && item.district.toLowerCase().includes(query.toLowerCase()));
+  const districtCounts = new Map<string, number>();
+  for (const listing of baseListings) {
+    districtCounts.set(listing.district, (districtCounts.get(listing.district) ?? 0) + 1);
+  }
+  const districts = Array.from(districtCounts, ([district, count]) => ({ district, count }))
+    .filter((item) => item.district.toLowerCase().includes(query.toLowerCase()))
+    .sort((a, b) => b.count - a.count);
+
+  const toggleDistrict = (district: string) => {
+    const next = filterDistrict.includes(district)
+      ? filterDistrict.filter((d) => d !== district)
+      : [...filterDistrict, district];
+    setFilterDistrict(next.length ? next : null);
+  };
 
   return (
     <section className="bk-side-section">
       <div className="bk-side-heading">
         <span className="bk-side-heading-left">Дүүрэг</span>
+        {filterDistrict.length ? (
+          <span className="bk-side-heading-count num">{filterDistrict.length}</span>
+        ) : null}
       </div>
       <div className="bk-side-section-body">
         <div className="relative mb-2">
@@ -358,10 +445,10 @@ function DistrictFilter({ baseListings }: { baseListings: Listing[] }) {
         {districts.map(({ district, count }) => (
           <CheckRow
             key={district}
-            checked={filterDistrict === district}
+            checked={filterDistrict.includes(district)}
             label={district}
             count={count}
-            onChange={() => setFilterDistrict(filterDistrict === district ? null : district)}
+            onChange={() => toggleDistrict(district)}
           />
         ))}
       </div>

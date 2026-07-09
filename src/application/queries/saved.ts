@@ -112,8 +112,8 @@ export function useSavedListMutations() {
 /* Saved searches                                                             */
 /* -------------------------------------------------------------------------- */
 
-export function useSavedSearches() {
-  return useQuery({ queryKey: queryKeys.savedSearches, queryFn: listSavedSearches });
+export function useSavedSearches(enabled = true) {
+  return useQuery({ queryKey: queryKeys.savedSearches, queryFn: listSavedSearches, enabled });
 }
 
 export function useSavedSearchMutations() {

@@ -24,12 +24,18 @@ export function ActiveFilterChips() {
   const clearAllFilters = useStore((s) => s.clearAllFilters);
 
   const chips: Array<{ key: string; label: string; remove: () => void }> = [];
-  if (filterDistrict)
+  for (const d of filterDistrict ?? []) {
     chips.push({
-      key: "district",
-      label: filterDistrict,
-      remove: () => setFilterDistrict(null),
+      key: `district-${d}`,
+      label: d,
+      remove: () =>
+        setFilterDistrict(
+          (filterDistrict ?? []).filter((x) => x !== d).length
+            ? (filterDistrict ?? []).filter((x) => x !== d)
+            : null
+        ),
     });
+  }
   if (filterRooms?.length)
     chips.push({
       key: "rooms",

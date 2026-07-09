@@ -85,6 +85,20 @@ export async function listListings(
   );
 }
 
+/**
+ * GET /listings/search — MeiliSearch full-text + filtered search. `q` is
+ * optional (filters-only search works too); results only include active
+ * listings. Same response envelope as `/listings`, so it reuses
+ * `parseListingList`.
+ */
+export async function searchListings(
+  params: ListListingsParams = {}
+): Promise<PaginatedListings> {
+  return parseListingList(
+    await apiFetch("/listings/search", { query: toQuery(params), skipAuth: true })
+  );
+}
+
 /** GET /listings/{id} — public detail. */
 export async function getListing(id: number): Promise<ListingResource> {
   const res = listingEnvelopeSchema.parse(

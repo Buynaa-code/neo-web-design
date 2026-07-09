@@ -67,7 +67,7 @@ interface StoreState {
 
   // Filters
   filterPropertyKind: ListingPropertyKind | null;
-  filterDistrict: string | null;
+  filterDistrict: string[] | null;
   filterRooms: number[] | null;
   filterBusStop: string | null;
   filterLifestyle: string[];
@@ -185,7 +185,7 @@ interface StoreActions {
 
   // Filters
   setFilterPropertyKind: (k: ListingPropertyKind | null) => void;
-  setFilterDistrict: (d: string | null) => void;
+  setFilterDistrict: (d: string[] | null) => void;
   setFilterRooms: (r: number[] | null) => void;
   setFilterBusStop: (id: string | null) => void;
   toggleLifestyle: (key: string) => void;

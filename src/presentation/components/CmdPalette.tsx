@@ -157,7 +157,7 @@ export function CmdPalette() {
     else if (it.type === "action") it.run();
     else if (it.type === "listing") router.push(it.href);
     else if (it.type === "district") {
-      setFilterDistrict(it.districtName);
+      setFilterDistrict([it.districtName]);
       router.push("/results");
     }
   };

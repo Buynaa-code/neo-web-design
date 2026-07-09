@@ -74,6 +74,7 @@ import {
   INTEREST_VIBES,
 } from "@/infrastructure/data/interests";
 import { usePreferences, useUpdatePreferences } from "@/application/queries/preferences";
+import { useSavedSearches } from "@/application/queries/saved";
 import { getToken } from "@/infrastructure/api/token";
 import type { PreferenceInput } from "@/infrastructure/api/preferences";
 import { inferInterestsFromBehavior, matchedListings, type MatchReason } from "@/application/interests";
@@ -81,6 +82,12 @@ import { fmtCompact } from "@/infrastructure/data/formatters";
 import { DISTRICTS } from "@/infrastructure/data/constants";
 import type { Listing, ListingMode } from "@/domain/types";
 import { cn } from "@/lib/utils";
+import { SavedSearchRow, toUiSavedSearch } from "@/components/SavedScreen";
+import {
+  DeleteSearchConfirm,
+  EditSearchModal,
+  SaveSearchModal,
+} from "@/components/results/SavedSearchModals";
 
 const ICONS: Record<string, LucideIcon> = {
   "arrow-up": ArrowUp,
@@ -158,6 +165,7 @@ export function InterestsScreen() {
   const isAuthed = useStore((s) => s.isLoggedIn) && !!getToken();
   const { data: serverPrefs } = usePreferences(isAuthed);
   const updatePrefs = useUpdatePreferences();
+  const { data: savedSearches } = useSavedSearches(isAuthed);
   const hydratedRef = useRef(false);
 
   useEffect(() => {
@@ -446,6 +454,41 @@ export function InterestsScreen() {
         </div>
       </div>
 
+      {isAuthed && (
+        <div className="mt-5">
+          <div className="flex items-center justify-between mb-2">
+            <div className="eyebrow">Хадгалсан хайлт</div>
+            <button
+              type="button"
+              onClick={() => openModal(<SaveSearchModal />, "md")}
+              className="btn btn-secondary !text-xs !py-2"
+            >
+              <Plus className="w-3.5 h-3.5" /> Одоогийн шүүлтүүрээ хадгалах
+            </button>
+          </div>
+          {savedSearches && savedSearches.length > 0 ? (
+            <div className="space-y-2">
+              {savedSearches.map((s) => {
+                const uiSearch = toUiSavedSearch(s);
+                return (
+                  <SavedSearchRow
+                    key={s.id}
+                    s={uiSearch}
+                    onEdit={() => openModal(<EditSearchModal search={uiSearch} />, "md")}
+                    onDelete={() => openModal(<DeleteSearchConfirm id={s.id} />, "sm")}
+                    onNotify={() => pushToast("Notification тохиргоо удахгүй", "info")}
+                  />
+                );
+              })}
+            </div>
+          ) : (
+            <div className="card p-4 text-sm text-[var(--text-3)]">
+              Хадгалсан хайлт алга. Шүүлтүүрээ тохируулаад дээрх товчоор хадгална уу.
+            </div>
+          )}
+        </div>
+      )}
+
       {results.length === 0 ? (
         <div
           className="text-center py-20 mt-5"
@@ -534,9 +577,16 @@ function MatchCard({
 
   return (
     <article className="card overflow-hidden flex flex-col">
-      <button
-        type="button"
+      <div
+        role="button"
+        tabIndex={0}
         onClick={() => router.push(`/property/${listing.id}`)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            router.push(`/property/${listing.id}`);
+          }
+        }}
         className="relative aspect-[4/3] cursor-pointer"
         style={{
           background: `linear-gradient(135deg, hsl(${(listing.id * 37) % 360}, 30%, 35%), hsl(${(listing.id * 71) % 360}, 25%, 22%))`,
@@ -575,7 +625,7 @@ function MatchCard({
             <Sparkle className="w-3 h-3" /> Шинэ
           </span>
         )}
-      </button>
+      </div>
       <div className="p-4 flex-1 flex flex-col">
         <div className="flex items-center justify-between gap-2 mb-1">
           <div className="font-bold text-[15.5px]" style={{ color: "var(--text)" }}>

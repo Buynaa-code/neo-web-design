@@ -66,7 +66,7 @@ export function getLifestyleTags(l: Listing): string[] {
 export interface FilterState {
   mode: "sale" | "rent";
   filterPropertyKind: ListingPropertyKind | null;
-  filterDistrict: string | null;
+  filterDistrict: string[] | null;
   filterRooms: number[] | null;
   filterBusStop: string | null;
   filterLifestyle: string[];
@@ -116,7 +116,7 @@ export function filteredListings(s: FilterState, searchResults?: Listing[]): Lis
   if (!searchResults && s.query?.trim()) list = list.filter((l) => matchesQuery(l, s.query!.trim()));
   if (s.mode !== "sale" && s.filterPropertyKind)
     list = list.filter((l) => getPropertyKind(l) === s.filterPropertyKind);
-  if (s.filterDistrict) list = list.filter((l) => l.district === s.filterDistrict);
+  if (s.filterDistrict?.length) list = list.filter((l) => s.filterDistrict!.includes(l.district));
   if (s.filterRooms && s.filterRooms.length)
     list = list.filter((l) => s.filterRooms!.includes(l.rooms));
 

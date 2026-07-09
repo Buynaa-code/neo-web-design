@@ -27,7 +27,7 @@ interface Draft {
 
 function buildDraft(): Draft {
   const s = useStore.getState();
-  const districts: string[] = s.filterDistrict ? [s.filterDistrict] : ["Хан-Уул", "Сүхбаатар"];
+  const districts: string[] = s.filterDistrict?.length ? s.filterDistrict : ["Хан-Уул", "Сүхбаатар"];
   const rooms: number[] = s.filterRooms && s.filterRooms.length ? s.filterRooms : [2, 3];
   const rent = s.mode === "rent";
   const priceRange: [number, number] = [

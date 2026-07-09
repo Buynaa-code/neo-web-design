@@ -29,6 +29,7 @@ export const queryKeys = {
 
   // Dynamic data (short staleTime, not persisted)
   listings: (params: ListListingsParams) => ["listings", params] as const,
+  listingsSearch: (params: ListListingsParams) => ["listings-search", params] as const,
   listing: (id: number) => ["listings", "detail", id] as const,
   myListings: (params: unknown) => ["my-listings", params] as const,
   currentUser: ["auth", "user"] as const,

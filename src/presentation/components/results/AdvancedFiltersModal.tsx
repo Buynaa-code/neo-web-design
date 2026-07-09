@@ -19,7 +19,7 @@ export function AdvancedFiltersModal() {
   const [rooms, setRooms] = useState<number | null>(
     initial.filterRooms && initial.filterRooms.length === 1 ? initial.filterRooms[0] : null
   );
-  const [district, setDistrict] = useState<string | null>(initial.filterDistrict);
+  const [districts, setDistricts] = useState<string[]>(initial.filterDistrict ?? []);
   const [priceMin, setPriceMin] = useState<string>(
     initial.filterPriceMin != null ? String(initial.filterPriceMin) : ""
   );
@@ -41,6 +41,10 @@ export function AdvancedFiltersModal() {
   const districtCount = (d: string) =>
     baseListingsForMode(mode).filter((l) => l.district === d).length;
 
+  const toggleDistrict = (d: string) => {
+    setDistricts((prev) => (prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d]));
+  };
+
   const isRent = mode === "rent";
   const priceMaxPlaceholder = isRent ? "2,000,000" : "600,000,000";
 
@@ -52,7 +56,7 @@ export function AdvancedFiltersModal() {
   const apply = () => {
     const store = useStore.getState();
     store.setMode(mode);
-    store.setFilterDistrict(district);
+    store.setFilterDistrict(districts.length ? districts : null);
     store.setFilterRooms(rooms ? [rooms] : null);
     store.setPriceRange(num(priceMin), num(priceMax));
     store.setAreaRange(num(areaMin), num(areaMax));
@@ -159,17 +163,16 @@ export function AdvancedFiltersModal() {
             <Label>Байршил (Дүүрэг)</Label>
             <div className="space-y-0.5">
               <RadioRow
-                checked={district === null}
-                onChange={() => setDistrict(null)}
+                checked={districts.length === 0}
+                onChange={() => setDistricts([])}
                 label="Бүх дүүрэг"
               />
               {DISTRICTS.map((d) => (
-                <RadioRow
+                <CheckRow
                   key={d}
-                  checked={district === d}
-                  onChange={() => setDistrict(d)}
-                  label={d}
-                  count={districtCount(d)}
+                  checked={districts.includes(d)}
+                  onChange={() => toggleDistrict(d)}
+                  label={`${d}${districtCount(d) ? ` (${districtCount(d)})` : ""}`}
                 />
               ))}
             </div>

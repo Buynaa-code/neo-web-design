@@ -48,7 +48,7 @@ const PRICE_PRESETS_RENT: Array<{ label: string; min: number | null; max: number
 
 export function FilterSidebar() {
   const mode = useStore((s) => s.mode);
-  const filterDistrict = useStore((s) => s.filterDistrict);
+  const filterDistrict = useStore((s) => s.filterDistrict) ?? [];
   const setFilterDistrict = useStore((s) => s.setFilterDistrict);
   const filterRooms = useStore((s) => s.filterRooms) ?? [];
   const setFilterRooms = useStore((s) => s.setFilterRooms);
@@ -66,6 +66,13 @@ export function FilterSidebar() {
   const clearAllFilters = useStore((s) => s.clearAllFilters);
 
   const presets = mode === "rent" ? PRICE_PRESETS_RENT : PRICE_PRESETS_SALE;
+
+  const toggleDistrict = (d: string) => {
+    const next = filterDistrict.includes(d)
+      ? filterDistrict.filter((x) => x !== d)
+      : [...filterDistrict, d];
+    setFilterDistrict(next.length ? next : null);
+  };
 
   const toggleRoom = (n: number) => {
     const set = new Set(filterRooms);
@@ -91,8 +98,8 @@ export function FilterSidebar() {
             <button
               key={d}
               type="button"
-              className={cn("filter-chip", filterDistrict === d && "active")}
-              onClick={() => setFilterDistrict(filterDistrict === d ? null : d)}
+              className={cn("filter-chip", filterDistrict.includes(d) && "active")}
+              onClick={() => toggleDistrict(d)}
             >
               {d}
             </button>

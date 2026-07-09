@@ -13,6 +13,7 @@ import {
   listListings,
   listMyListings,
   listTags,
+  searchListings,
   toListing,
   updateListing,
   type ListListingsParams,
@@ -30,9 +31,30 @@ export function useListings(params: ListListingsParams = {}, opts: { enabled?: b
   return useQuery({
     queryKey: queryKeys.listings(params),
     queryFn: () => listListings(params),
-    enabled: opts.enabled,
+    enabled: opts.enabled ?? true,
     placeholderData: keepPreviousData,
     // Map wire resources to UI listings once, here, so components stay simple.
+    select: (res) => ({
+      ...res,
+      listings: res.items.map(toListing),
+    }),
+  });
+}
+
+/**
+ * Real MeiliSearch backend search (`GET /listings/search`) — used wherever a
+ * free-text query needs to search the server's whole dataset instead of only
+ * substring-matching the listings already bootstrapped into the store.
+ */
+export function useSearchListings(
+  params: ListListingsParams = {},
+  opts: { enabled?: boolean } = {}
+) {
+  return useQuery({
+    queryKey: queryKeys.listingsSearch(params),
+    queryFn: () => searchListings(params),
+    enabled: opts.enabled ?? true,
+    placeholderData: keepPreviousData,
     select: (res) => ({
       ...res,
       listings: res.items.map(toListing),

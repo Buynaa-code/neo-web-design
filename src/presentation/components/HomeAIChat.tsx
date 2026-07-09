@@ -77,7 +77,7 @@ export function HomeAIChat() {
     const ex = parseAIQuery(q);
     const store = useStore.getState();
     if (ex.mode) store.setMode(ex.mode);
-    store.setFilterDistrict(ex.district);
+    store.setFilterDistrict(ex.district ? [ex.district] : null);
     store.setFilterRooms(ex.rooms ? [ex.rooms] : null);
     store.setLifestyle(ex.lifestyle);
     if (ex.maxPrice != null) store.setPriceRange(null, ex.maxPrice);
