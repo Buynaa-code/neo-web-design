@@ -3229,9 +3229,7 @@ function StepTwo({
         </CardHeader>
         <CardContent
           className={
-            draft.locationTouched
-              ? "grid gap-4 xl:grid-cols-[minmax(0,1fr)_380px]"
-              : "space-y-4"
+           "space-y-4"
           }
         >
           <div className="space-y-2">
