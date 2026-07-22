@@ -128,7 +128,18 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
-import { cn } from "@/lib/utils";
+import { cn, normalisedToLatLng, latLngToNormalised } from "@/lib/utils";
+import {
+  mapEnum,
+  USAGE_KEY,
+  INTERIOR_KEY,
+  CERT_KEY,
+  CURRENT_KEY,
+  COLLATERAL_KEY,
+  RELATION_KEY,
+  RENT_FREQ_KEY,
+  type EnumOptions as ImportedEnumOptions,
+} from "./list-property-wizard-enums";
 import { submitListingDraft, type TagGroup } from "@/infrastructure/api/listings";
 import {
   useCreateListing,
@@ -386,89 +397,7 @@ function resolveSubtypeKey(
   return keys.find((k) => subs[k]?.label === subtypeLabel) ?? keys[0];
 }
 
-type EnumOptions = Record<string, unknown>;
-
-/**
- * Reverse-looks-up an API enum *key* from a (possibly Mongolian) label, using
- * the live form-options `enumOptions[field]` map (shaped `{ key: label }`).
- * Falls back to the raw value if no exact label match is found (so already-key
- * values pass straight through). Returns undefined for empty input.
- */
-function resolveEnumKey(
-  field: string,
-  label: string | undefined,
-  enumOptions: EnumOptions | undefined
-): string | undefined {
-  const value = (label ?? "").trim();
-  if (!value) return undefined;
-  const map = enumOptions?.[field];
-  if (map && typeof map === "object") {
-    const entries = Object.entries(map as Record<string, unknown>);
-    // If the value is already a valid key, keep it.
-    if (entries.some(([key]) => key === value)) return value;
-    const hit = entries.find(([, lbl]) => String(lbl) === value);
-    if (hit) return hit[0];
-  }
-  return value;
-}
-
-/** Wizard-label → API-key maps for the enum selects (labels come from the UI). */
-const USAGE_KEY: Record<string, string> = {
-  "Цоо шинэ, ашиглаж байгаагүй": "brand_new_unused",
-  "Ашиглагдаж байсан": "used",
-};
-const INTERIOR_KEY: Record<string, string> = {
-  "Сүүлийн 1 жилийн хугацаанд засал хийсэн": "renovated_within_1_year",
-  "1-3 жилийн өмнө засал хийсэн": "renovated_1_to_3_years",
-  "3-с дээш жилийн өмнө засал хийсэн / Анхны заслаараа байгаа": "old_or_original_finish",
-};
-const CERT_KEY: Record<string, string> = {
-  "Бэлэн гэрчилгээтэй": "certificate_ready",
-  "Дуусаагүй барилгын гэрчилгээтэй": "unfinished_building_certificate",
-  "Гэрчилгээгүй - Гэрчилгээ гарахад бэлэн": "certificate_pending_ready",
-  "Гэрчилгээгүй - Баригдаж байгаа, захиалгын гэрээтэй": "under_construction",
-};
-const CURRENT_KEY: Record<string, string> = {
-  "Түрээсийн эсхүл хөлслүүлэх гэрээтэй байгаа": "has_lease_contract",
-  "Амьдарч, ашиглаж байгаа": "occupied_or_in_use",
-  "Сул, чөлөөтэй байгаа": "vacant",
-  "Бусад": "other",
-};
-const COLLATERAL_KEY: Record<string, string> = {
-  "Ямар нэг барьцаанд байхгүй": "no_collateral",
-  "Банк, ББСБ, санхүүгийн байгууллагын зээлийн барьцаанд байгаа": "financial_institution_collateral",
-  "Гуравдагч этгээдийн барьцаанд байгаа": "third_party_collateral",
-};
-const RELATION_KEY: Record<string, string> = {
-  "Өмчлөгч": "owner",
-  "Эрх эзэмшигч": "right_holder",
-  "Гэрээний эрх эзэмшигч": "contract_right_holder",
-  "Өмчлөгч, эрх эзэмшигч хуулийн этгээдийн ажилтан": "employee_of_owner_entity",
-  "Хууль ёсны итгэмжлэгдсэн төлөөлөгч": "legal_representative",
-};
-const RENT_FREQ_KEY: Record<string, string> = {
-  "1 сар тутам": "monthly",
-  "2 сар тутам": "bimonthly",
-  "3 сар тутам": "quarterly",
-  "4 сар тутам": "four_monthly",
-  "6 сар тутам": "semiannual",
-  "12 сар тутам": "annual",
-};
-
-/**
- * Resolves a wizard label to an API enum key: prefers the static label→key map,
- * then the live enumOptions reverse-lookup, then the raw value.
- */
-function mapEnum(
-  field: string,
-  label: string | undefined,
-  staticMap: Record<string, string>,
-  enumOptions: EnumOptions | undefined
-): string | undefined {
-  const value = (label ?? "").trim();
-  if (!value) return undefined;
-  return staticMap[value] ?? resolveEnumKey(field, value, enumOptions);
-}
+type EnumOptions = ImportedEnumOptions;
 
 /** Parses a numeric string to a positive number, or undefined when empty/zero. */
 function numOrUndef(value: unknown): number | undefined {
@@ -487,7 +416,7 @@ function pruneEmpty(obj: Record<string, unknown>): Record<string, unknown> {
 }
 
 /** Builds a StoreListingRequest body from the wizard draft + metadata. */
-function buildCreateRequest(
+export function buildCreateRequest(
   draft: SmartDraft,
   classification: ClassificationLike | undefined,
   enumOptions: EnumOptions | undefined
@@ -546,6 +475,16 @@ function buildCreateRequest(
     building_block_number: draft.address.buildingNumber || undefined,
     google_map_link: draft.address.googleMapLink || undefined,
     address_description: draft.address.note || undefined,
+    // The API validates `lat`/`lng` as 0..1 (rejects real WGS84), so encode
+    // the pin as UB-relative normalised coords instead of dropping it —
+    // otherwise every listing round-trips with lat:null/lng:null and every
+    // pin on the results map collapses onto the same point.
+    ...(draft.locationTouched
+      ? (() => {
+          const [lat, lng] = latLngToNormalised(draft.lat, draft.lng);
+          return { lat, lng };
+        })()
+      : {}),
     year: parseInt(draft.state.commissionYear, 10) || undefined,
     commissioned_year: parseInt(draft.state.commissionYear, 10) || undefined,
     // State enums (wizard stores Mongolian labels → API keys).
@@ -554,6 +493,7 @@ function buildCreateRequest(
     certificate_status: mapEnum("certificate_status", draft.state.certStatus, CERT_KEY, enumOptions),
     current_availability_status: mapEnum("current_availability_status", draft.state.current, CURRENT_KEY, enumOptions),
     collateral_status: mapEnum("collateral_status", draft.state.collateral, COLLATERAL_KEY, enumOptions),
+    collateral_description: draft.state.collateralNote || undefined,
     relationship_to_property: mapEnum("relationship_to_property", draft.services.relation, RELATION_KEY, enumOptions),
     vat_included: draft.pricing.vatIncluded,
     provides_vat_ebarimt: draft.pricing.ebarimt,
@@ -686,7 +626,7 @@ function photosFromResource(photos: unknown): PhotoDraft[] {
  * round-trip exactly; enum labels, grouped tags and photos are reconstructed
  * from the live values (unknown tags land in the custom bucket).
  */
-function draftFromListing(
+export function draftFromListing(
   resource: ListingResource,
   classification: ClassificationLike | undefined
 ): SmartDraft {
@@ -714,9 +654,17 @@ function draftFromListing(
   const idOf = (key: string): string | null =>
     masterIds[key] != null ? String(masterIds[key]) : null;
 
-  const rawLat = typeof r.lat === "number" ? r.lat : base.lat;
-  const rawLng = typeof r.lng === "number" ? r.lng : base.lng;
-  const hasCoords = typeof r.lat === "number" && r.lat > 1;
+  // The API stores `lat`/`lng` as 0..1 UB-relative coords (see
+  // `buildCreateRequest`); denormalise back to real WGS84 for the map pin.
+  // A few legacy rows may still carry real WGS84 (>1) from before that
+  // encoding existed — pass those through as-is.
+  const hasNormalisedCoords =
+    typeof r.lat === "number" && typeof r.lng === "number" && r.lat > 0 && r.lat <= 1 && r.lng > 0 && r.lng <= 1;
+  const hasLegacyRealCoords = typeof r.lat === "number" && r.lat > 1;
+  const hasCoords = hasNormalisedCoords || hasLegacyRealCoords;
+  const [rawLat, rawLng] = hasNormalisedCoords
+    ? normalisedToLatLng(r.lat as number, r.lng as number)
+    : [hasLegacyRealCoords ? (r.lat as number) : base.lat, hasLegacyRealCoords ? (r.lng as number) : base.lng];
 
   return {
     ...base,
@@ -770,6 +718,7 @@ function draftFromListing(
       certStatus: labelFromKey(CERT_KEY, r.certificateStatus, base.state.certStatus),
       current: labelFromKey(CURRENT_KEY, r.currentAvailabilityStatus, base.state.current),
       collateral: labelFromKey(COLLATERAL_KEY, r.collateralStatus, base.state.collateral),
+      collateralNote: str("collateralDescription"),
       certNumber: str("propertyRegistrationNumber"),
       commissionYear: numStr("year") || numStr("commissionedYear"),
     },
@@ -1498,7 +1447,7 @@ function normalizeWindows(value?: unknown): WindowCounts {
   return out;
 }
 
-function createDefaultDraft(): SmartDraft {
+export function createDefaultDraft(): SmartDraft {
   const district = DISTRICTS[0];
   const loc = defaultListPropLocation(district);
   return {

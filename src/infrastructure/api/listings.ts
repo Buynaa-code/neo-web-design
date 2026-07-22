@@ -282,6 +282,45 @@ function flattenPhotoUrls(photos: ListingResource["photos"]): string[] {
   return urls;
 }
 
+/**
+ * A listing without a saved map pin (`lat`/`lng` null) used to fall back to
+ * `0, 0`, which every such listing shares — on the results map they all
+ * stack on the exact same point. Spread them out instead: a deterministic
+ * per-district base position (in the same 0..1 UB-relative space the map
+ * components already expect, see `normalisedToLatLng`) plus a small
+ * per-listing jitter so same-district listings don't overlap either.
+ */
+const DISTRICT_FALLBACK_POSITION: Record<string, [number, number]> = {
+  "Сүхбаатар": [0.42, 0.62],
+  "Чингэлтэй": [0.32, 0.75],
+  "Баянгол": [0.18, 0.55],
+  "Баянзүрх": [0.68, 0.68],
+  "Хан-Уул": [0.3, 0.35],
+  "Сонгинохайрхан": [0.15, 0.15],
+  "Налайх": [0.95, 0.95],
+  "Багануур": [0.98, 0.02],
+  "Багахангай": [0.99, 0.01],
+};
+const DEFAULT_FALLBACK_POSITION: [number, number] = [0.45, 0.5];
+
+function seededUnit(key: string): number {
+  let hash = 0;
+  for (let i = 0; i < key.length; i++) hash = (Math.imul(hash, 31) + key.charCodeAt(i)) >>> 0;
+  return (hash % 10000) / 10000;
+}
+
+function clamp01(value: number): number {
+  return Math.min(1, Math.max(0, value));
+}
+
+function fallbackPosition(r: ListingResource): [number, number] {
+  const key = r.district || r.khoroo || r.khotkhon || "";
+  const [baseLat, baseLng] = DISTRICT_FALLBACK_POSITION[key] ?? DEFAULT_FALLBACK_POSITION;
+  const jitterLat = (seededUnit(`${key}:${r.id}:lat`) - 0.5) * 0.16;
+  const jitterLng = (seededUnit(`${key}:${r.id}:lng`) - 0.5) * 0.16;
+  return [clamp01(baseLat + jitterLat), clamp01(baseLng + jitterLng)];
+}
+
 /** Pulls the first clip URL out of the grouped `photos.video` array, if present. */
 function extractVideoUrl(photos: ListingResource["photos"]): string | undefined {
   if (!photos || typeof photos !== "object" || Array.isArray(photos)) return undefined;
@@ -308,6 +347,9 @@ export function toListing(r: ListingResource): Listing {
         .map((p) => ({ d: p.d, p: p.p }))
     : undefined;
 
+  const hasSavedPin = typeof r.lat === "number" && typeof r.lng === "number" && (r.lat !== 0 || r.lng !== 0);
+  const [lat, lng] = hasSavedPin ? [r.lat as number, r.lng as number] : fallbackPosition(r);
+
   return {
     id: r.id,
     mode: r.mode === "rent" ? "rent" : "sale",
@@ -326,8 +368,8 @@ export function toListing(r: ListingResource): Listing {
     viewingCount: r.viewingCount,
     features: toStringArray(r.features),
     agentId: r.agentId ?? 0,
-    lat: r.lat ?? 0,
-    lng: r.lng ?? 0,
+    lat,
+    lng,
     desc: r.desc ?? undefined,
     priceHistory: priceHistory?.length ? priceHistory : undefined,
     photoSeeds: r.photoSeeds.filter(

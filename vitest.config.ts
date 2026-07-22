@@ -4,6 +4,12 @@ import { defineConfig } from "vitest/config";
 const src = (p: string) => resolve(__dirname, "src", p);
 
 export default defineConfig({
+  // tsconfig.json sets `jsx: "preserve"` (Next's SWC does the actual JSX
+  // transform at build time); outside Next, Vite's esbuild transform reads
+  // that same tsconfig setting and — finding "preserve" — skips transforming
+  // JSX entirely, which fails to parse. Force the transform here so plain
+  // "use client" .tsx files can be imported directly in tests.
+  oxc: { jsx: { runtime: "automatic" } },
   resolve: {
     alias: {
       "@/domain": src("domain"),

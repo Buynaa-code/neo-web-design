@@ -11,6 +11,16 @@
   max-width: none !important;
 }
 
+/* leaflet.css never gives `.leaflet-container` a positioning context, so its
+   internal panes/controls (`position: absolute`, up to `z-index: 1000` for
+   `.leaflet-top`/`.leaflet-bottom`) attach to whatever positioned ancestor is
+   further up the page and can stack over unrelated chrome (nav, footer,
+   modals). Scope those z-indexes to the map itself. */
+.leaflet-container {
+  position: relative;
+  isolation: isolate;
+}
+
 @custom-variant dark (&:is(.dark *));
 
 :root {
