@@ -348,6 +348,16 @@ function buildMediaPayload(
   }
 
   const out: Record<string, unknown> = { ...idFields };
+  // Зураг бүрийг аль өрөөнийх болохыг нь илгээнэ. Backend талд ийм талбар
+  // хараахан байхгүй бол Laravel-ийн validated() үүнийг зүгээр орхино.
+  const roomTags = ordered
+    .filter((photo) => photo.rooms && photo.rooms.length)
+    .map((photo) => ({
+      media_id: photo.mediaId,
+      url: photo.url,
+      room_ids: photo.rooms,
+    }));
+  if (roomTags.length) out.photo_room_tags = roomTags;
   // The cover is whatever photo the user selected (moved to `ordered[0]` above),
   // regardless of its category — not just photos in the "cover" group.
   const coverImageId = ordered[0]?.mediaId;
@@ -500,7 +510,9 @@ export function buildCreateRequest(
     desc: draft.desc || undefined,
     // Tag arrays — the backend accepts arbitrary strings (custom tags included).
     amenities: flattenTags(Object.values(draft.community)),
+    amenities_details: tagDetails(flattenTags(Object.values(draft.community)), draft.tagNotes),
     included_items: flattenTags(Object.values(draft.included)),
+    included_items_details: tagDetails(flattenTags(Object.values(draft.included)), draft.tagNotes),
     infrastructure: flattenInfra(draft.infra),
     // Optional paid services + declarations.
     wants_verified: draft.services.verified,
@@ -524,6 +536,8 @@ export function buildCreateRequest(
       enumOptions
     );
     base.rent_deposit_amount = parseInt(draft.pricing.deposit, 10) || undefined;
+    base.lease_term = draft.pricing.leaseTerm || undefined;
+    if (draft.pricing.leaseTermNote.trim()) base.lease_term_note = draft.pricing.leaseTermNote.trim();
   } else {
     base.total_price = numOrUndef(draft.pricing.totalPrice) ?? price;
     base.unit_price_m2 = area ? Math.round((numOrUndef(draft.pricing.totalPrice) ?? price) / area) : undefined;
@@ -544,6 +558,20 @@ function flattenTags(groups: string[][]): string[] {
   return Array.from(seen);
 }
 
+/**
+ * Сонгосон tag-уудаас тайлбартайг нь `{ key, note }` жагсаалт болгоно —
+ * backend-ийн `amenities_details` / `included_items_details` талбарт таарна.
+ * Тайлбаргүй tag энд орохгүй (үндсэн жагсаалтад аль хэдийн байгаа).
+ */
+function tagDetails(tags: string[], notes: Record<string, string>): Array<{ key: string; note: string }> {
+  const out: Array<{ key: string; note: string }> = [];
+  for (const tag of tags) {
+    const note = (notes[tag] || "").trim();
+    if (note) out.push({ key: tag, note });
+  }
+  return out;
+}
+
 /** Flatten the single-choice infra map into a flat list of chosen values. */
 function flattenInfra(infra: SmartDraft["infra"]): string[] {
   const out: string[] = [];
@@ -553,7 +581,9 @@ function flattenInfra(infra: SmartDraft["infra"]): string[] {
     if (field.key === "internet") {
       for (const part of value.split(",").map((s) => s.trim()).filter(Boolean)) out.push(part);
     } else {
-      out.push(value);
+      const cfg = infraSubChoices[field.key];
+      const sub = cfg ? infra[cfg.field] : "";
+      out.push(sub ? `${value} — ${sub}` : value);
     }
   }
   return out;
@@ -602,6 +632,95 @@ function infraFromList(values: unknown, base: SmartDraft["infra"]): SmartDraft["
   }
   if (internet.length) out.internet = internet.join(", ");
   return out;
+}
+
+/** Нэг зурагт хамгийн ихдээ хэдэн өрөө шошиглож болох. */
+const MAX_PHOTO_ROOMS = 3;
+
+/**
+ * «Энэ бол аль өрөөний зураг вэ?» — зураг оруулсны дараа хэрэглэгч өөрийн
+ * нэмсэн өрөөнүүдээсээ сонгож шошиглоно. Нэг зурагт хэд хэдэн өрөө орсон
+ * тохиолдол түгээмэл тул 3 хүртэл өрөө давхар сонгож болно.
+ */
+function PhotoRoomTagger({
+  draft,
+  actions,
+}: {
+  draft: SmartDraft;
+  actions: DraftActions;
+}) {
+  const rooms = draft.roomDetails;
+  const photos = draft.media.photos.filter((photo) => photo.category !== "Бичлэг");
+  if (!photos.length) return null;
+
+  if (!rooms.length) {
+    return (
+      <div className="rounded-md border border-dashed p-3 text-[11px] leading-4 text-muted-foreground">
+        Зургаа өрөөгөөр нь шошиглохын тулд эхлээд «Өрөө, талбай» алхам дээр өрөөнүүдээ нэмнэ үү.
+      </div>
+    );
+  }
+
+  const toggleRoom = (photoId: string, roomId: string) => {
+    actions.mutate((next) => {
+      const photo = next.media.photos.find((item) => item.id === photoId);
+      if (!photo) return;
+      const current = photo.rooms ? [...photo.rooms] : [];
+      const at = current.indexOf(roomId);
+      if (at >= 0) current.splice(at, 1);
+      else if (current.length < MAX_PHOTO_ROOMS) current.push(roomId);
+      photo.rooms = current;
+    });
+  };
+
+  const tagged = photos.filter((photo) => photo.rooms && photo.rooms.length).length;
+
+  return (
+    <div className="space-y-2 rounded-lg border p-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="text-sm font-semibold">Энэ бол аль өрөөний зураг вэ?</div>
+        <Badge variant="outline" className="h-5 px-1.5 text-[10px]">
+          {tagged} / {photos.length} шошиглосон
+        </Badge>
+      </div>
+      <p className="text-[11px] leading-4 text-muted-foreground">
+        Нэг зурагт хэд хэдэн өрөө орсон бол {MAX_PHOTO_ROOMS} хүртэл өрөө сонгож болно. Шошиглосон зураг
+        зарын хуудсан дээр тухайн өрөөний доор эрэмбэлэгдэнэ.
+      </p>
+      <div className="space-y-2">
+        {photos.map((photo) => {
+          const chosen = photo.rooms ?? [];
+          return (
+            <div key={photo.id} className="flex flex-wrap items-center gap-2 border-t pt-2 first:border-t-0 first:pt-0">
+              <div className="size-12 shrink-0 overflow-hidden rounded-md border bg-muted">
+                <PhotoTileImage url={photo.url ? normalizeMediaUrl(photo.url) : ""} alt={photo.category} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="mb-1 text-[11px] text-muted-foreground">{photo.category}</div>
+                <div className="flex flex-wrap gap-1.5">
+                  {rooms.map((room) => {
+                    const active = chosen.includes(room.id);
+                    const full = !active && chosen.length >= MAX_PHOTO_ROOMS;
+                    return (
+                      <span key={room.id} className={cn(full && "pointer-events-none opacity-40")}>
+                        <ToggleChip
+                          active={active}
+                          onClick={() => toggleRoom(photo.id, room.id)}
+                          icon={active ? Check : undefined}
+                        >
+                          {room.label || room.typeKey}
+                        </ToggleChip>
+                      </span>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
 }
 
 /** Rebuild PhotoDraft[] from the grouped `photos` object the API returns. */
@@ -678,6 +797,7 @@ export function draftFromListing(
       khoroo: str("khoroo"),
       khotkhon: str("khotkhon"),
       zip: str("zipcode"),
+      zone: str("khoroolol"),
       streetNumber: str("streetNumber"),
       buildingNumber: str("buildingBlockNumber"),
       buildingName: str("buildingBlockName"),
@@ -787,6 +907,11 @@ type PhotoDraft = {
   id: string;
   seed: string;
   category: string;
+  /**
+   * Аль өрөөний зураг болохыг заана (`roomDetails[].id`). Нэг зурагт олон өрөө
+   * багтсан байж болох тул 3 хүртэл өрөө сонгож болно.
+   */
+  rooms?: string[];
   /** Optional real image URL; when set it is sent instead of a seed placeholder. */
   url?: string;
   /** Set when the file was uploaded to `/media`; linked by id on create. */
@@ -822,6 +947,8 @@ type SmartDraft = {
     khotkonId: string | null;
     buildingId: string | null;
     zip: string;
+    /** Хаягийн бүсчлэлийн нэр (хороолол). Зип кодтой хосолж «13-р хороолол-2 /14220/» болж харагдана. */
+    zone: string;
     street: string;
     streetNumber: string;
     khotkhon: string;
@@ -847,9 +974,14 @@ type SmartDraft = {
     windows: WindowCounts;
     officeNeeds: string[];
   };
-  infra: Record<InfraKey, string> & { note: string; heatingSub: string };
+  infra: Record<InfraKey, string> & { note: string } & Record<InfraSubKey, string>;
   community: Record<CommunityKey, string[]>;
   included: Record<IncludedKey, string[]>;
+  /**
+   * Сонгосон tag тус бүрийн нэмэлт тайлбар (түлхүүр нь tag-ийн нэр).
+   * Жишээ: «Бассейн» → «Зөвхөн зун ажиллана, 06:00–22:00».
+   */
+  tagNotes: Record<string, string>;
   state: {
     usage: string;
     certStatus: string;
@@ -871,6 +1003,9 @@ type SmartDraft = {
     ebarimt: boolean;
     paymentForms: string[];
     rentFrequency: string;
+    /** Түрээсийн гэрээг хэдэн хугацаагаар байгуулах (эксэлд байсан ч UI-д орхигдсон байсан). */
+    leaseTerm: string;
+    leaseTermNote: string;
     deposit: string;
     rentDiscounts: Record<RentMonth, number>;
   };
@@ -941,6 +1076,8 @@ type InfraKey =
   | "sewage"
   | "road"
   | "internet";
+/** Үндсэн сонголтоо нарийвчилдаг дэд талбарууд (жишээ: Бие даасан дулаан → Газар зуух). */
+type InfraSubKey = "heatingSub" | "waterColdSub" | "waterHotSub" | "sewageSub";
 type CommunityKey = "services" | "security" | "amenities";
 type IncludedKey = "furniture" | "equipment" | "extra";
 
@@ -1229,9 +1366,49 @@ const infraFields: Array<{
   },
 ];
 
-const heatingSubChoices: Record<string, string[]> = {
-  "Төвлөрсөн (Хотхоны)": ["Уурын зуух (Нүүрсэн)", "Газар зуух", "Цахилгаан"],
-  "Бие даасан": ["Газар зуух", "Цахилгаан зуух", "Цахилгаан радиатор"],
+/**
+ * Үндсэн сонголт бүр дотроо дахин нарийвчлагддаг дэд сонголттой байх ёстой
+ * (дулаан, цэвэр ус, халуун ус, бохир). Дэд сонголт байхгүй үндсэн утга дээр
+ * дэд талбар огт харагдахгүй.
+ */
+const infraSubChoices: Partial<
+  Record<InfraKey, { field: InfraSubKey; label: string; map: Record<string, string[]> }>
+> = {
+  heating: {
+    field: "heatingSub",
+    label: "Дулааны эх үүсвэр",
+    map: {
+      "Төвлөрсөн (Хотхоны)": ["Уурын зуух (Нүүрсэн)", "Газар зуух", "Цахилгаан"],
+      "Бие даасан": ["Газар зуух", "Цахилгаан зуух", "Цахилгаан радиатор"],
+    },
+  },
+  waterCold: {
+    field: "waterColdSub",
+    label: "Цэвэр усны нөхцөл",
+    map: {
+      "Гүний худаг": ["Өөрийн худаг", "Дундын худаг", "Насостой", "Насосгүй"],
+      "Ус зөөдөг": ["Усны машинаар", "Ойролцоох ус түгээх цэгээс", "Дундын нөөц савтай"],
+      "Бие даасан": ["Нөөц устай", "Нөөц усгүй"],
+    },
+  },
+  waterHot: {
+    field: "waterHotSub",
+    label: "Халуун усны нөхцөл",
+    map: {
+      "Бие даасан": ["Цахилгаан бойлер", "Хийн бойлер", "Нарны коллектор"],
+      "Эзлэхүүний бойлер": ["30–80 л", "80–150 л", "150 л-ээс дээш"],
+      "Түргэн халаагч бойлер": ["Цахилгаан", "Хийн"],
+    },
+  },
+  sewage: {
+    field: "sewageSub",
+    label: "Бохирын нөхцөл",
+    map: {
+      "Септик": ["Битүү (соруулдаг)", "Шүүрүүлдэг", "Био цэвэрлэгээтэй"],
+      "Соруулдаг": ["Өөрийн нөөцтэй", "Дундын нөөцтэй"],
+      "Бие даасан": ["Био цэвэрлэх байгууламжтай", "Цэвэрлэх байгууламжгүй"],
+    },
+  },
 };
 
 const communityGroups: Array<{
@@ -1348,6 +1525,8 @@ const salePaymentForms = [
 ];
 
 const rentFrequencies = ["1 сар тутам", "2 сар тутам", "3 сар тутам", "4 сар тутам", "6 сар тутам", "12 сар тутам"];
+/** Гэрээлэх хугацаа — түрээсийн зарын заавал байх нөхцөл. */
+const leaseTerms = ["3 сар", "6 сар", "1 жил", "2 жил", "3 жил", "3 жилээс дээш", "Тохиролцоно"];
 const mediaCategories = [
   "Нүүрний зураг",
   "План зураг",
@@ -1465,6 +1644,7 @@ export function createDefaultDraft(): SmartDraft {
       khorooId: null,
       streetId: null,
       khoroololId: null,
+      zone: "",
       khotkonId: null,
       buildingId: null,
       zip: "",
@@ -1496,6 +1676,9 @@ export function createDefaultDraft(): SmartDraft {
     infra: {
       heating: "Төсвийн (улсын)",
       heatingSub: "",
+      waterColdSub: "",
+      waterHotSub: "",
+      sewageSub: "",
       electric: "Төвийн 100%",
       waterCold: "Төвийн шугам (улсын)",
       waterHot: "Төвийн шугам (улсын) - ялтсан бойлер",
@@ -1505,6 +1688,7 @@ export function createDefaultDraft(): SmartDraft {
       note: "",
     },
     community: { services: [], security: [], amenities: [] },
+    tagNotes: {},
     included: { furniture: [], equipment: [], extra: [] },
     state: {
       usage: "Ашиглалтад орсон",
@@ -1527,6 +1711,8 @@ export function createDefaultDraft(): SmartDraft {
       ebarimt: false,
       paymentForms: [salePaymentForms[0]],
       rentFrequency: "1 сар тутам",
+      leaseTerm: "1 жил",
+      leaseTermNote: "",
       deposit: "",
       rentDiscounts: { 1: 0, 2: 0, 3: 0, 4: 0, 6: 5, 12: 10 },
     },
@@ -1616,6 +1802,9 @@ function normalizeDraft(value?: unknown): SmartDraft {
       ...base.infra,
       ...toRecord(raw.infra),
     } as SmartDraft["infra"],
+    tagNotes: Object.fromEntries(
+      Object.entries(toRecord(raw.tagNotes)).map(([key, value]) => [key, String(value ?? "")])
+    ),
     community: {
       services: arrayOfStrings(toRecord(raw.community).services),
       security: arrayOfStrings(toRecord(raw.community).security),
@@ -1689,17 +1878,20 @@ function normalizeDraft(value?: unknown): SmartDraft {
       out.infra[field.key] = field.choices[0];
     }
   });
-  const heatingSubs = heatingSubChoices[out.infra.heating];
-  if (heatingSubs) {
-    if (!heatingSubs.includes(out.infra.heatingSub)) {
-      out.infra.heatingSub = heatingSubs[0];
+  // Үндсэн сонголт солигдоход дэд сонголт нь хүчингүй болвол эхнийхээр солино.
+  for (const [key, cfg] of Object.entries(infraSubChoices)) {
+    if (!cfg) continue;
+    const subs = cfg.map[out.infra[key as InfraKey]];
+    if (subs) {
+      if (!subs.includes(out.infra[cfg.field])) out.infra[cfg.field] = subs[0];
+    } else {
+      out.infra[cfg.field] = "";
     }
-  } else {
-    out.infra.heatingSub = "";
   }
   if (!certOptions.includes(out.state.certStatus)) out.state.certStatus = base.state.certStatus;
   if (!collateralOptions.includes(out.state.collateral)) out.state.collateral = base.state.collateral;
   if (!rentFrequencies.includes(out.pricing.rentFrequency)) out.pricing.rentFrequency = base.pricing.rentFrequency;
+  if (!leaseTerms.includes(out.pricing.leaseTerm)) out.pricing.leaseTerm = base.pricing.leaseTerm;
   if (out.media.coverIndex >= out.media.photos.length) out.media.coverIndex = 0;
   // Coords are real WGS84 now. Clamp to valid ranges (and migrate away from the
   // old 0–1 normalized values, which fall outside UB and land in the ocean).
@@ -2105,12 +2297,19 @@ function Field({
   id,
   label,
   required,
+  optional,
   children,
   hint,
 }: {
   id?: string;
   label: string;
   required?: boolean;
+  /**
+   * «Дараа нөхөж болно» шошго. Урьд нь заавал биш БҮХ талбарт автоматаар
+   * гарч, өгөгдмөл утгатай сонголтууд дээр ч утгагүй харагддаг байсан тул
+   * одоо зөвхөн үнэхээр хойшлуулж болох талбарт гараар тавина.
+   */
+  optional?: boolean;
   children: ReactNode;
   hint?: string;
 }) {
@@ -2122,11 +2321,11 @@ function Field({
           <Badge variant="destructive" className="ml-1 h-5 px-1.5 text-[10px]">
             заавал
           </Badge>
-        ) : (
+        ) : optional ? (
           <Badge variant="outline" className="ml-1 h-5 px-1.5 text-[10px]">
             дараа нөхөж болно
           </Badge>
-        )}
+        ) : null}
       </Label>
       {children}
       {hint ? <p className="text-[11px] leading-4 text-muted-foreground">{hint}</p> : null}
@@ -2480,14 +2679,16 @@ function AddressCascade({
           }}
         />
       </Field>
-      <Field label="Хороолол" hint="Заавал биш">
+      <Field label="Хороолол (хаягийн бүс)" hint="Баазаас сонгоно. Зип кодтой хосолж харагдана.">
         <NativeSelect
           value={address.khoroololId != null ? String(address.khoroololId) : ""}
           options={toOptions(khoroolols.data)}
           onChange={(value) => {
             const item = pick(khoroolols.data, value);
             setPath("address.khoroololId", item ? String(item.id) : null);
-            if (item) setPath("address.zip", optionName(item));
+            // Урьд нь хороолол сонгоход зип код руу НЭР нь бичигдэж байсан.
+            // Нэр нь өөрийн талбартаа, зип код нь тусдаа хэвээр үлдэнэ.
+            setPath("address.zone", item ? optionName(item) : "");
           }}
         />
       </Field>
@@ -3243,11 +3444,32 @@ function StepTwo({
                 Нарийвчилсан хаяг
               </div>
               <div className="grid gap-3 sm:grid-cols-2">
-                <Field label="Хаягийн бүс / zipcode">
+                <Field label="Хаягийн бүс" hint="Дээрх «Хороолол» сонголтоос автоматаар орно.">
+                  <Input
+                    value={
+                      draft.address.zone
+                        ? draft.address.zip
+                          ? `${draft.address.zone} /${draft.address.zip}/`
+                          : draft.address.zone
+                        : ""
+                    }
+                    readOnly
+                    placeholder="13-р хороолол-2 /14220/"
+                  />
+                </Field>
+                <Field label="Зип код">
                   <Input
                     value={draft.address.zip}
-                    onChange={(event) => actions.setPath("address.zip", event.target.value)}
-                    placeholder="17011"
+                    inputMode="numeric"
+                    onChange={(event) => actions.setPath("address.zip", event.target.value.replace(/\D/g, ""))}
+                    placeholder="14220"
+                  />
+                </Field>
+                <Field label="Гудамжны нэр" hint="Дээрх «Гудамж» сонголтоос орох ба гараар засаж болно.">
+                  <Input
+                    value={draft.address.street}
+                    onChange={(event) => actions.setPath("address.street", event.target.value)}
+                    placeholder="Их тойруу"
                   />
                 </Field>
                 <Field label="Гудамжны дугаар">
@@ -4049,6 +4271,19 @@ function RoomDetailsEditor({ draft, actions }: { draft: SmartDraft; actions: Dra
  * badge (e.g. "3/7" or "5 сонгосон") and progress bar. Lets long sections be
  * folded away and shows at a glance how much of each group is filled in.
  */
+/**
+ * Бүлэг доторх талбаруудаас хэд нь бөглөгдсөнийг тоолно. Хураасан үедээ ч
+ * «5 / 8 бөглөсөн · 63%» гэж харагдаж, аль бүлэг дутууг шууд харуулна.
+ */
+function fillStat(values: unknown[]): { badge: string; percent: number } {
+  const total = values.length;
+  const filled = values.filter((value) =>
+    Array.isArray(value) ? value.length > 0 : typeof value === "string" ? value.trim() !== "" : Boolean(value)
+  ).length;
+  const percent = total ? Math.round((filled / total) * 100) : 0;
+  return { badge: `${filled} / ${total} бөглөсөн · ${percent}%`, percent };
+}
+
 function CollapsibleGroup({
   icon: Icon,
   title,
@@ -4142,7 +4377,19 @@ function StepThree({ draft, actions }: { draft: SmartDraft; actions: DraftAction
 
   return (
     <div className="space-y-4">
-      <CollapsibleGroup icon={PlugZap} title="06. Үзүүлэлт - Дэд бүтэц">
+      <CollapsibleGroup
+        icon={PlugZap}
+        title="06. Үзүүлэлт - Дэд бүтэц"
+        {...fillStat([
+          draft.infra.heating,
+          draft.infra.electric,
+          draft.infra.waterCold,
+          draft.infra.waterHot,
+          draft.infra.sewage,
+          draft.infra.road,
+          draft.infra.internet,
+        ])}
+      >
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {infraFields.map((field) => {
               const Icon = field.icon;
@@ -4175,7 +4422,8 @@ function StepThree({ draft, actions }: { draft: SmartDraft; actions: DraftAction
                   </Field>
                 );
               }
-              const subOptions = field.key === "heating" ? heatingSubChoices[draft.infra.heating] : undefined;
+              const subCfg = infraSubChoices[field.key];
+              const subOptions = subCfg ? subCfg.map[draft.infra[field.key]] : undefined;
               const rawValue = draft.infra[field.key];
               const hasOther = field.choices.includes("Бусад");
               const isOther = hasOther && (rawValue === "Бусад" || !field.choices.includes(rawValue));
@@ -4193,9 +4441,9 @@ function StepThree({ draft, actions }: { draft: SmartDraft; actions: DraftAction
                         value={selectValue}
                         onChange={(event) => {
                           actions.setPath(`infra.${field.key}`, event.target.value);
-                          if (field.key === "heating") {
-                            const nextSubs = heatingSubChoices[event.target.value];
-                            actions.setPath("infra.heatingSub", nextSubs ? nextSubs[0] : "");
+                          if (subCfg) {
+                            const nextSubs = subCfg.map[event.target.value];
+                            actions.setPath(`infra.${subCfg.field}`, nextSubs ? nextSubs[0] : "");
                           }
                         }}
                         className="h-9 w-full rounded-md border border-input bg-background py-1 pl-9 pr-2.5 text-sm outline-none transition-colors focus:border-ring focus:ring-3 focus:ring-ring/20"
@@ -4207,10 +4455,15 @@ function StepThree({ draft, actions }: { draft: SmartDraft; actions: DraftAction
                         ))}
                       </select>
                     </div>
-                    {subOptions ? (
+                    {subOptions && subCfg ? (
                       <select
-                        value={subOptions.includes(draft.infra.heatingSub) ? draft.infra.heatingSub : subOptions[0]}
-                        onChange={(event) => actions.setPath("infra.heatingSub", event.target.value)}
+                        aria-label={subCfg.label}
+                        value={
+                          subOptions.includes(draft.infra[subCfg.field])
+                            ? draft.infra[subCfg.field]
+                            : subOptions[0]
+                        }
+                        onChange={(event) => actions.setPath(`infra.${subCfg.field}`, event.target.value)}
                         className="h-9 w-full rounded-md border border-input bg-background py-1 px-2.5 text-sm outline-none transition-colors focus:border-ring focus:ring-3 focus:ring-ring/20"
                       >
                         {subOptions.map((item) => (
@@ -4234,7 +4487,7 @@ function StepThree({ draft, actions }: { draft: SmartDraft; actions: DraftAction
               );
             })}
           </div>
-          <Field label="Дэд бүтцийн бусад тайлбар">
+          <Field label="Дэд бүтцийн бусад тайлбар" optional>
             <Textarea
               value={draft.infra.note}
               onChange={(event) => actions.setPath("infra.note", event.target.value)}
@@ -4245,9 +4498,10 @@ function StepThree({ draft, actions }: { draft: SmartDraft; actions: DraftAction
 
       <CollapsibleGroup
         icon={BadgeCheck}
-        title="07. Хотхон, төслийн дундын хэрэглээ, үйлчилгээ, аюулгүй байдал, тав тух"
+        title="07. Дундын хэрэглээ — үйлчилгээ, аюулгүй байдал, тав тух"
         description="Түгээмэл сонголтууд болон бүх бүлгийн сонголтууд filter/match-д ашиглагдана."
         badge={`${communitySelected} сонгосон`}
+        percent={fillStat(communityGroups.map((group) => draft.community[group.key])).percent}
       >
           <div className="flex flex-wrap gap-2">
             {popular.map((item) => {
@@ -4293,12 +4547,19 @@ function StepThree({ draft, actions }: { draft: SmartDraft; actions: DraftAction
               placeholder="Жишээ: Гэрэлт хашаа, EV цэнэглэгч…"
             />
           </div>
+          <TagNotes
+            tags={flattenTags(Object.values(draft.community))}
+            notes={draft.tagNotes}
+            onChange={(tag, note) => actions.setPath(`tagNotes.${tag}`, note)}
+            placeholder="Жишээ: зөвхөн зун ажиллана, 06:00–22:00"
+          />
       </CollapsibleGroup>
 
       <CollapsibleGroup
         icon={PackageCheck}
-        title="08. Үнэд багтсан дагалдах зүйлс"
+        title="08. Үнэд багтсан дагалдах зүйлс — тавилга, тоног төхөөрөмж, нэмэлт"
         badge={`${includedSelected} сонгосон`}
+        percent={fillStat(includedGroups.map((group) => draft.included[group.key])).percent}
       >
           {includedGroups.map((group) => (
             <GroupedChips
@@ -4323,7 +4584,62 @@ function StepThree({ draft, actions }: { draft: SmartDraft; actions: DraftAction
               placeholder="Жишээ: Хөшиг, агааржуулагч…"
             />
           </div>
+          <TagNotes
+            tags={flattenTags(Object.values(draft.included))}
+            notes={draft.tagNotes}
+            onChange={(tag, note) => actions.setPath(`tagNotes.${tag}`, note)}
+            placeholder="Жишээ: 2 ширхэг, 2023 онд авсан, брэнд нь…"
+          />
       </CollapsibleGroup>
+    </div>
+  );
+}
+
+/**
+ * Сонгосон tag бүрийн ард нэмэлт тайлбар бичих мөр. LinkedIn-ий ур чадварын
+ * адил: сонгосны дараа л тайлбар асууна, сонгоогүй tag дээр гарахгүй.
+ */
+function TagNotes({
+  tags,
+  notes,
+  onChange,
+  placeholder,
+}: {
+  tags: string[];
+  notes: Record<string, string>;
+  onChange: (tag: string, note: string) => void;
+  placeholder: string;
+}) {
+  const [open, setOpen] = useState(false);
+  if (!tags.length) return null;
+  const filled = tags.filter((tag) => (notes[tag] || "").trim()).length;
+  return (
+    <div className="rounded-md border bg-muted/30">
+      <button
+        type="button"
+        onClick={() => setOpen((value) => !value)}
+        className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-semibold"
+      >
+        <ChevronRight className={cn("size-3.5 transition-transform", open && "rotate-90")} />
+        Сонгосон зүйлс дээр тайлбар нэмэх
+        <Badge variant="outline" className="ml-auto h-5 px-1.5 text-[10px]">
+          {filled} / {tags.length}
+        </Badge>
+      </button>
+      {open ? (
+        <div className="space-y-2 border-t p-3">
+          {tags.map((tag) => (
+            <div key={tag} className="grid gap-1.5 sm:grid-cols-[minmax(0,180px)_minmax(0,1fr)] sm:items-center">
+              <div className="truncate text-xs font-medium">{tag}</div>
+              <Input
+                value={notes[tag] || ""}
+                onChange={(event) => onChange(tag, event.target.value)}
+                placeholder={placeholder}
+              />
+            </div>
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -4494,7 +4810,19 @@ function StepFour({
     !draft.state.certStatus.startsWith("Гэрчилгээгүй");
   return (
     <div className="space-y-4">
-      <CollapsibleGroup icon={SearchCheck} title="09. Үл хөдлөх эд хөрөнгийн төлөв">
+      <CollapsibleGroup
+        icon={SearchCheck}
+        title="09. Үл хөдлөх эд хөрөнгийн төлөв"
+        {...fillStat([
+          draft.state.usage,
+          isCommissioned ? draft.state.commissionYear : draft.state.commissionDue,
+          draft.state.certStatus,
+          hasCertificate ? draft.state.certNumber : "—",
+          draft.state.current,
+          draft.state.interior,
+          draft.state.collateral,
+        ])}
+      >
           <div className="grid gap-3 md:grid-cols-2">
             <Field label="Ашиглалтад орсон эсэх">
               <NativeSelect
@@ -4636,7 +4964,15 @@ function PricingSection({
   const deposit = parseFloat(draft.pricing.deposit) || 0;
 
   return (
-    <CollapsibleGroup icon={Banknote} title="10. Үнэ, төлбөрийн нөхцөл">
+    <CollapsibleGroup
+      icon={Banknote}
+      title="10. Үнэ"
+      {...fillStat(
+        isRent
+          ? [draft.pricing.monthlyPrice, draft.pricing.rentFrequency, draft.pricing.deposit, draft.pricing.leaseTerm]
+          : [draft.pricing.totalPrice, draft.pricing.paymentForms]
+      )}
+    >
         <div className="grid gap-3 md:grid-cols-2">
           <Field id="field-price" label={isRent ? "Нийт үнэ/сар (₮)" : "Нийт үнэ (₮)"} required>
             <Input
@@ -4674,21 +5010,46 @@ function PricingSection({
                   placeholder="4000000"
                 />
               </Field>
+              <Field label="Гэрээлэх хугацаа" required>
+                <NativeSelect
+                  value={draft.pricing.leaseTerm}
+                  onChange={(value) => actions.setPath("pricing.leaseTerm", value)}
+                  options={leaseTerms}
+                />
+              </Field>
+              <Field label="Гэрээний нэмэлт нөхцөл" optional hint="Сунгах нөхцөл, эрт цуцлах, түрээслэгчид тавих шаардлага гэх мэт.">
+                <Input
+                  value={draft.pricing.leaseTermNote}
+                  onChange={(event) => actions.setPath("pricing.leaseTermNote", event.target.value)}
+                  placeholder="Жишээ: 1 жилийн дараа тохиролцож сунгана"
+                />
+              </Field>
             </>
           ) : null}
         </div>
 
-        <div className="grid gap-2 md:grid-cols-2">
+        {/* И-баримтыг зөвхөн НӨАТ-тай үед асууна — НӨАТ-гүй үнэ дээр НӨАТ-тай
+            и-баримт олгох боломжгүй тул хоёр checkbox-ыг хамааралтай болгов. */}
+        <div className="space-y-2">
           <CheckboxRow
             checked={draft.pricing.vatIncluded}
-            onChange={(value) => actions.setPath("pricing.vatIncluded", value)}
+            onChange={(value) => {
+              actions.setPath("pricing.vatIncluded", value);
+              if (!value) actions.setPath("pricing.ebarimt", false);
+            }}
             title="Дээрх үнэд НӨАТ багтсан"
           />
-          <CheckboxRow
-            checked={draft.pricing.ebarimt}
-            onChange={(value) => actions.setPath("pricing.ebarimt", value)}
-            title="Худалдан авагчид НӨАТ-тэй и-баримт олгоно"
-          />
+          {draft.pricing.vatIncluded ? (
+            <CheckboxRow
+              checked={draft.pricing.ebarimt}
+              onChange={(value) => actions.setPath("pricing.ebarimt", value)}
+              title="Худалдан авагчид НӨАТ-тэй и-баримт олгоно"
+            />
+          ) : (
+            <p className="pl-1 text-[11px] leading-4 text-muted-foreground">
+              Үнэд НӨАТ багтаагүй тул и-баримтын сонголт хамаарахгүй.
+            </p>
+          )}
         </div>
 
         {isRent ? (
@@ -4732,8 +5093,8 @@ function PricingSection({
             );
           })()
         ) : (
-          <div>
-            <div className="mb-2 text-xs font-semibold text-muted-foreground">ТӨЛБӨРИЙН НӨХЦӨЛ</div>
+          <div className="rounded-lg border p-3">
+            <div className="mb-2 text-xs font-semibold text-muted-foreground">11. ТӨЛБӨРИЙН НӨХЦӨЛ</div>
             <div className="flex flex-wrap gap-2">
               {salePaymentForms.map((item) => (
                 <ToggleChip
@@ -5053,6 +5414,7 @@ function MediaSection({ draft, actions }: { draft: SmartDraft; actions: DraftAct
                 </Button>
                 <div className="absolute inset-x-0 bottom-0 truncate bg-slate-950/75 px-2 py-1 text-[10px] font-semibold text-white">
                   {photo.category}
+                  {photo.rooms && photo.rooms.length ? ` · ${photo.rooms.length} өрөө` : ""}
                 </div>
               </div>
             );
@@ -5088,7 +5450,7 @@ function MediaSection({ draft, actions }: { draft: SmartDraft; actions: DraftAct
             </label>
           ) : null}
         </div>
-        <Field label="Зургийн линкээр нэмэх" hint="Интернэт дэх зургийн URL-ийг ангилалтай нь оруулна. Хадгалахад зурагнууд серверт хадгалагдана.">
+        <Field label="Зургийн линкээр нэмэх" optional hint="Интернэт дэх зургийн URL-ийг ангилалтай нь оруулна. Хадгалахад зурагнууд серверт хадгалагдана.">
           <div className="flex flex-col gap-2 sm:flex-row">
             <select
               value={urlCategory}
@@ -5118,6 +5480,8 @@ function MediaSection({ draft, actions }: { draft: SmartDraft; actions: DraftAct
             </Button>
           </div>
         </Field>
+        <PhotoRoomTagger draft={draft} actions={actions} />
+
         <Field label="Зураг, бичлэг агуулсан линк">
           <Input
             value={draft.media.videoLink}
